@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NSE Pattern Intelligence Engine — Project Plan v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--card:#111;--card-hover:#161616;--border:#1e1e1e;--accent:#ff4800;--accent-glow:rgba(255,72,0,.15);--text:#d4d4d4;--text-bright:#f0f0f0;--text-muted:#5a5a5a;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--blue:#3b82f6}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-weight:300;line-height:1.7}
+.header{background:linear-gradient(180deg,#111,var(--bg));border-bottom:1px solid var(--border);padding:48px 40px 40px;position:relative}.header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#ff6b00,var(--accent))}.header-badge{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--accent);text-transform:uppercase;letter-spacing:3px;margin-bottom:12px}.header h1{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--text-bright);letter-spacing:-1px;margin-bottom:8px}.header-sub{font-size:15px;color:var(--text-muted);margin-bottom:24px}.pbc{background:var(--border);border-radius:4px;height:8px;overflow:hidden;max-width:500px}.pbf{height:100%;background:linear-gradient(90deg,var(--accent),#ff6b00);border-radius:4px;transition:width .5s}.pl{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-top:8px}
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,10,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;display:flex;overflow-x:auto}.nav a{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);text-decoration:none;padding:14px 16px;border-bottom:2px solid transparent;white-space:nowrap;transition:.2s}.nav a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.main{padding:40px;max-width:1200px;margin:0 auto}
+.phase{margin-bottom:32px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--card)}.phase-header{display:flex;align-items:center;gap:16px;padding:20px 24px;cursor:pointer;user-select:none;transition:.2s}.phase-header:hover{background:var(--card-hover)}.pn{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--bg);background:var(--accent);width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.pn.done{background:var(--green)}.pt{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text-bright);flex:1}.ps{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;padding:4px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:1px}.ps.pending{color:var(--text-muted);background:#1a1a1a}.ps.active{color:var(--accent);background:var(--accent-glow)}.ps.done{color:var(--green);background:rgba(34,197,94,.1)}.pa{color:var(--text-muted);font-size:18px;transition:transform .3s}.phase.open .pa{transform:rotate(180deg)}.phase-body{display:none;padding:0 24px 24px}.phase.open .phase-body{display:block}
+.task{padding:12px 0;border-bottom:1px solid #1a1a1a;display:flex;align-items:flex-start;gap:12px}.task:last-child{border-bottom:none}.task input[type=checkbox]{appearance:none;width:18px;height:18px;border:2px solid #333;border-radius:4px;cursor:pointer;flex-shrink:0;margin-top:2px;transition:.2s}.task input:checked{background:var(--accent);border-color:var(--accent)}.task input:checked::after{content:'✓';display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}.tc{flex:1}.tl{font-size:13px;color:var(--text)}.task.ck .tl{color:var(--text-muted);text-decoration:line-through}.tf{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-top:3px;opacity:.7}
+.sb{background:#0d0d0d;border:1px solid var(--border);border-radius:6px;margin:14px 0;overflow:hidden}.sbh{padding:10px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--accent);background:#0f0f0f;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between}.sbb{padding:16px;display:none;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;color:var(--text);white-space:pre-wrap;overflow-x:auto}.sb.open .sbb{display:block}
+.st{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}.st th{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}.st td{padding:8px 10px;border-bottom:1px solid #151515}.st tr:hover td{background:#0f0f0f}
+.mono{font-family:'JetBrains Mono',monospace;font-size:12px}.accent{color:var(--accent)}.green{color:var(--green)}.muted{color:var(--text-muted)}.bright{color:var(--text-bright)}code{font-family:'JetBrains Mono',monospace;font-size:12px;background:#1a1a1a;padding:2px 6px;border-radius:3px;color:var(--accent)}h2.s2{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text-bright);margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}p.d{font-size:13px;line-height:1.8;margin-bottom:10px}.co{border-left:3px solid var(--accent);padding:12px 16px;margin:16px 0;background:rgba(255,72,0,.04);font-size:13px}
+.footer{text-align:center;padding:40px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border)}
+@media(max-width:768px){.header{padding:32px 20px}.header h1{font-size:24px}.nav{padding:0 12px}.main{padding:20px}.phase-header{padding:16px}.phase-body{padding:0 16px 16px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">Bodhiworks · Project Spec · v3.0 Final</div>
+  <h1>NSE Pattern Intelligence Engine</h1>
+  <div class="header-sub">7 patterns · 4 filters · pattern dedup · conviction scoring · async I/O · multiprocess detection · backtesting · Carbon Ember dashboard · Telegram alerts</div>
+  <div class="pbc"><div class="pbf" id="pb" style="width:0%"></div></div>
+  <div class="pl" id="plb">0 / 0 tasks</div>
+</div>
+
+<div class="nav">
+  <a href="#overview">Overview</a><a href="#arch">Architecture</a><a href="#data">Data</a><a href="#resilience">Resilience</a><a href="#p1">P1: Data</a><a href="#p2">P2: Patterns</a><a href="#p3">P3: Filters</a><a href="#p4">P4: Telegram</a><a href="#p5">P5: Dashboard</a><a href="#p6">P6: Scanner</a><a href="#p7">P7: Dedup+Maintenance</a><a href="#p8">P8: Backtest</a>
+</div>
+
+<div class="main">
+
+<!-- OVERVIEW -->
+<div id="overview" style="margin-bottom:40px">
+  <h2 class="s2">Project Overview</h2>
+  <p class="d">Python scanner runs daily on Windows. Scans Nifty 500. Detects 7 patterns. Stacks 4 institutional filters. Scores conviction 0–100. Outputs Carbon Ember HTML + Telegram alerts. <strong>No server. No React. No framework.</strong></p>
+  <table class="st">
+    <tr><th>Attribute</th><th>Value</th></tr>
+    <tr><td>Universe</td><td class="mono accent">Nifty 500</td></tr>
+    <tr><td>Data</td><td class="mono">Dhan API — stocks (NSE_EQ) + indices (IDX_I). yfinance fallback only.</td></tr>
+    <tr><td>Store</td><td class="mono">SQLite (fresh build)</td></tr>
+    <tr><td>Platform</td><td class="mono">Windows local</td></tr>
+    <tr><td>Output</td><td class="mono">HTML dashboard + Telegram</td></tr>
+    <tr><td>Styling</td><td class="mono"><span class="accent">#0a0a0a</span> · <span class="accent">#ff4800</span> · Syne + JetBrains Mono</td></tr>
+  </table>
+
+  <h2 class="s2">Tech Stack</h2>
+  <table class="st">
+    <tr><th>Component</th><th>Tool</th><th>Why</th></tr>
+    <tr><td>Language</td><td class="mono">Python 3.11+</td><td>Existing setup</td></tr>
+    <tr><td>Data</td><td class="mono">Dhan API (dhanhq)</td><td>Single source — stocks + indices</td></tr>
+    <tr><td>Async fetch</td><td class="mono">aiohttp + asyncio</td><td>Bulk 500-stock download with rate-limited semaphore</td></tr>
+    <tr><td>Parallel detect</td><td class="mono">ProcessPoolExecutor</td><td>7 detectors × 500 stocks across 8 CPU cores</td></tr>
+    <tr><td>Math</td><td class="mono">NumPy + SciPy</td><td>argrelextrema, polyfit, rolling stats</td></tr>
+    <tr><td>Store</td><td class="mono">SQLite</td><td>Zero setup, portable, fast</td></tr>
+    <tr><td>Dashboard</td><td class="mono">Jinja2 → HTML</td><td>Self-contained, no server</td></tr>
+    <tr><td>Alerts</td><td class="mono">Telegram Bot API</td><td>Instant mobile push</td></tr>
+    <tr><td>Fallback</td><td class="mono">yfinance</td><td>Only if sector index missing from Dhan IDX_I</td></tr>
+  </table>
+
+  <h2 class="s2">Folder Structure</h2>
+  <div class="sb open"><div class="sbb">nse-pattern-engine/
+├── CLAUDE.md
+├── docs/NSE_PATTERN_ENGINE_PLAN.html   ← THIS FILE
+├── requirements.txt
+├── .env                               ← DHAN + TELEGRAM keys
+├── config/
+│   ├── settings.py                    ← ALL thresholds
+│   ├── nifty500.csv
+│   ├── nifty500_dhan.csv
+│   └── sector_map.json
+├── data/nse_ohlcv.db                  ← ohlcv_daily, ohlcv_weekly, index_daily
+├── setup/
+│   ├── 01_download_symbols.py
+│   ├── 02_download_historical.py      ← asyncio + aiohttp
+│   ├── 03_generate_weekly.py          ← incremental mode
+│   ├── 04_download_indices.py         ← Dhan IDX_I segment
+│   ├── 05_create_sector_map.py
+│   ├── 06_verify_data.py
+│   └── 07_rebalance_check.py         ← quarterly Nifty 500 refresh
+├── patterns/
+│   ├── __init__.py                    ← ALL_DETECTORS list
+│   ├── base.py                        ← PatternResult dataclass
+│   ├── cup_handle.py
+│   ├── ascending_triangle.py
+│   ├── bull_flag.py
+│   ├── vcp.py
+│   ├── inv_head_shoulders.py
+│   ├── supertrend.py
+│   └── multiyear_breakout.py
+├── filters/
+│   ├── stage2.py · volume.py · sector_rs.py · market_regime.py
+├── engine/
+│   ├── data_loader.py                 ← SQLite + Dhan batch OHLC
+│   ├── scorer.py · explainer.py · telegram.py
+│   ├── dedup.py                       ← pattern consolidation per stock
+│   └── chart_gen.py                   ← annotated candlestick charts (mplfinance)
+├── backtest/
+│   ├── engine.py                      ← walkforward loop, zero leakage
+│   ├── metrics.py                     ← win rate, PF, Sharpe, per-tier
+│   └── report.py                      ← Carbon Ember backtest HTML
+├── dashboard/template.html            ← Jinja2 Carbon Ember
+├── scanner.py                         ← Pipeline orchestrator
+└── output/
+    ├── scan_YYYYMMDD.html
+    ├── backtest_YYYYMMDD.html
+    └── charts/                        ← per-stock pattern PNGs</div></div>
+</div>
+
+<!-- ARCHITECTURE -->
+<div id="arch" style="margin-bottom:40px">
+  <h2 class="s2">Pipeline Architecture</h2>
+  <div class="sb open"><div class="sbh">6-Stage Pipeline — Execution Model <span>▼</span></div><div class="sbb" style="display:block">STAGE 1: VERIFY              [sync, ~2s]
+    │   7 SQLite checks. @stage(critical=True)
+    │
+STAGE 2: FETCH                [async I/O, ~2min bulk / ~3s daily]
+    │   Bulk:  asyncio + aiohttp + semaphore(5) + retry(3×)
+    │   Daily: Dhan batch OHLC → 1 API call for 500 stocks
+    │
+STAGE 3: PRE-COMPUTE          [sync, ~3s]
+    │   ├── Market Regime (4-check, compute ONCE)
+    │   ├── Sector RS per sector (15 calcs, cached)
+    │   └── If regime.score ≤ 1 → BEAR → Telegram warn → exit
+    │
+STAGE 4: DETECT               [ProcessPoolExecutor(8), ~12s]
+    │   500 workers × 7 detectors each
+    │   Pass NumPy arrays (not DataFrames) — lower pickle cost
+    │   per-detector try/except — 1 crash ≠ stock lost
+    │   per-stock 30s timeout — 1 hang ≠ scan stuck
+    │
+STAGE 5: FILTER + SCORE       [sync, ~3s]
+    │   Only pattern hits (~50-100 stocks)
+    │   4 filters + RSI overlay → conviction → dedup → explanation
+    │
+STAGE 5b: CHART GENERATION    [sync, ~10s]
+    │   mplfinance candlestick + volume + RSI per scored hit
+    │   Pattern annotations drawn (lines, shading, labels)
+    │   Pivot/target/stop as dashed horizontal lines
+    │   PNG per stock → output/charts/ + base64 for HTML embed
+    │
+STAGE 6: OUTPUT               [sync, ~2s]
+    ├── Jinja2 → HTML dashboard (charts embedded inline)
+    ├── Telegram: send chart photo + caption for conviction ≥ 70
+    └── Daily summary
+
+TOTAL: ~35s daily (data in DB) · ~2.5min first run (fetch-dominated)</div></div>
+
+  <h2 class="s2">PipelineContext + Pipeline Class</h2>
+  <div class="sb"><div class="sbh">scanner.py — exact implementation spec <span>▼</span></div><div class="sbb">@dataclass
+class PipelineContext:
+    scan_date: str              # YYYY-MM-DD
+    dry_run: bool = False       # --dry-run flag
+    skip_fetch: bool = False    # --skip-fetch flag
+
+    loader: Optional[DataLoader] = None
+    symbols: list = field(default_factory=list)
+
+    # Pre-computed (Stage 3 — compute once)
+    market_regime: dict = field(default_factory=dict)
+    sector_rs_cache: dict = field(default_factory=dict)
+    nifty50_cmp: float = 0.0
+
+    # Results
+    pattern_hits: list = field(default_factory=list)
+    scored_results: list = field(default_factory=list)
+
+    # Meta
+    timings: dict = field(default_factory=dict)
+    errors: list = field(default_factory=list)
+    stocks_scanned: int = 0
+    patterns_found: int = 0
+    alerts_sent: int = 0
+
+
+class Pipeline:
+    def __init__(self, ctx: PipelineContext):
+        self.ctx = ctx
+
+    def run(self, from_stage="verify"):
+        stages = [
+            ("verify",       self.verify),
+            ("fetch",        self.fetch),
+            ("pre_compute",  self.pre_compute),
+            ("detect",       self.detect),
+            ("filter_score", self.filter_and_score),
+            ("output",       self.output),
+        ]
+        names = [s[0] for s in stages]
+        start = names.index(from_stage) if from_stage in names else 0
+
+        for name, fn in stages[start:]:
+            fn()
+            if name == "pre_compute" and self.ctx.market_regime.get("score",0) <= 1:
+                log.warning("🔴 BEAR REGIME — skipping scan")
+                if not self.ctx.dry_run:
+                    send_alert("🔴 BEAR REGIME — scan skipped")
+                return
+
+        self._print_summary()
+
+
+# CLI:
+#   python scanner.py
+#   python scanner.py --skip-fetch
+#   python scanner.py --stage detect
+#   python scanner.py --dry-run
+#   python scanner.py --workers 4</div></div>
+
+  <h2 class="s2">Stage Decorator</h2>
+  <div class="sb"><div class="sbh">Timing + error handling per stage <span>▼</span></div><div class="sbb">def stage(name: str, critical: bool = True):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            log.info(f"▶ {name}")
+            t0 = time.perf_counter()
+            try:
+                result = func(self, *args, **kwargs)
+                dt = time.perf_counter() - t0
+                log.info(f"✅ {name} — {dt:.1f}s")
+                self.ctx.timings[name] = round(dt, 2)
+                return result
+            except Exception as e:
+                dt = time.perf_counter() - t0
+                log.error(f"❌ {name} FAILED — {dt:.1f}s — {e}")
+                self.ctx.errors.append({"stage": name, "error": str(e)})
+                if critical:
+                    raise
+        return wrapper
+    return decorator
+
+# critical=True  → pipeline stops (verify, fetch, pre_compute)
+# critical=False → pipeline continues (detect, output)</div></div>
+
+  <h2 class="s2">Async Fetch — Bulk Download</h2>
+  <div class="sb"><div class="sbh">setup/02_download_historical.py — aiohttp + semaphore <span>▼</span></div><div class="sbb">MAX_CONCURRENT = 5  # Dhan rate limit
+
+async def fetch_one(session, sem, symbol, security_id, headers):
+    async with sem:
+        payload = {
+            "securityId": security_id,
+            "exchangeSegment": "NSE_EQ",
+            "instrument": "EQUITY",
+            "fromDate": "2021-05-19",
+            "toDate": "2026-05-19",
+            "expiryCode": 0,
+            "HistoricalDataType": "D"
+        }
+        for attempt in range(3):  # retry 3x
+            try:
+                async with session.post(URL, json=payload, headers=headers) as r:
+                    if r.status == 200: return symbol, await r.json(), None
+                    if r.status == 429: await asyncio.sleep(2 ** attempt)
+            except: await asyncio.sleep(2 ** attempt)
+        return symbol, None, "3 retries exhausted"
+
+async def fetch_all(symbols_df, token):
+    sem = asyncio.Semaphore(MAX_CONCURRENT)
+    headers = {"access-token": token, "Content-Type": "application/json"}
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_one(session, sem, r['Symbol'], str(int(r['sid'])), headers)
+                 for _, r in symbols_df.iterrows()]
+        return await asyncio.gather(*tasks, return_exceptions=True)</div></div>
+
+  <h2 class="s2">Multiprocess Detection</h2>
+  <div class="sb"><div class="sbh">ProcessPoolExecutor — 8 workers, NumPy arrays <span>▼</span></div><div class="sbb">from concurrent.futures import ProcessPoolExecutor, as_completed
+
+def _scan_one_stock(args):
+    """Worker — runs in SEPARATE PROCESS. Receives NumPy arrays."""
+    symbol, daily, weekly = args  # daily = {"open":np,"high":np,...}
+    results = []
+    for detector_fn in ALL_DETECTORS:
+        try:
+            hits = detector_fn(daily, weekly)
+            results.extend(hits)
+        except Exception:
+            pass  # 1 detector crash ≠ stock lost
+    return {"symbol": symbol,
+            "price": float(daily["close"][-1]),
+            "patterns": results}
+
+@stage("Pattern Detection (7×500)", critical=False)
+def detect(self):
+    work = [(sym, loader.get_arrays(sym, "daily"), loader.get_arrays(sym, "weekly"))
+            for sym in self.ctx.symbols]
+
+    with ProcessPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(_scan_one_stock, w): w[0] for w in work}
+        for f in as_completed(futures):
+            try:
+                r = f.result(timeout=30)  # 30s per stock
+                if r["patterns"]:
+                    self.ctx.pattern_hits.append(r)
+                self.ctx.stocks_scanned += 1
+            except Exception as e:
+                self.ctx.errors.append({"stage":"detect","symbol":futures[f]})</div></div>
+
+  <h2 class="s2">Daily Refresh — Dhan Batch OHLC</h2>
+  <div class="sb"><div class="sbh">1 API call for all 500 stocks (no loop) <span>▼</span></div><div class="sbb">POST https://api.dhan.co/v2/marketfeed/ohlc
+Body: {"NSE_EQ": [sec_id_1, sec_id_2, ..., sec_id_500]}
+
+Returns OHLC for all 500 in one response.
+Append today's candle to ohlcv_daily.
+Up to 1000 instruments per call — 500 fits in one.</div></div>
+</div>
+
+<!-- DATA -->
+<div id="data" style="margin-bottom:40px">
+  <h2 class="s2">Data — All From Dhan API</h2>
+  <table class="st">
+    <tr><th>#</th><th>Data</th><th>Interval</th><th>History</th><th>Segment</th></tr>
+    <tr><td>1</td><td>Stock OHLCV</td><td class="mono">Daily</td><td class="mono">5yr</td><td class="mono">NSE_EQ</td></tr>
+    <tr><td>2</td><td>Stock OHLCV</td><td class="mono">Weekly</td><td class="mono">5yr</td><td class="mono">Aggregated</td></tr>
+    <tr><td>3</td><td>Nifty 50 + Sector Indices</td><td class="mono">Daily</td><td class="mono">2yr</td><td class="mono accent">IDX_I</td></tr>
+    <tr><td>4</td><td>Live CMP (daily refresh)</td><td class="mono">Current</td><td class="mono">—</td><td class="mono">NSE_EQ batch</td></tr>
+    <tr><td>5</td><td>Instrument master</td><td class="mono">Static</td><td class="mono">—</td><td class="mono">NSE_EQ + IDX_I</td></tr>
+  </table>
+
+  <h2 class="s2">Dhan Index API</h2>
+  <div class="sb"><div class="sbh">IDX_I segment — Nifty 50 (sid=13), BankNifty (sid=25), sectors from instrument master <span>▼</span></div><div class="sbb">POST https://api.dhan.co/v2/charts/historical
+{
+    "securityId": "13",          // Nifty 50
+    "exchangeSegment": "IDX_I",  // INDEX segment
+    "instrument": "INDEX",
+    "fromDate": "2024-05-19",
+    "toDate": "2026-05-19",
+    "expiryCode": 0,
+    "HistoricalDataType": "D"
+}
+
+To get ALL sector security_ids:
+1. Download https://images.dhan.co/api-data/api-scrip-master.csv
+2. Filter SEM_SEGMENT == "IDX_I"
+3. Match SEM_TRADING_SYMBOL for each sector
+4. Store in config/settings.py INDEX_SECURITY_IDS
+
+Fallback: yfinance (^CNXIT etc) only if specific index missing.</div></div>
+
+  <h2 class="s2">SQLite Schema</h2>
+  <div class="sb"><div class="sbh">3 tables <span>▼</span></div><div class="sbb">CREATE TABLE ohlcv_daily (
+    symbol TEXT, security_id TEXT, date TEXT,
+    open REAL, high REAL, low REAL, close REAL, volume INTEGER,
+    PRIMARY KEY (symbol, date));
+CREATE INDEX idx_sym ON ohlcv_daily(symbol);
+
+CREATE TABLE ohlcv_weekly (
+    symbol TEXT, week TEXT,
+    open REAL, high REAL, low REAL, close REAL, volume INTEGER,
+    PRIMARY KEY (symbol, week));
+
+CREATE TABLE index_daily (
+    index_name TEXT, date TEXT,
+    open REAL, high REAL, low REAL, close REAL, volume INTEGER,
+    PRIMARY KEY (index_name, date));</div></div>
+</div>
+
+<!-- RESILIENCE -->
+<div id="resilience" style="margin-bottom:40px">
+  <h2 class="s2">Resilience Strategy</h2>
+  <table class="st">
+    <tr><th>Failure</th><th>Handling</th></tr>
+    <tr><td>Dhan API down (bulk)</td><td>Retry 3× per stock, exponential backoff (1s→2s→4s). Continue with available data.</td></tr>
+    <tr><td>Dhan batch OHLC fail (daily)</td><td>Fall back to yesterday's data. Dashboard shows "as of yesterday".</td></tr>
+    <tr><td>1 stock crashes in detection</td><td>try/except per stock in worker. Other 499 continue. Error logged.</td></tr>
+    <tr><td>1 detector crashes on a stock</td><td>try/except per detector inside worker. Other 6 detectors still run.</td></tr>
+    <tr><td>SQLite corrupt</td><td>Critical. Verify catches it. Pipeline aborts with clear message.</td></tr>
+    <tr><td>Telegram down</td><td>Non-critical. Retry 2× with 5s. HTML still generates.</td></tr>
+    <tr><td>Sector index missing</td><td>Default NEUTRAL RS. Log warning.</td></tr>
+    <tr><td>Bear regime</td><td>Early exit. Telegram: "🔴 BEAR — no breakouts." Dashboard shows regime only.</td></tr>
+    <tr><td>ProcessPool worker timeout</td><td>30s timeout per stock. Stuck worker killed, others continue.</td></tr>
+  </table>
+  <div class="co"><strong>Golden rule:</strong> Graceful degradation at every level. One bad stock, one bad detector, one bad API call — scan continues. Only SQLite corruption or &gt;50% data missing stops the pipeline.</div>
+</div>
+
+<!-- PHASE 1 -->
+<div class="phase" id="p1"><div class="phase-header" onclick="tp(this)"><div class="pn">1</div><div class="pt">Data Infrastructure</div><div class="ps pending" id="p1s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">All data fresh from Dhan. Stocks via NSE_EQ. Indices via IDX_I. Async bulk download. SQLite store.</p>
+  <div class="task"><input type="checkbox" data-task="1-1"><div class="tc"><div class="tl"><code>config/settings.py</code> — all thresholds, paths, .env loading, INDEX_SECURITY_IDS dict</div><div class="tf">config/settings.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-2"><div class="tc"><div class="tl"><code>requirements.txt</code> — dhanhq, aiohttp, numpy, scipy, pandas, jinja2, requests, python-dotenv, tabulate, yfinance, mplfinance</div><div class="tf">requirements.txt</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-3"><div class="tc"><div class="tl"><code>01_download_symbols.py</code> — Nifty 500 CSV + Dhan instrument master (NSE_EQ + IDX_I) + merge</div><div class="tf">setup/01_download_symbols.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-4"><div class="tc"><div class="tl"><code>02_download_historical.py</code> — <strong>asyncio + aiohttp + semaphore(5)</strong> + retry 3×. 5yr daily for 500 stocks.</div><div class="tf">setup/02_download_historical.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-5"><div class="tc"><div class="tl"><code>03_generate_weekly.py</code> — <strong>Incremental:</strong> find MAX(week) in ohlcv_weekly per symbol, only aggregate daily rows after that date. Full rebuild only with <code>--full</code> flag. Append new weekly candles, don't delete existing.</div><div class="tf">setup/03_generate_weekly.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-6"><div class="tc"><div class="tl"><code>04_download_indices.py</code> — <strong>Dhan IDX_I</strong> for Nifty 50 + all sectors. yfinance fallback only.</div><div class="tf">setup/04_download_indices.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-7"><div class="tc"><div class="tl"><code>05_create_sector_map.py</code> — Industry → sector index, sector_map.json</div><div class="tf">setup/05_create_sector_map.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-8"><div class="tc"><div class="tl"><code>06_verify_data.py</code> — 7 checks. Returns (passed, total, details).</div><div class="tf">setup/06_verify_data.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-8b"><div class="tc"><div class="tl"><code>07_rebalance_check.py</code> — <strong>Quarterly Nifty 500 refresh.</strong> Re-download CSV from NSE. Diff vs existing nifty500_dhan.csv. ADDED stocks: fetch 5yr history from Dhan, insert into DB, update sector_map.json. REMOVED stocks: flag INACTIVE in CSV, keep data for historical analysis. Print: "3 added, 2 removed." Run quarterly or with <code>--check-rebalance</code> flag in scanner.py.</div><div class="tf">setup/07_rebalance_check.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-9"><div class="tc"><div class="tl"><code>data_loader.py</code> — get_stock_daily(), get_stock_weekly(), get_index(), <strong>get_stock_daily_arrays()</strong> [NumPy for multiprocess], fetch_todays_candles() [batch OHLC]</div><div class="tf">engine/data_loader.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="1-10"><div class="tc"><div class="tl">Run all 6 setup scripts. All 7 verify checks PASS.</div></div></div>
+</div></div>
+
+<!-- PHASE 2 -->
+<div class="phase" id="p2"><div class="phase-header" onclick="tp(this)"><div class="pn">2</div><div class="pt">7 Pattern Detectors</div><div class="ps pending" id="p2s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Separate files. Return PatternResult. Accept NumPy arrays. Thresholds from settings.py.</p>
+  <div class="task"><input type="checkbox" data-task="2-1"><div class="tc"><div class="tl"><code>base.py</code> — PatternResult: pattern, status, pivot, target, stop_loss, confidence, explanation, timeframe, bars_in_pattern, extra</div><div class="tf">patterns/base.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-2"><div class="tc"><div class="tl"><code>__init__.py</code> — ALL_DETECTORS = [7 detector functions]</div><div class="tf">patterns/__init__.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-3"><div class="tc"><div class="tl"><strong>Cup &amp; Handle</strong> — 50–455 bars. Depth 12–55%. Rim ±8%. Handle ≤50% depth in upper 1/3. Weekly too.</div><div class="tf">patterns/cup_handle.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-4"><div class="tc"><div class="tl"><strong>Ascending Triangle</strong> — 60-bar. ≥2 touches 1.5%. Rising lows argrelextrema(4). Within 4%.</div><div class="tf">patterns/ascending_triangle.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-5"><div class="tc"><div class="tl"><strong>Bull Flag</strong> — pole ≥12% in 3–15 bars. Flag 2–12% pullback. Vol decline &lt;90%.</div><div class="tf">patterns/bull_flag.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-6"><div class="tc"><div class="tl"><strong>VCP</strong> — ≥2 diminishing swings. Volume declining. Tightness &lt;6%/8%. Stage 2 check.</div><div class="tf">patterns/vcp.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-7"><div class="tc"><div class="tl"><strong>Inv. H&amp;S</strong> — 120-bar. 3 troughs, middle deepest. Shoulders ±10%. Neckline target.</div><div class="tf">patterns/inv_head_shoulders.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-8"><div class="tc"><div class="tl"><strong>Supertrend</strong> — ATR(10) × 3.0. Bullish flip in last 3 bars. Target = close + 2×ATR.</div><div class="tf">patterns/supertrend.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-9"><div class="tc"><div class="tl"><strong>Multi-Year Breakout</strong> — weekly. ≥2yr resistance. ≥2 touches. Vol surge 1.4×.</div><div class="tf">patterns/multiyear_breakout.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-10"><div class="tc"><div class="tl">Test all 7 on 10 stocks with NumPy arrays. No crashes.</div></div></div>
+</div></div>
+
+<!-- PHASE 3 -->
+<div class="phase" id="p3"><div class="phase-header" onclick="tp(this)"><div class="pn">3</div><div class="pt">4 Filters + Conviction Scoring</div><div class="ps pending" id="p3s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Market regime + sector RS pre-computed once. Filters run on hits only (~50-100 stocks).</p>
+  <div class="task"><input type="checkbox" data-task="3-1"><div class="tc"><div class="tl"><strong>Stage 2</strong> — close &gt; 150/200 MA, 150&gt;200, slope&gt;0, within 25% of 52w high, ≥30% above 52w low</div><div class="tf">filters/stage2.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="3-2"><div class="tc"><div class="tl"><strong>Volume</strong> — breakout vol ÷ 50d avg ≥1.4×. Base dry-up check.</div><div class="tf">filters/volume.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="3-3"><div class="tc"><div class="tl"><strong>Sector RS</strong> — 63d % vs Nifty. Both &gt;1.0=LEADING, one=NEUTRAL, both&lt;1.0=LAGGING</div><div class="tf">filters/sector_rs.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="3-4"><div class="tc"><div class="tl"><strong>Market Regime</strong> — 4 checks. Score 0–4. ≤1=BEAR (skip scan).</div><div class="tf">filters/market_regime.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="3-4b"><div class="tc"><div class="tl"><strong>RSI Overlay</strong> — compute RSI(14) for all pattern hits. Not a separate filter — adjusts conviction directly. RSI 55–78 on breakout = no penalty. RSI &lt;45 = conviction −10 (weak momentum). RSI &gt;80 = conviction −15 (overbought, likely to pull back). RSI bearish divergence (price higher high + RSI lower high over 14 bars) = conviction −20 (kill switch). RSI value stored in result for chart display.</div><div class="tf">filters/rsi.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="3-5"><div class="tc"><div class="tl"><strong>Scorer</strong> — pattern 25, stage2 20, volume 20, sector 15, regime 10, multi-TF 10. Tiers: 90+/70+/50+/skip.</div><div class="tf">engine/scorer.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="3-6"><div class="tc"><div class="tl"><strong>Explainer</strong> — generates structured plain-English explanation per hit. NOT generic. Must answer 4 questions in order:</div><div class="tf">engine/explainer.py</div></div></div>
+
+  <div class="sb"><div class="sbh">engine/explainer.py — exact output format <span>▼</span></div><div class="sbb">Each explanation has 5 mandatory sections. Displayed in dashboard BELOW the chart.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 0: PATTERN NAME (BIG HEADER)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Displayed as a large heading above everything — on the chart title
+AND above the explanation text.
+
+Dashboard:  &lt;h3 class="pattern-name"&gt;📐 ASCENDING TRIANGLE&lt;/h3&gt;
+Chart:      Title bar = "DEEPAKNTR — ASCENDING TRIANGLE — 82/100 🟡"
+Telegram:   First line of caption = "📐 ASCENDING TRIANGLE"
+
+This is how the user knows WHICH pattern at a glance.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1: PATTERN 101 — What IS this pattern? (Educational)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Generic explanation of the pattern — what it looks like, why it
+forms, what it means in terms of buyer/seller psychology.
+This is STATIC per pattern type (same text every time, hardcoded).
+
+ASCENDING TRIANGLE:
+"An Ascending Triangle forms when price repeatedly hits the same
+resistance level (flat top) while making higher lows (rising
+bottom). It looks like a triangle squeezing toward a point.
+
+Why it forms: Sellers defend a fixed price level. But each time
+price pulls back, buyers step in earlier and at higher prices —
+showing increasing demand. Eventually, sellers at the resistance
+level get exhausted (no more supply), and price breaks out
+upward with force.
+
+Historical win rate: ~72-75% when confirmed with volume."
+
+CUP &amp; HANDLE:
+"A Cup &amp; Handle forms when price drops, rounds out a smooth
+bottom (the cup), recovers back to the starting level, then
+pulls back slightly (the handle) before breaking out.
+
+Why it forms: The cup is institutional accumulation — smart
+money quietly buying while the stock looks weak. The handle
+shakes out the last weak holders. When the handle completes,
+there's no one left to sell — and the breakout is clean.
+
+Popularized by William O'Neil (CANSLIM). Historical win rate:
+~65-68%."
+
+BULL FLAG:
+"A Bull Flag forms after a sharp rally (the pole) followed by
+a tight, slightly downward-drifting consolidation (the flag).
+It looks like a flag on a flagpole.
+
+Why it forms: After a strong move up, the stock pauses to
+digest gains. Crucially, volume dries up during the flag —
+meaning institutions are NOT selling, just resting. When
+buying resumes, the next leg up mirrors the pole's size.
+
+Historical win rate: ~63-67%."
+
+VCP (Volatility Contraction Pattern):
+"A VCP shows a series of price swings that get progressively
+smaller — like a bouncing ball losing energy. For example:
+25% swing → 15% → 8% → 4%. Volume dries up with each
+contraction.
+
+Why it forms: Each swing shakes out weaker holders. By the
+final tight contraction, almost everyone who wanted to sell
+has already sold. The remaining holders are strong hands.
+When new buying enters, there's no supply to absorb it —
+price moves fast.
+
+Created by Mark Minervini. His backtests show ~70%+ win rate
+in confirmed bull markets."
+
+INV HEAD &amp; SHOULDERS:
+"An Inverse Head &amp; Shoulders has three troughs — left shoulder,
+head (the deepest), and right shoulder. The head represents
+final capitulation (maximum pessimism). The right shoulder's
+higher low means sellers are losing power.
+
+Why it forms: It marks the END of a downtrend. The head is
+the last panic sell. By the right shoulder, bears can't push
+price as low as before. When price breaks above the neckline
+(peaks between the shoulders), the trend officially reverses.
+
+One of the most reliable reversal patterns. Win rate: ~74%."
+
+SUPERTREND:
+"Supertrend is an ATR-based trend indicator that plots a line
+below price in uptrends (support) and above price in
+downtrends (resistance). When price crosses above the
+Supertrend line, it flips bullish.
+
+Why it works: It adapts to volatility — wider stops in
+volatile markets, tighter in calm markets. A bullish flip
+means the stock has broken above its volatility-adjusted
+resistance.
+
+Settings: ATR(10) × 3.0 multiplier (default)."
+
+MULTI-YEAR BREAKOUT:
+"A Multi-Year Breakout happens when price finally breaks above
+a resistance level that has held for 2+ years. Multiple
+failed attempts over years create a well-known ceiling.
+
+Why it's powerful: Every trader who bought at that level over
+2-5 years and was stuck — they've either sold at breakeven or
+given up. By the time it finally breaks, there's virtually NO
+overhead supply left. The move tends to be explosive and
+sustained.
+
+The longer the base, the bigger the breakout. Livermore,
+Darvas, Minervini — all loved this setup."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2: THIS STOCK SPECIFICALLY — What the detector found
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Dynamic. Uses actual values from PatternResult.
+"DEEPAKNTR has tested ₹1,898 resistance 5 times over 60 days
+while making higher lows: ₹1,680 → ₹1,720 → ₹1,770 → ₹1,810.
+The triangle is 3.7% from breakout. Volume has dried up 40%
+in the base. RSI at 68 — healthy momentum, not overbought."
+
+If stacked: "Additionally detected: Bull Flag (pole +12.9%)
+and Inv H&amp;S (neckline at ₹1,839). Three patterns converging
+on the same stock = strong stacked signal."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3: ACTION PLAN — Entry, Stop, Target, R:R
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"📍 Entry:     Buy above ₹1,898 on volume ≥1.4× avg (≥2.1M)
+ 🛑 Stop Loss: ₹1,750 (below last higher low)
+ 🎯 Target 1:  ₹2,100 (measured move)
+ 🎯 Target 2:  ₹2,516 (full projection)
+ ⚖️ Risk:      ₹148 per share
+ 💰 Reward:    ₹252–618 per share
+ 📊 R:R:       1:1.7 to 1:4.2"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4: RISK — What could go wrong
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"⚠️ If price closes below ₹1,750, the ascending triangle is
+invalidated — exit immediately. RSI at 68 is fine but watch
+for divergence. Volume must confirm on breakout day — a
+low-volume breakout is likely a trap."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5: CONVICTION BREAKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"Conviction: 82/100 🟡 HIGH
+ Pattern quality:   20/25
+ Stage 2 uptrend:   20/20  ✅
+ Volume:            15/20  ✅
+ Sector RS:         15/15  ✅ Chemicals LEADING
+ Market regime:     10/10  ✅ CONFIRMED UPTREND
+ RSI adjustment:    -8     ⚠️ RSI 72
+ Stack bonus:       +10    📊 3 patterns"</div></div>
+  <div class="task"><input type="checkbox" data-task="3-7"><div class="tc"><div class="tl">Test pipeline on 10 stocks: detect → filter → score → explain.</div></div></div>
+</div></div>
+
+<!-- PHASE 4 -->
+<div class="phase" id="p4"><div class="phase-header" onclick="tp(this)"><div class="pn">4</div><div class="pt">Telegram Alerts</div><div class="ps pending" id="p4s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Conviction ≥70 → alert. Daily summary. Non-critical — HTML generates even if Telegram fails.</p>
+  <div class="task"><input type="checkbox" data-task="4-1"><div class="tc"><div class="tl"><code>send_alert()</code> — POST Telegram, HTML parse_mode, 10s timeout, retry 2× with 5s</div><div class="tf">engine/telegram.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="4-1b"><div class="tc"><div class="tl"><code>send_chart_alert()</code> — POST <code>/sendPhoto</code> with chart PNG. Caption = compact version of explanation: pattern name + why bullish (1 line) + entry/stop/target + R:R + conviction score. Full 4-part explanation stays on dashboard only — Telegram caption has 1024 char limit.</div><div class="tf">engine/telegram.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="4-2"><div class="tc"><div class="tl"><code>format_alert()</code> — 🚨 symbol+CMP, pattern, pivot/target/stop, R:R, 4 filter ✅/❌, stacked count</div><div class="tf">engine/telegram.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="4-3"><div class="tc"><div class="tl"><code>send_daily_summary()</code> — regime, count, tiers, total alerts</div><div class="tf">engine/telegram.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="4-4"><div class="tc"><div class="tl">Test message on mobile.</div></div></div>
+</div></div>
+
+<!-- PHASE 5 -->
+<div class="phase" id="p5"><div class="phase-header" onclick="tp(this)"><div class="pn">5</div><div class="pt">Chart Generation + Carbon Ember Dashboard</div><div class="ps pending" id="p5s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Every pattern hit gets an annotated candlestick chart. The dashboard embeds them inline. Telegram sends them as photos. <strong>No chart = no visual verification = no trust.</strong></p>
+
+  <h2 class="s2" style="margin-top:12px">Chart Generator (MANDATORY)</h2>
+  <div class="sb"><div class="sbh">engine/chart_gen.py — annotated candlestick per pattern hit <span>▼</span></div><div class="sbb">Library: mplfinance (pip install mplfinance)
+Style: dark background matching Carbon Ember (#0a0a0a bg, #ff4800 accent)
+
+What each chart shows:
+━━━━━━━━━━━━━━━━━━━━
+1. TITLE BAR (top of chart, large font):
+   "DEEPAKNTR — 📐 ASCENDING TRIANGLE — 82/100 🟡"
+   Pattern name MUST be in the title. This is the first thing you see.
+
+2. CANDLESTICK — last 120 trading days, green/red candles
+
+3. PATTERN ANNOTATION WITH LABELS — varies per pattern:
+   - Cup &amp; Handle:       curved arrow tracing cup bottom, "CUP" label on bottom,
+                          "HANDLE" label on pullback, "RIM" at resistance level
+   - Ascending Triangle:  flat resistance line labeled "RESISTANCE ₹1,898 (5 touches)",
+                          rising trendline labeled "RISING SUPPORT", shaded triangle area
+   - Bull Flag:           pole highlighted + labeled "POLE +12.9%",
+                          flag channel drawn labeled "FLAG (pullback 5.8%)"
+   - VCP:                 each contraction swing connected, labeled "C1: 25%", "C2: 15%",
+                          "C3: 8%", tight zone labeled "PIVOT ZONE"
+   - Inv H&amp;S:             "LS" "HEAD" "RS" labels at each trough,
+                          neckline drawn + labeled "NECKLINE ₹1,839"
+   - Supertrend:          supertrend line plotted, flip point labeled
+                          "🔄 BULLISH FLIP" with arrow
+   - Multi-Year Breakout: horizontal resistance line labeled
+                          "RESISTANCE ₹X (held Y years)", breakout arrow "BREAKOUT →"
+
+4. KEY LEVELS — horizontal dashed lines WITH labels on right edge:
+   - Pivot/Entry:  orange dashed  "▸ ENTRY ₹1,898"
+   - Target:       green dashed   "▸ TARGET ₹2,516"
+   - Stop Loss:    red dashed     "▸ STOP ₹1,750"
+
+5. MOVING AVERAGES — 50 MA (blue), 150 MA (yellow), 200 MA (red)
+
+6. VOLUME BARS — subplot below, green/red matching candle direction
+
+7. RSI(14) — subplot below volume, 30/70 reference lines, current value labeled
+
+Output:
+  - PNG file: output/charts/DEEPAKNTR_asc_triangle_20260519.png
+  - Size: 1200×800px (good for dashboard inline + Telegram)
+  - Dark background, no white borders
+
+Per-pattern annotation functions:
+  draw_cup_handle(ax, cup_left_idx, bottom_idx, rim_idx, handle_low, handle_high)
+  draw_ascending_triangle(ax, resistance, support_points)
+  draw_bull_flag(ax, pole_start, pole_end, flag_channel)
+  draw_vcp(ax, contraction_points)
+  draw_inv_hs(ax, ls_idx, head_idx, rs_idx, neckline)
+  draw_supertrend(ax, supertrend_values, directions)
+  draw_multiyear_breakout(ax, resistance_level, first_touch_idx)</div></div>
+
+  <div class="sb"><div class="sbh">Chart generation flow — where it runs in the pipeline <span>▼</span></div><div class="sbb">Pipeline stage: between filter_and_score() and output()
+
+def generate_charts(self):
+    """Generate annotated chart PNG for every scored result."""
+    for result in self.ctx.scored_results:
+        symbol = result["symbol"]
+        df = self.ctx.loader.get_stock_daily(symbol)
+        
+        chart_path = generate_pattern_chart(
+            df=df,
+            symbol=symbol,
+            pattern_result=result["primary_pattern"],
+            all_patterns=result.get("all_patterns", []),
+            pivot=result["pivot"],
+            target=result["target"],
+            stop_loss=result["stop_loss"],
+            conviction=result["final_score"],
+            rsi_value=result.get("rsi", None),
+            output_dir="output/charts/"
+        )
+        result["chart_path"] = chart_path
+
+Time estimate: ~0.3s per chart × 30 results = ~10s total
+Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
+
+  <div class="task"><input type="checkbox" data-task="5-0"><div class="tc"><div class="tl"><code>engine/chart_gen.py</code> — <strong>generate_pattern_chart()</strong>: mplfinance candlestick + volume + RSI subplots, Carbon Ember dark style, 120-day lookback.</div><div class="tf">engine/chart_gen.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-0b"><div class="tc"><div class="tl">7 pattern-specific annotation functions — each draws pattern geometry on the price axis. Cup curve, triangle lines, flag channel, VCP swings, H&amp;S troughs, supertrend line, breakout resistance.</div><div class="tf">engine/chart_gen.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-0c"><div class="tc"><div class="tl">Draw key levels: pivot (orange dashed), target (green dashed), stop (red dashed). Draw 50/150/200 MAs on price chart.</div><div class="tf">engine/chart_gen.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-0d"><div class="tc"><div class="tl">Test: generate chart for each pattern type. Verify annotations are visible, not overlapping, dark bg renders correctly.</div></div></div>
+
+  <h2 class="s2">Carbon Ember Dashboard</h2>
+  <div class="task"><input type="checkbox" data-task="5-1"><div class="tc"><div class="tl">Header — date/time, regime badge, Nifty CMP, scan count, duration</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-2"><div class="tc"><div class="tl">Market Regime Panel — 4 checks ✅/❌, verdict</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-3"><div class="tc"><div class="tl">Sector Heatmap — 15 sectors colored by RS</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-4"><div class="tc"><div class="tl">Result Cards by tier — symbol, CMP, pattern, status, pivot/target/stop, conviction, <strong>stacked pattern count badge</strong></div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-5"><div class="tc"><div class="tl">Expandable Detail — opens to show in order: (1) <strong>Pattern name header</strong> large: "📐 ASCENDING TRIANGLE", (2) <strong>Chart image</strong> with pattern drawn + labeled on it, (3) <strong>Pattern 101</strong> — what this pattern IS, how it forms, buyer/seller psychology (static per pattern, educational), (4) <strong>This stock specifically</strong> — what detector found with actual values, (5) <strong>Action plan</strong> — entry/stop/target/R:R, (6) <strong>Risk note</strong>, (7) <strong>Conviction breakdown</strong> table</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-6"><div class="tc"><div class="tl">Errors Panel (bottom) — failed stocks/stages for transparency</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-7"><div class="tc"><div class="tl">Styling: #0a0a0a, #141414, #ff4800, Syne, JetBrains Mono. CSS+JS inline. Charts base64-embedded so HTML is fully self-contained.</div><div class="tf">dashboard/template.html</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5-8"><div class="tc"><div class="tl">Render sample. Test mobile + desktop. Verify charts display inline and are readable.</div></div></div>
+</div></div>
+
+<!-- PHASE 6 -->
+<div class="phase" id="p6"><div class="phase-header" onclick="tp(this)"><div class="pn">6</div><div class="pt">Scanner Orchestrator + First Run</div><div class="ps pending" id="p6s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Pipeline class. Stage decorator. ProcessPoolExecutor(8). argparse CLI. Target: &lt;25s daily.</p>
+  <div class="task"><input type="checkbox" data-task="6-1"><div class="tc"><div class="tl">PipelineContext dataclass</div><div class="tf">scanner.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-2"><div class="tc"><div class="tl">stage() decorator — timing + error handling (critical/non-critical)</div><div class="tf">scanner.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-3"><div class="tc"><div class="tl">Pipeline.verify() — verify checks, allow 1 non-critical fail</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-4"><div class="tc"><div class="tl">Pipeline.fetch() — DataLoader + batch OHLC (unless --skip-fetch)</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-5"><div class="tc"><div class="tl">Pipeline.pre_compute() — regime (once) + sector RS (cached) + bear early exit</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-6"><div class="tc"><div class="tl">Pipeline.detect() — <strong>ProcessPoolExecutor(8)</strong>, as_completed, 30s timeout, per-stock error isolation</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-7"><div class="tc"><div class="tl">Pipeline.filter_and_score() — 4 filters, conviction, explain. <strong>Then DEDUP:</strong> group all patterns per symbol → single consolidated card. One conviction score per stock (use highest-scoring pattern as primary, others listed as "also detected"). Dashboard shows "DEEPAKNTR: Asc.Triangle (primary) + Bull Flag + IH&amp;S" not 3 separate cards.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-7b"><div class="tc"><div class="tl"><strong>Dedup logic:</strong> (1) Group scored_results by symbol. (2) For each group, pick the pattern with highest individual conviction as PRIMARY. (3) Merge: use primary's pivot/target/stop, but conviction gets +5 bonus per additional pattern (stacked patterns = stronger signal, capped at +15). (4) Explanation mentions all detected patterns. (5) Telegram shows stacked count in alert.</div><div class="tf">engine/dedup.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-8"><div class="tc"><div class="tl">Pipeline.output() — Jinja2 HTML + Telegram (≥70) + daily summary + console</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-9"><div class="tc"><div class="tl">argparse: --skip-fetch, --stage, --dry-run, --workers</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-10"><div class="tc"><div class="tl">First full Nifty 500 run. HTML + Telegram verified. Target &lt;25s.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-11"><div class="tc"><div class="tl">Windows Task Scheduler: python scanner.py at 3:45 PM IST daily</div></div></div>
+</div></div>
+
+<!-- PHASE 7 -->
+<div class="phase" id="p7"><div class="phase-header" onclick="tp(this)"><div class="pn">7</div><div class="pt">Data Maintenance + Pattern Dedup Engine</div><div class="ps pending" id="p7s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Incremental weekly updates, quarterly Nifty 500 rebalance detection, and pattern dedup consolidation.</p>
+
+  <h2 class="s2" style="margin-top:12px">Incremental Weekly Update</h2>
+  <div class="sb"><div class="sbh">03_generate_weekly.py — incremental logic <span>▼</span></div><div class="sbb">def generate_weekly_incremental(conn):
+    """
+    1. For each symbol, find MAX(week) in ohlcv_weekly
+    2. Query ohlcv_daily WHERE date > last_week_friday
+    3. Resample new daily rows to weekly candles
+    4. INSERT new weekly candles (no delete, no rebuild)
+    5. Only run full rebuild if --full flag passed
+
+    Why: Full rebuild processes 500×1250 = 625K rows every time.
+         Incremental processes only this week's 500 rows.
+         100x less work on daily runs.
+    """
+
+# Also called by scanner.py after fetch_todays_candles():
+#   if today is Friday:
+#       generate_weekly_incremental()</div></div>
+
+  <h2 class="s2">Quarterly Rebalance Detection</h2>
+  <div class="sb"><div class="sbh">07_rebalance_check.py — auto-detect Nifty 500 changes <span>▼</span></div><div class="sbb">def check_rebalance():
+    """
+    1. Download fresh Nifty 500 CSV from NSE
+    2. Load existing nifty500_dhan.csv
+    3. Compute:
+        added   = new_symbols - old_symbols
+        removed = old_symbols - new_symbols
+    4. For ADDED stocks:
+        - Lookup security_id from Dhan instrument master
+        - Download 5yr daily OHLCV from Dhan
+        - Insert into ohlcv_daily
+        - Generate weekly candles
+        - Map to sector in sector_map.json
+    5. For REMOVED stocks:
+        - Set status='INACTIVE' in nifty500_dhan.csv
+        - Keep all historical data (needed for backtesting)
+        - Exclude from future scans (filter in data_loader)
+    6. Update nifty500_dhan.csv with new master
+    7. Print summary
+
+    Trigger:
+        python setup/07_rebalance_check.py           # manual
+        python scanner.py --check-rebalance           # via scanner
+        Auto-detect: if current month is Mar/Jun/Sep/Dec, prompt user
+    """</div></div>
+
+  <h2 class="s2">Pattern Dedup Engine</h2>
+  <div class="sb"><div class="sbh">engine/dedup.py — consolidate multiple patterns per stock <span>▼</span></div><div class="sbb">def dedup_results(scored_results: list) -> list:
+    """
+    Input:  [
+        {"symbol": "DEEPAKNTR", "pattern": "Asc.Triangle", "score": 82, ...},
+        {"symbol": "DEEPAKNTR", "pattern": "Bull Flag",    "score": 68, ...},
+        {"symbol": "DEEPAKNTR", "pattern": "Inv H&S",      "score": 71, ...},
+        {"symbol": "SUNPHARMA", "pattern": "Bull Flag",    "score": 78, ...},
+    ]
+
+    Output: [
+        {
+            "symbol": "DEEPAKNTR",
+            "price": 1827,
+            "primary_pattern": "Asc.Triangle",
+            "all_patterns": ["Asc.Triangle", "Inv H&S", "Bull Flag"],
+            "stacked_count": 3,
+            "base_score": 82,           # highest individual
+            "stack_bonus": 10,          # +5 per extra pattern (capped +15)
+            "final_score": 92,          # base + bonus
+            "tier": "HIGHEST",
+            "pivot": 1898,              # from primary pattern
+            "target": 2516,
+            "stop_loss": 1750,
+            "explanation": "DEEPAKNTR showing 3 stacked patterns...",
+            "filters": {...},
+        },
+        {
+            "symbol": "SUNPHARMA",
+            "primary_pattern": "Bull Flag",
+            "all_patterns": ["Bull Flag"],
+            "stacked_count": 1,
+            "base_score": 78,
+            "stack_bonus": 0,
+            "final_score": 78,
+            ...
+        }
+    ]
+
+    Rules:
+    1. Group scored_results by symbol
+    2. Sort patterns within group by score desc
+    3. Primary = highest-scoring pattern → its pivot/target/stop used
+    4. Stack bonus: +5 per additional pattern, capped at +15
+    5. Final score = min(base_score + stack_bonus, 100)
+    6. Explanation updated: "3 stacked patterns detected: ..."
+    7. Re-sort final list by final_score desc
+    8. Re-assign tiers based on final_score
+    """</div></div>
+
+  <div class="task"><input type="checkbox" data-task="7-1"><div class="tc"><div class="tl">Implement incremental weekly in <code>03_generate_weekly.py</code> — find MAX(week), append new candles only. <code>--full</code> for rebuild.</div><div class="tf">setup/03_generate_weekly.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-2"><div class="tc"><div class="tl">Auto-trigger weekly increment in scanner.py: if today is Friday, run incremental after fetch.</div><div class="tf">scanner.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-3"><div class="tc"><div class="tl">Build <code>07_rebalance_check.py</code> — diff old vs new Nifty 500, add/remove stocks, update all config files.</div><div class="tf">setup/07_rebalance_check.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-4"><div class="tc"><div class="tl">Add <code>--check-rebalance</code> flag to scanner.py. Auto-prompt if current month is Mar/Jun/Sep/Dec.</div><div class="tf">scanner.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-5"><div class="tc"><div class="tl">Build <code>engine/dedup.py</code> — group by symbol, pick primary, stack bonus (+5/pattern, cap +15), merge explanation.</div><div class="tf">engine/dedup.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-6"><div class="tc"><div class="tl">Update dashboard template: show stacked count badge on cards ("3 patterns"), expandable lists all patterns.</div><div class="tf">dashboard/template.html</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-7"><div class="tc"><div class="tl">Update Telegram alert: show stacked count and all pattern names in alert message.</div><div class="tf">engine/telegram.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-8"><div class="tc"><div class="tl">Test: stock with 3 patterns → single card, score = base + 10 bonus. Stock with 1 pattern → no change.</div></div></div>
+</div></div>
+
+<!-- PHASE 8 -->
+<div class="phase" id="p8"><div class="phase-header" onclick="tp(this)"><div class="pn">8</div><div class="pt">Backtesting Engine</div><div class="ps pending" id="p8s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Answer the only question that matters: <strong>do these patterns actually make money on Indian markets?</strong> No backtest = gambling with conviction scores.</p>
+
+  <div class="sb"><div class="sbh">backtest/engine.py — architecture <span>▼</span></div><div class="sbb">HOW IT WORKS:
+━━━━━━━━━━━━
+Walk through historical data day-by-day, simulating what the scanner
+would have detected at each point in time.
+
+For each trading day T in the lookback period:
+  1. Slice data up to day T (no future data leakage)
+  2. Run all 7 detectors on this slice
+  3. Apply 4 stacking filters
+  4. Score conviction
+  5. For each pattern hit with conviction ≥ threshold:
+     - Record ENTRY at pivot price (or next day's open)
+     - Track forward: did price hit TARGET or STOP first?
+     - Record outcome: WIN (hit target) / LOSS (hit stop) / OPEN (neither in N days)
+  6. Calculate metrics
+
+KEY RULE: NO FUTURE DATA LEAKAGE.
+The detector on day T must only see data up to day T.
+This is the #1 mistake in backtesting — if you leak even 1 day, results are garbage.</div></div>
+
+  <div class="sb"><div class="sbh">Backtest metrics — what we measure <span>▼</span></div><div class="sbb">PER PATTERN:
+    win_rate          = wins / (wins + losses)
+    avg_win_pct       = average % gain on winning trades
+    avg_loss_pct      = average % loss on losing trades
+    profit_factor     = (total $ won) / (total $ lost)
+    avg_holding_days  = average bars from entry to exit
+    max_drawdown      = worst peak-to-trough during any trade
+    expectancy        = (win_rate × avg_win) - (loss_rate × avg_loss)
+
+PER CONVICTION TIER:
+    win_rate_90plus   = win rate for 90+ conviction hits
+    win_rate_70_89    = win rate for 70-89 hits
+    win_rate_50_69    = win rate for 50-69 hits
+    → This proves whether conviction scoring actually works
+
+PER FILTER:
+    win_rate_with_stage2    vs  win_rate_without_stage2
+    win_rate_with_volume    vs  win_rate_without_volume
+    win_rate_with_sector_rs vs  win_rate_without_sector_rs
+    → This proves whether each filter adds real edge
+
+COMBINED:
+    equity_curve      = cumulative P&L over time
+    sharpe_ratio      = annualized risk-adjusted return
+    max_consecutive_losses = how many losses in a row (psychological)
+
+STACK BONUS VALIDATION:
+    win_rate_1_pattern  vs  win_rate_2_stacked  vs  win_rate_3_stacked
+    → Proves whether stacked patterns actually perform better</div></div>
+
+  <div class="sb"><div class="sbh">backtest/engine.py — core walkforward loop <span>▼</span></div><div class="sbb">def run_backtest(db_path, lookback_years=3, entry_mode="next_open",
+                  max_hold_days=30, min_conviction=50):
+    """
+    Walkforward backtest. NO future leakage.
+
+    lookback_years: how far back to test (3yr = ~750 trading days)
+    entry_mode: "pivot" (enter at exact pivot) or "next_open" (realistic)
+    max_hold_days: close trade if neither target nor stop hit in N days
+    min_conviction: only test hits above this threshold
+    """
+    loader = DataLoader(db_path)
+    all_symbols = loader.get_all_symbols()
+    trades = []
+
+    # Walk day by day
+    for day_idx in range(start_idx, end_idx):
+        current_date = trading_days[day_idx]
+
+        for symbol in all_symbols:
+            # Slice data UP TO current_date only
+            daily_slice = loader.get_daily_up_to(symbol, current_date)
+            weekly_slice = loader.get_weekly_up_to(symbol, current_date)
+
+            if len(daily_slice) < 200:
+                continue
+
+            # Run detectors on sliced data
+            daily_arrays = to_numpy_arrays(daily_slice)
+            weekly_arrays = to_numpy_arrays(weekly_slice)
+
+            for detector in ALL_DETECTORS:
+                hits = detector(daily_arrays, weekly_arrays)
+                for hit in hits:
+                    if hit.status not in ["BREAKING OUT", "PIVOT READY"]:
+                        continue
+
+                    # Score it
+                    score = score_conviction(hit, ...)
+                    if score < min_conviction:
+                        continue
+
+                    # Record entry
+                    if entry_mode == "next_open":
+                        entry_price = get_next_open(symbol, current_date)
+                    else:
+                        entry_price = hit.pivot
+
+                    # Track forward (using future data — this is allowed for OUTCOME only)
+                    outcome = track_trade_forward(
+                        symbol, current_date, entry_price,
+                        hit.target, hit.stop_loss, max_hold_days
+                    )
+
+                    trades.append({
+                        "symbol": symbol,
+                        "entry_date": current_date,
+                        "pattern": hit.pattern,
+                        "conviction": score,
+                        "entry_price": entry_price,
+                        "target": hit.target,
+                        "stop_loss": hit.stop_loss,
+                        **outcome,
+                    })
+
+    return BacktestResult(trades)
+
+
+def track_trade_forward(symbol, entry_date, entry, target, stop, max_days):
+    """Check each subsequent day: did price hit target or stop?"""
+    for i in range(1, max_days + 1):
+        day_data = get_day(symbol, entry_date + i)
+        if day_data is None:
+            continue
+        if day_data.low <= stop:
+            return {"result": "LOSS", "exit_price": stop, "hold_days": i}
+        if day_data.high >= target:
+            return {"result": "WIN", "exit_price": target, "hold_days": i}
+    # Neither hit — close at last price
+    return {"result": "TIMEOUT", "exit_price": last_close, "hold_days": max_days}</div></div>
+
+  <div class="sb"><div class="sbh">backtest/report.py — HTML output <span>▼</span></div><div class="sbb">Generates a Carbon Ember backtest report HTML with:
+
+1. SUMMARY TABLE
+   | Pattern           | Trades | Win% | Avg Win | Avg Loss | PF   | Expectancy |
+   | Cup & Handle      |   42   | 64%  |  12.3%  |  -4.1%   | 3.01 |    5.7%    |
+   | VCP               |   38   | 71%  |  10.8%  |  -3.9%   | 2.76 |    5.5%    |
+   | ...               |        |      |         |          |      |            |
+
+2. CONVICTION TIER TABLE
+   | Tier       | Trades | Win% | PF   |
+   | 90+ (🟢)   |   15   | 80%  | 4.20 |
+   | 70-89 (🟡) |   47   | 65%  | 2.50 |
+   | 50-69 (🟠) |   83   | 52%  | 1.30 |
+   → Proves conviction scoring works if 90+ >> 50-69
+
+3. FILTER IMPACT TABLE
+   | Filter     | With Filter | Without | Improvement |
+   | Stage 2    |    68%      |   51%   |   +17%      |
+   | Volume     |    65%      |   54%   |   +11%      |
+   → Proves each filter adds edge
+
+4. STACK VALIDATION
+   | Patterns  | Trades | Win% |
+   | 1 pattern |   95   | 58%  |
+   | 2 stacked |   32   | 69%  |
+   | 3 stacked |    8   | 88%  |
+   → Proves stack bonus is justified
+
+5. EQUITY CURVE CHART (inline SVG)
+   Cumulative P&L over time
+
+6. MONTHLY RETURNS HEATMAP
+   Color-coded grid: green months, red months</div></div>
+
+  <div class="task"><input type="checkbox" data-task="8-1"><div class="tc"><div class="tl"><code>data_loader</code> additions: <code>get_daily_up_to(symbol, date)</code> and <code>get_weekly_up_to(symbol, date)</code> for walkforward slicing. Must be fast — called thousands of times.</div><div class="tf">engine/data_loader.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-2"><div class="tc"><div class="tl"><code>backtest/engine.py</code> — walkforward loop. Day-by-day, slice data, detect, score, track outcome. <strong>Zero future leakage.</strong></div><div class="tf">backtest/engine.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-3"><div class="tc"><div class="tl"><code>track_trade_forward()</code> — for each entry, walk forward max 30 days. First hit of target or stop = outcome. Timeout = close at last price.</div><div class="tf">backtest/engine.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-4"><div class="tc"><div class="tl"><code>BacktestResult</code> class — compute all metrics: win rate, PF, expectancy, Sharpe, max drawdown, per-pattern, per-tier, per-filter, per-stack-count.</div><div class="tf">backtest/metrics.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-5"><div class="tc"><div class="tl"><code>backtest/report.py</code> — Carbon Ember HTML report: summary table, conviction tier table, filter impact table, stack validation, equity curve SVG, monthly heatmap.</div><div class="tf">backtest/report.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-6"><div class="tc"><div class="tl">Run backtest on 3yr Nifty 500 data. Expect: 500–2000 trades depending on thresholds.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-7"><div class="tc"><div class="tl">Validate: does conviction 90+ actually beat 50-69 by a meaningful margin? If not → retune weights.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-8"><div class="tc"><div class="tl">Validate: does stack bonus actually improve win rate? If 3-stacked ≈ 1-pattern → remove bonus.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-9"><div class="tc"><div class="tl">CLI: <code>python -m backtest --years 3 --min-conviction 50 --entry next_open</code></div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-10"><div class="tc"><div class="tl">Output: <code>output/backtest_YYYYMMDD.html</code> — full backtest report.</div></div></div>
+
+  <h2 class="s2" style="margin-top:20px">Phase 8b: Retrofit — Data-Driven Tuning (After Backtest)</h2>
+  <p class="d">Use backtest results to kill noise. Don't guess — let 3 years of data tell you what works on Indian markets.</p>
+  <div class="task"><input type="checkbox" data-task="8-11"><div class="tc"><div class="tl"><strong>Kill or keep patterns:</strong> If any pattern has win rate &lt;50% or profit factor &lt;1.0 across 3yr backtest → remove from ALL_DETECTORS. Don't keep losers out of attachment.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-12"><div class="tc"><div class="tl"><strong>Define quality_score per pattern:</strong> Analyze winning vs losing trades for each pattern. What distinguishes them? (e.g. VCP wins had avg 3.2 contractions vs losses had 2.0 → min_contractions should be 3, not 2). Update detector thresholds in settings.py.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-13"><div class="tc"><div class="tl"><strong>Add quality_score (0–100) to PatternResult.</strong> Each detector computes it based on backtest-proven traits. Update scorer: quality ≥80 = 25pts, ≥65 = 20pts, ≥50 = 15pts, &lt;50 = 5pts.</div><div class="tf">patterns/base.py + all detectors</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-14"><div class="tc"><div class="tl"><strong>Retune conviction weights:</strong> If backtest shows Stage 2 adds +17% win rate but volume only adds +3% → Stage 2 deserves 25pts, volume maybe 10pts. Redistribute based on measured impact.</div><div class="tf">config/settings.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-15"><div class="tc"><div class="tl"><strong>Validate stack bonus:</strong> If 3-stacked ≈ 1-pattern in win rate → remove bonus. If 3-stacked genuinely outperforms → keep. Adjust +5/pattern cap based on data.</div><div class="tf">engine/dedup.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-16"><div class="tc"><div class="tl"><strong>Re-run backtest</strong> with tuned thresholds + quality_score. Compare v1 vs v2 metrics. If no improvement → revert. Ship what works.</div></div></div>
+</div></div>
+
+<!-- DAILY WORKFLOW -->
+<div style="margin-top:32px;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:8px">
+  <h2 class="s2" style="margin-top:0">Daily Workflow</h2>
+  <div class="mono" style="font-size:12px;line-height:2">
+    <span class="muted">3:30</span> Market closes · <span class="muted">3:35</span> Dhan updates<br>
+    <span class="accent">3:40</span> <span class="bright">python scanner.py</span> — verify(2s) → batch fetch(3s) → pre-compute(3s) → detect 8-core(12s) → filter(3s) → output(2s)<br>
+    <span class="accent">3:41</span> Open <span class="bright">output/scan_YYYYMMDD.html</span> · Review picks · Place GTT on Dhan
+  </div>
+</div>
+
+</div>
+<div class="footer">Bodhiworks · NSE Pattern Intelligence Engine · v3.0 Final · <span id="lu"></span></div>
+
+<script>
+function tp(h){h.closest('.phase').classList.toggle('open')}
+document.querySelectorAll('.sbh').forEach(h=>h.addEventListener('click',()=>h.closest('.sb').classList.toggle('open')));
+const K='npe_v2';
+function lp(){try{return JSON.parse(localStorage.getItem(K)||'{}')}catch{return{}}}
+function sp(d){localStorage.setItem(K,JSON.stringify(d))}
+function up(){
+  const p=lp(),a=document.querySelectorAll('input[data-task]');let d=0;
+  a.forEach(c=>{const k=c.dataset.task;c.checked=!!p[k];c.closest('.task').classList.toggle('ck',c.checked);if(c.checked)d++});
+  const pct=a.length?Math.round(d/a.length*100):0;
+  document.getElementById('pb').style.width=pct+'%';
+  document.getElementById('plb').textContent=`${d} / ${a.length} tasks (${pct}%)`;
+  for(let i=1;i<=8;i++){
+    const t=document.querySelectorAll(`#p${i} input[data-task]`),dn=[...t].filter(c=>c.checked).length,s=document.getElementById(`p${i}s`),n=document.querySelector(`#p${i} .pn`);
+    if(dn===t.length&&t.length){s.textContent='DONE';s.className='ps done';n.classList.add('done')}
+    else if(dn){s.textContent=`${dn}/${t.length}`;s.className='ps active';n.classList.remove('done')}
+    else{s.textContent='PENDING';s.className='ps pending';n.classList.remove('done')}}
+}
+document.querySelectorAll('input[data-task]').forEach(c=>c.addEventListener('change',()=>{const p=lp();p[c.dataset.task]=c.checked;sp(p);up()}));
+up();document.getElementById('lu').textContent=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+for(let i=1;i<=8;i++){const s=document.getElementById(`p${i}s`);if(s.textContent!=='DONE'){document.getElementById(`p${i}`).classList.add('open');break}}
+</script>
+</body>
+</html>

@@ -1,0 +1,505 @@
+symbol,company_name,industry,security_id,exchange_segment,instrument,status
+360ONE,360 ONE WAM Ltd.,Financial Services,13061,NSE_EQ,EQUITY,ACTIVE
+3MINDIA,3M India Ltd.,Diversified,474,NSE_EQ,EQUITY,ACTIVE
+AADHARHFC,Aadhar Housing Finance Ltd.,Financial Services,23729,NSE_EQ,EQUITY,ACTIVE
+AARTIIND,Aarti Industries Ltd.,Chemicals,7,NSE_EQ,EQUITY,ACTIVE
+AAVAS,Aavas Financiers Ltd.,Financial Services,5385,NSE_EQ,EQUITY,ACTIVE
+ABB,ABB India Ltd.,Capital Goods,13,NSE_EQ,EQUITY,ACTIVE
+ABBOTINDIA,Abbott India Ltd.,Healthcare,17903,NSE_EQ,EQUITY,ACTIVE
+ABCAPITAL,Aditya Birla Capital Ltd.,Financial Services,21614,NSE_EQ,EQUITY,ACTIVE
+ABDL,Allied Blenders and Distillers Ltd.,Fast Moving Consumer Goods,24308,NSE_EQ,EQUITY,ACTIVE
+ABFRL,Aditya Birla Fashion and Retail Ltd.,Consumer Services,30108,NSE_EQ,EQUITY,ACTIVE
+ABLBL,Aditya Birla Lifestyle Brands Ltd.,Consumer Services,756843,NSE_EQ,EQUITY,ACTIVE
+ABREL,Aditya Birla Real Estate Ltd.,Realty,625,NSE_EQ,EQUITY,ACTIVE
+ABSLAMC,Aditya Birla Sun Life AMC Ltd.,Financial Services,6018,NSE_EQ,EQUITY,ACTIVE
+ACC,ACC Ltd.,Construction Materials,22,NSE_EQ,EQUITY,ACTIVE
+ACE,Action Construction Equipment Ltd.,Capital Goods,13587,NSE_EQ,EQUITY,ACTIVE
+ACMESOLAR,ACME Solar Holdings Ltd.,Power,27061,NSE_EQ,EQUITY,ACTIVE
+ACUTAAS,Acutaas Chemicals Ltd.,Healthcare,5578,NSE_EQ,EQUITY,ACTIVE
+ADANIENSOL,Adani Energy Solutions Ltd.,Power,10217,NSE_EQ,EQUITY,ACTIVE
+ADANIENT,Adani Enterprises Ltd.,Metals & Mining,25,NSE_EQ,EQUITY,ACTIVE
+ADANIGREEN,Adani Green Energy Ltd.,Power,3563,NSE_EQ,EQUITY,ACTIVE
+ADANIPORTS,Adani Ports and Special Economic Zone Ltd.,Services,15083,NSE_EQ,EQUITY,ACTIVE
+ADANIPOWER,Adani Power Ltd.,Power,17388,NSE_EQ,EQUITY,ACTIVE
+AEGISLOG,Aegis Logistics Ltd.,Oil Gas & Consumable Fuels,40,NSE_EQ,EQUITY,ACTIVE
+AEGISVOPAK,Aegis Vopak Terminals Ltd.,Oil Gas & Consumable Fuels,757336,NSE_EQ,EQUITY,ACTIVE
+AFCONS,Afcons Infrastructure Ltd.,Construction,25977,NSE_EQ,EQUITY,ACTIVE
+AFFLE,Affle 3i Ltd.,Information Technology,11343,NSE_EQ,EQUITY,ACTIVE
+AIAENG,AIA Engineering Ltd.,Capital Goods,13086,NSE_EQ,EQUITY,ACTIVE
+AIIL,Authum Investment & Infrastructure Ltd.,Financial Services,23553,NSE_EQ,EQUITY,ACTIVE
+AJANTPHARM,Ajanta Pharmaceuticals Ltd.,Healthcare,8124,NSE_EQ,EQUITY,ACTIVE
+ALKEM,Alkem Laboratories Ltd.,Healthcare,11703,NSE_EQ,EQUITY,ACTIVE
+AMBER,Amber Enterprises India Ltd.,Consumer Durables,1185,NSE_EQ,EQUITY,ACTIVE
+AMBUJACEM,Ambuja Cements Ltd.,Construction Materials,1270,NSE_EQ,EQUITY,ACTIVE
+ANANDRATHI,Anand Rathi Wealth Ltd.,Financial Services,7145,NSE_EQ,EQUITY,ACTIVE
+ANANTRAJ,Anant Raj Ltd.,Realty,13620,NSE_EQ,EQUITY,ACTIVE
+ANGELONE,Angel One Ltd.,Financial Services,324,NSE_EQ,EQUITY,ACTIVE
+ANTHEM,Anthem Biosciences Ltd.,Healthcare,757885,NSE_EQ,EQUITY,ACTIVE
+ANURAS,Anupam Rasayan India Ltd.,Chemicals,2829,NSE_EQ,EQUITY,ACTIVE
+APARINDS,Apar Industries Ltd.,Capital Goods,11491,NSE_EQ,EQUITY,ACTIVE
+APLAPOLLO,APL Apollo Tubes Ltd.,Capital Goods,25780,NSE_EQ,EQUITY,ACTIVE
+APOLLOHOSP,Apollo Hospitals Enterprise Ltd.,Healthcare,157,NSE_EQ,EQUITY,ACTIVE
+APOLLOTYRE,Apollo Tyres Ltd.,Automobile and Auto Components,163,NSE_EQ,EQUITY,ACTIVE
+APTUS,Aptus Value Housing Finance India Ltd.,Financial Services,5435,NSE_EQ,EQUITY,ACTIVE
+ARE&M,Amara Raja Energy & Mobility Ltd.,Automobile and Auto Components,100,NSE_EQ,EQUITY,ACTIVE
+ASAHIINDIA,Asahi India Glass Ltd.,Automobile and Auto Components,5378,NSE_EQ,EQUITY,ACTIVE
+ASHOKLEY,Ashok Leyland Ltd.,Capital Goods,212,NSE_EQ,EQUITY,ACTIVE
+ASIANPAINT,Asian Paints Ltd.,Consumer Durables,236,NSE_EQ,EQUITY,ACTIVE
+ASTERDM,Aster DM Healthcare Ltd.,Healthcare,1508,NSE_EQ,EQUITY,ACTIVE
+ASTRAL,Astral Ltd.,Capital Goods,14418,NSE_EQ,EQUITY,ACTIVE
+ATGL,Adani Total Gas Ltd.,Oil Gas & Consumable Fuels,6066,NSE_EQ,EQUITY,ACTIVE
+ATHERENERG,Ather Energy Ltd.,Automobile and Auto Components,757645,NSE_EQ,EQUITY,ACTIVE
+ATUL,Atul Ltd.,Chemicals,263,NSE_EQ,EQUITY,ACTIVE
+AUBANK,AU Small Finance Bank Ltd.,Financial Services,21238,NSE_EQ,EQUITY,ACTIVE
+AUROPHARMA,Aurobindo Pharma Ltd.,Healthcare,275,NSE_EQ,EQUITY,ACTIVE
+AWL,AWL Agri Business Ltd.,Fast Moving Consumer Goods,8110,NSE_EQ,EQUITY,ACTIVE
+AXISBANK,Axis Bank Ltd.,Financial Services,5900,NSE_EQ,EQUITY,ACTIVE
+BAJAJ-AUTO,Bajaj Auto Ltd.,Automobile and Auto Components,16669,NSE_EQ,EQUITY,ACTIVE
+BAJAJFINSV,Bajaj Finserv Ltd.,Financial Services,16675,NSE_EQ,EQUITY,ACTIVE
+BAJAJHFL,Bajaj Housing Finance Ltd.,Financial Services,25270,NSE_EQ,EQUITY,ACTIVE
+BAJAJHLDNG,Bajaj Holdings & Investment Ltd.,Financial Services,305,NSE_EQ,EQUITY,ACTIVE
+BAJFINANCE,Bajaj Finance Ltd.,Financial Services,317,NSE_EQ,EQUITY,ACTIVE
+BALKRISIND,Balkrishna Industries Ltd.,Automobile and Auto Components,335,NSE_EQ,EQUITY,ACTIVE
+BALRAMCHIN,Balrampur Chini Mills Ltd.,Fast Moving Consumer Goods,341,NSE_EQ,EQUITY,ACTIVE
+BANDHANBNK,Bandhan Bank Ltd.,Financial Services,2263,NSE_EQ,EQUITY,ACTIVE
+BANKBARODA,Bank of Baroda,Financial Services,4668,NSE_EQ,EQUITY,ACTIVE
+BANKINDIA,Bank of India,Financial Services,4745,NSE_EQ,EQUITY,ACTIVE
+BATAINDIA,Bata India Ltd.,Consumer Durables,371,NSE_EQ,EQUITY,ACTIVE
+BAYERCROP,Bayer Cropscience Ltd.,Chemicals,17927,NSE_EQ,EQUITY,ACTIVE
+BBTC,Bombay Burmah Trading Corporation Ltd.,Fast Moving Consumer Goods,380,NSE_EQ,EQUITY,ACTIVE
+BDL,Bharat Dynamics Ltd.,Capital Goods,2144,NSE_EQ,EQUITY,ACTIVE
+BEL,Bharat Electronics Ltd.,Capital Goods,383,NSE_EQ,EQUITY,ACTIVE
+BELRISE,Belrise Industries Ltd.,Automobile and Auto Components,757102,NSE_EQ,EQUITY,ACTIVE
+BEML,BEML Ltd.,Capital Goods,395,NSE_EQ,EQUITY,ACTIVE
+BERGEPAINT,Berger Paints India Ltd.,Consumer Durables,404,NSE_EQ,EQUITY,ACTIVE
+BHARATFORG,Bharat Forge Ltd.,Automobile and Auto Components,422,NSE_EQ,EQUITY,ACTIVE
+BHARTIARTL,Bharti Airtel Ltd.,Telecommunication,10604,NSE_EQ,EQUITY,ACTIVE
+BHARTIHEXA,Bharti Hexacom Ltd.,Telecommunication,23489,NSE_EQ,EQUITY,ACTIVE
+BHEL,Bharat Heavy Electricals Ltd.,Capital Goods,438,NSE_EQ,EQUITY,ACTIVE
+BIKAJI,Bikaji Foods International Ltd.,Fast Moving Consumer Goods,11966,NSE_EQ,EQUITY,ACTIVE
+BIOCON,Biocon Ltd.,Healthcare,11373,NSE_EQ,EQUITY,ACTIVE
+BLS,BLS International Services Ltd.,Consumer Services,17279,NSE_EQ,EQUITY,ACTIVE
+BLUEDART,Blue Dart Express Ltd.,Services,495,NSE_EQ,EQUITY,ACTIVE
+BLUEJET,Blue Jet Healthcare Ltd.,Healthcare,19686,NSE_EQ,EQUITY,ACTIVE
+BLUESTARCO,Blue Star Ltd.,Consumer Durables,8311,NSE_EQ,EQUITY,ACTIVE
+BOSCHLTD,Bosch Ltd.,Automobile and Auto Components,2181,NSE_EQ,EQUITY,ACTIVE
+BPCL,Bharat Petroleum Corporation Ltd.,Oil Gas & Consumable Fuels,526,NSE_EQ,EQUITY,ACTIVE
+BRIGADE,Brigade Enterprises Ltd.,Realty,15184,NSE_EQ,EQUITY,ACTIVE
+BRITANNIA,Britannia Industries Ltd.,Fast Moving Consumer Goods,547,NSE_EQ,EQUITY,ACTIVE
+BSE,BSE Ltd.,Financial Services,19585,NSE_EQ,EQUITY,ACTIVE
+BSOFT,Birlasoft Ltd.,Information Technology,6994,NSE_EQ,EQUITY,ACTIVE
+CAMS,Computer Age Management Services Ltd.,Financial Services,342,NSE_EQ,EQUITY,ACTIVE
+CANBK,Canara Bank,Financial Services,10794,NSE_EQ,EQUITY,ACTIVE
+CANFINHOME,Can Fin Homes Ltd.,Financial Services,583,NSE_EQ,EQUITY,ACTIVE
+CANHLIFE,Canara HSBC Life Insurance Company Ltd.,Financial Services,759477,NSE_EQ,EQUITY,ACTIVE
+CAPLIPOINT,Caplin Point Laboratories Ltd.,Healthcare,3906,NSE_EQ,EQUITY,ACTIVE
+CARBORUNIV,Carborundum Universal Ltd.,Capital Goods,595,NSE_EQ,EQUITY,ACTIVE
+CARTRADE,Cartrade Tech Ltd.,Consumer Services,5407,NSE_EQ,EQUITY,ACTIVE
+CASTROLIND,Castrol India Ltd.,Oil Gas & Consumable Fuels,1250,NSE_EQ,EQUITY,ACTIVE
+CCL,CCL Products (I) Ltd.,Fast Moving Consumer Goods,11452,NSE_EQ,EQUITY,ACTIVE
+CDSL,Central Depository Services (India) Ltd.,Financial Services,21174,NSE_EQ,EQUITY,ACTIVE
+CEATLTD,Ceat Ltd.,Automobile and Auto Components,15254,NSE_EQ,EQUITY,ACTIVE
+CEMPRO,Cemindia Projects Ltd.,Construction,5622,NSE_EQ,EQUITY,ACTIVE
+CENTRALBK,Central Bank of India,Financial Services,14894,NSE_EQ,EQUITY,ACTIVE
+CESC,CESC Ltd.,Power,628,NSE_EQ,EQUITY,ACTIVE
+CGCL,Capri Global Capital Ltd.,Financial Services,20329,NSE_EQ,EQUITY,ACTIVE
+CGPOWER,CG Power and Industrial Solutions Ltd.,Capital Goods,760,NSE_EQ,EQUITY,ACTIVE
+CHALET,Chalet Hotels Ltd.,Consumer Services,8546,NSE_EQ,EQUITY,ACTIVE
+CHAMBLFERT,Chambal Fertilizers & Chemicals Ltd.,Chemicals,637,NSE_EQ,EQUITY,ACTIVE
+CHENNPETRO,Chennai Petroleum Corporation Ltd.,Oil Gas & Consumable Fuels,2049,NSE_EQ,EQUITY,ACTIVE
+CHOICEIN,Choice International Ltd.,Financial Services,8866,NSE_EQ,EQUITY,ACTIVE
+CHOLAFIN,Cholamandalam Investment and Finance Company Ltd.,Financial Services,19257,NSE_EQ,EQUITY,ACTIVE
+CHOLAHLDNG,Cholamandalam Financial Holdings Ltd.,Financial Services,21740,NSE_EQ,EQUITY,ACTIVE
+CIEINDIA,CIE Automotive India Ltd.,Automobile and Auto Components,14937,NSE_EQ,EQUITY,ACTIVE
+CIPLA,Cipla Ltd.,Healthcare,694,NSE_EQ,EQUITY,ACTIVE
+CLEAN,Clean Science and Technology Ltd.,Chemicals,5049,NSE_EQ,EQUITY,ACTIVE
+COALINDIA,Coal India Ltd.,Oil Gas & Consumable Fuels,20374,NSE_EQ,EQUITY,ACTIVE
+COCHINSHIP,Cochin Shipyard Ltd.,Capital Goods,21508,NSE_EQ,EQUITY,ACTIVE
+COFORGE,Coforge Ltd.,Information Technology,11543,NSE_EQ,EQUITY,ACTIVE
+COHANCE,Cohance Lifesciences Ltd.,Healthcare,17945,NSE_EQ,EQUITY,ACTIVE
+COLPAL,Colgate Palmolive (India) Ltd.,Fast Moving Consumer Goods,15141,NSE_EQ,EQUITY,ACTIVE
+CONCOR,Container Corporation of India Ltd.,Services,4749,NSE_EQ,EQUITY,ACTIVE
+CONCORDBIO,Concord Biotech Ltd.,Healthcare,18060,NSE_EQ,EQUITY,ACTIVE
+COROMANDEL,Coromandel International Ltd.,Chemicals,739,NSE_EQ,EQUITY,ACTIVE
+CPPLUS,Aditya Infotech Ltd.,Capital Goods,758858,NSE_EQ,EQUITY,ACTIVE
+CRAFTSMAN,Craftsman Automation Ltd.,Automobile and Auto Components,2854,NSE_EQ,EQUITY,ACTIVE
+CREDITACC,CreditAccess Grameen Ltd.,Financial Services,4421,NSE_EQ,EQUITY,ACTIVE
+CRISIL,CRISIL Ltd.,Financial Services,757,NSE_EQ,EQUITY,ACTIVE
+CROMPTON,Crompton Greaves Consumer Electricals Ltd.,Consumer Durables,17094,NSE_EQ,EQUITY,ACTIVE
+CUB,City Union Bank Ltd.,Financial Services,5701,NSE_EQ,EQUITY,ACTIVE
+CUMMINSIND,Cummins India Ltd.,Capital Goods,1901,NSE_EQ,EQUITY,ACTIVE
+CYIENT,Cyient Ltd.,Information Technology,5748,NSE_EQ,EQUITY,ACTIVE
+DABUR,Dabur India Ltd.,Fast Moving Consumer Goods,772,NSE_EQ,EQUITY,ACTIVE
+DALBHARAT,Dalmia Bharat Ltd.,Construction Materials,8075,NSE_EQ,EQUITY,ACTIVE
+DATAPATTNS,Data Patterns (India) Ltd.,Capital Goods,7358,NSE_EQ,EQUITY,ACTIVE
+DCMSHRIRAM,DCM Shriram Ltd.,Diversified,811,NSE_EQ,EQUITY,ACTIVE
+DEEPAKFERT,Deepak Fertilisers & Petrochemicals Corp. Ltd.,Chemicals,827,NSE_EQ,EQUITY,ACTIVE
+DEEPAKNTR,Deepak Nitrite Ltd.,Chemicals,19943,NSE_EQ,EQUITY,ACTIVE
+DELHIVERY,Delhivery Ltd.,Services,9599,NSE_EQ,EQUITY,ACTIVE
+DEVYANI,Devyani International Ltd.,Consumer Services,5373,NSE_EQ,EQUITY,ACTIVE
+DIVISLAB,Divi's Laboratories Ltd.,Healthcare,10940,NSE_EQ,EQUITY,ACTIVE
+DIXON,Dixon Technologies (India) Ltd.,Consumer Durables,21690,NSE_EQ,EQUITY,ACTIVE
+DLF,DLF Ltd.,Realty,14732,NSE_EQ,EQUITY,ACTIVE
+DMART,Avenue Supermarts Ltd.,Consumer Services,19913,NSE_EQ,EQUITY,ACTIVE
+DOMS,DOMS Industries Ltd.,Fast Moving Consumer Goods,20551,NSE_EQ,EQUITY,ACTIVE
+DRREDDY,Dr. Reddy's Laboratories Ltd.,Healthcare,881,NSE_EQ,EQUITY,ACTIVE
+DUMMYVEDL1,Dummy Vedanta Ltd. 1,Metals & Mining,,NSE_EQ,EQUITY,ACTIVE
+DUMMYVEDL2,Dummy Vedanta Ltd. 2,Power,,NSE_EQ,EQUITY,ACTIVE
+DUMMYVEDL3,Dummy Vedanta Ltd. 3,Oil Gas & Consumable Fuels,,NSE_EQ,EQUITY,ACTIVE
+DUMMYVEDL4,Dummy Vedanta Ltd. 4,Metals & Mining,,NSE_EQ,EQUITY,ACTIVE
+ECLERX,eClerx Services Ltd.,Services,15179,NSE_EQ,EQUITY,ACTIVE
+EICHERMOT,Eicher Motors Ltd.,Automobile and Auto Components,910,NSE_EQ,EQUITY,ACTIVE
+EIDPARRY,E.I.D. Parry (India) Ltd.,Fast Moving Consumer Goods,916,NSE_EQ,EQUITY,ACTIVE
+EIHOTEL,EIH Ltd.,Consumer Services,919,NSE_EQ,EQUITY,ACTIVE
+ELECON,Elecon Engineering Co. Ltd.,Capital Goods,13643,NSE_EQ,EQUITY,ACTIVE
+ELGIEQUIP,Elgi Equipments Ltd.,Capital Goods,937,NSE_EQ,EQUITY,ACTIVE
+EMAMILTD,Emami Ltd.,Fast Moving Consumer Goods,13517,NSE_EQ,EQUITY,ACTIVE
+EMCURE,Emcure Pharmaceuticals Ltd.,Healthcare,24398,NSE_EQ,EQUITY,ACTIVE
+EMMVEE,Emmvee Photovoltaic Power Ltd.,Capital Goods,759728,NSE_EQ,EQUITY,ACTIVE
+ENDURANCE,Endurance Technologies Ltd.,Automobile and Auto Components,18822,NSE_EQ,EQUITY,ACTIVE
+ENGINERSIN,Engineers India Ltd.,Construction,4907,NSE_EQ,EQUITY,ACTIVE
+ENRIN,Siemens Energy India Ltd.,Capital Goods,756871,NSE_EQ,EQUITY,ACTIVE
+ERIS,Eris Lifesciences Ltd.,Healthcare,21154,NSE_EQ,EQUITY,ACTIVE
+ESCORTS,Escorts Kubota Ltd.,Capital Goods,958,NSE_EQ,EQUITY,ACTIVE
+ETERNAL,Eternal Ltd.,Consumer Services,5097,NSE_EQ,EQUITY,ACTIVE
+EXIDEIND,Exide Industries Ltd.,Automobile and Auto Components,676,NSE_EQ,EQUITY,ACTIVE
+FACT,Fertilisers and Chemicals Travancore Ltd.,Chemicals,1008,NSE_EQ,EQUITY,ACTIVE
+FEDERALBNK,Federal Bank Ltd.,Financial Services,1023,NSE_EQ,EQUITY,ACTIVE
+FINCABLES,Finolex Cables Ltd.,Capital Goods,1038,NSE_EQ,EQUITY,ACTIVE
+FIRSTCRY,Brainbees Solutions Ltd.,Consumer Services,24814,NSE_EQ,EQUITY,ACTIVE
+FIVESTAR,Five-Star Business Finance Ltd.,Financial Services,12032,NSE_EQ,EQUITY,ACTIVE
+FLUOROCHEM,Gujarat Fluorochemicals Ltd.,Chemicals,13750,NSE_EQ,EQUITY,ACTIVE
+FORCEMOT,Force Motors Ltd.,Automobile and Auto Components,11573,NSE_EQ,EQUITY,ACTIVE
+FORTIS,Fortis Healthcare Ltd.,Healthcare,14592,NSE_EQ,EQUITY,ACTIVE
+FSL,Firstsource Solutions Ltd.,Services,14304,NSE_EQ,EQUITY,ACTIVE
+GABRIEL,Gabriel India Ltd.,Automobile and Auto Components,1085,NSE_EQ,EQUITY,ACTIVE
+GAIL,GAIL (India) Ltd.,Oil Gas & Consumable Fuels,4717,NSE_EQ,EQUITY,ACTIVE
+GALLANTT,Gallantt Ispat Ltd.,Capital Goods,13337,NSE_EQ,EQUITY,ACTIVE
+GESHIP,Great Eastern Shipping Co. Ltd.,Services,13776,NSE_EQ,EQUITY,ACTIVE
+GICRE,General Insurance Corporation of India,Financial Services,277,NSE_EQ,EQUITY,ACTIVE
+GILLETTE,Gillette India Ltd.,Fast Moving Consumer Goods,1576,NSE_EQ,EQUITY,ACTIVE
+GLAND,Gland Pharma Ltd.,Healthcare,1186,NSE_EQ,EQUITY,ACTIVE
+GLAXO,Glaxosmithkline Pharmaceuticals Ltd.,Healthcare,1153,NSE_EQ,EQUITY,ACTIVE
+GLENMARK,Glenmark Pharmaceuticals Ltd.,Healthcare,7406,NSE_EQ,EQUITY,ACTIVE
+GMDCLTD,Gujarat Mineral Development Corporation Ltd.,Metals & Mining,5204,NSE_EQ,EQUITY,ACTIVE
+GMRAIRPORT,GMR Airports Ltd.,Services,13528,NSE_EQ,EQUITY,ACTIVE
+GODFRYPHLP,Godfrey Phillips India Ltd.,Fast Moving Consumer Goods,1181,NSE_EQ,EQUITY,ACTIVE
+GODIGIT,Go Digit General Insurance Ltd.,Financial Services,23799,NSE_EQ,EQUITY,ACTIVE
+GODREJCP,Godrej Consumer Products Ltd.,Fast Moving Consumer Goods,10099,NSE_EQ,EQUITY,ACTIVE
+GODREJIND,Godrej Industries Ltd.,Diversified,10925,NSE_EQ,EQUITY,ACTIVE
+GODREJPROP,Godrej Properties Ltd.,Realty,17875,NSE_EQ,EQUITY,ACTIVE
+GPIL,Godawari Power & Ispat Ltd.,Capital Goods,13409,NSE_EQ,EQUITY,ACTIVE
+GRANULES,Granules India Ltd.,Healthcare,11872,NSE_EQ,EQUITY,ACTIVE
+GRAPHITE,Graphite India Ltd.,Capital Goods,592,NSE_EQ,EQUITY,ACTIVE
+GRASIM,Grasim Industries Ltd.,Construction Materials,1232,NSE_EQ,EQUITY,ACTIVE
+GRAVITA,Gravita India Ltd.,Metals & Mining,20534,NSE_EQ,EQUITY,ACTIVE
+GROWW,Billionbrains Garage Ventures Ltd.,Financial Services,759806,NSE_EQ,EQUITY,ACTIVE
+GRSE,Garden Reach Shipbuilders & Engineers Ltd.,Capital Goods,5475,NSE_EQ,EQUITY,ACTIVE
+GVT&D,GE Vernova T&D India Ltd.,Capital Goods,16783,NSE_EQ,EQUITY,ACTIVE
+HAL,Hindustan Aeronautics Ltd.,Capital Goods,2303,NSE_EQ,EQUITY,ACTIVE
+HAVELLS,Havells India Ltd.,Consumer Durables,9819,NSE_EQ,EQUITY,ACTIVE
+HBLENGINE,HBL Engineering Ltd.,Capital Goods,13966,NSE_EQ,EQUITY,ACTIVE
+HCLTECH,HCL Technologies Ltd.,Information Technology,7229,NSE_EQ,EQUITY,ACTIVE
+HDBFS,HDB Financial Services Ltd.,Financial Services,757772,NSE_EQ,EQUITY,ACTIVE
+HDFCAMC,HDFC Asset Management Company Ltd.,Financial Services,4244,NSE_EQ,EQUITY,ACTIVE
+HDFCBANK,HDFC Bank Ltd.,Financial Services,1333,NSE_EQ,EQUITY,ACTIVE
+HDFCLIFE,HDFC Life Insurance Company Ltd.,Financial Services,467,NSE_EQ,EQUITY,ACTIVE
+HEG,H.E.G. Ltd.,Capital Goods,1336,NSE_EQ,EQUITY,ACTIVE
+HEROMOTOCO,Hero MotoCorp Ltd.,Automobile and Auto Components,1348,NSE_EQ,EQUITY,ACTIVE
+HEXT,Hexaware Technologies Ltd.,Information Technology,29666,NSE_EQ,EQUITY,ACTIVE
+HFCL,HFCL Ltd.,Telecommunication,21951,NSE_EQ,EQUITY,ACTIVE
+HINDALCO,Hindalco Industries Ltd.,Metals & Mining,1363,NSE_EQ,EQUITY,ACTIVE
+HINDCOPPER,Hindustan Copper Ltd.,Metals & Mining,17939,NSE_EQ,EQUITY,ACTIVE
+HINDPETRO,Hindustan Petroleum Corporation Ltd.,Oil Gas & Consumable Fuels,1406,NSE_EQ,EQUITY,ACTIVE
+HINDUNILVR,Hindustan Unilever Ltd.,Fast Moving Consumer Goods,1394,NSE_EQ,EQUITY,ACTIVE
+HINDZINC,Hindustan Zinc Ltd.,Metals & Mining,1424,NSE_EQ,EQUITY,ACTIVE
+HOMEFIRST,Home First Finance Company India Ltd.,Financial Services,2056,NSE_EQ,EQUITY,ACTIVE
+HONASA,Honasa Consumer Ltd.,Fast Moving Consumer Goods,19813,NSE_EQ,EQUITY,ACTIVE
+HONAUT,Honeywell Automation India Ltd.,Capital Goods,3417,NSE_EQ,EQUITY,ACTIVE
+HSCL,Himadri Speciality Chemical Ltd.,Chemicals,14334,NSE_EQ,EQUITY,ACTIVE
+HUDCO,Housing & Urban Development Corporation Ltd.,Financial Services,20825,NSE_EQ,EQUITY,ACTIVE
+HYUNDAI,Hyundai Motor India Ltd.,Automobile and Auto Components,25844,NSE_EQ,EQUITY,ACTIVE
+ICICIAMC,ICICI Prudential Asset Management Company Ltd.,Financial Services,760407,NSE_EQ,EQUITY,ACTIVE
+ICICIBANK,ICICI Bank Ltd.,Financial Services,4963,NSE_EQ,EQUITY,ACTIVE
+ICICIGI,ICICI Lombard General Insurance Company Ltd.,Financial Services,21770,NSE_EQ,EQUITY,ACTIVE
+ICICIPRULI,ICICI Prudential Life Insurance Company Ltd.,Financial Services,18652,NSE_EQ,EQUITY,ACTIVE
+IDBI,IDBI Bank Ltd.,Financial Services,1476,NSE_EQ,EQUITY,ACTIVE
+IDEA,Vodafone Idea Ltd.,Telecommunication,14366,NSE_EQ,EQUITY,ACTIVE
+IDFCFIRSTB,IDFC First Bank Ltd.,Financial Services,11184,NSE_EQ,EQUITY,ACTIVE
+IEX,Indian Energy Exchange Ltd.,Financial Services,220,NSE_EQ,EQUITY,ACTIVE
+IFCI,IFCI Ltd.,Financial Services,1491,NSE_EQ,EQUITY,ACTIVE
+IGIL,International Gemological Institute Ltd.,Services,28378,NSE_EQ,EQUITY,ACTIVE
+IGL,Indraprastha Gas Ltd.,Oil Gas & Consumable Fuels,11262,NSE_EQ,EQUITY,ACTIVE
+IIFL,IIFL Finance Ltd.,Financial Services,11809,NSE_EQ,EQUITY,ACTIVE
+IKS,Inventurus Knowledge Solutions Ltd.,Information Technology,28125,NSE_EQ,EQUITY,ACTIVE
+INDGN,Indegene Ltd.,Healthcare,23693,NSE_EQ,EQUITY,ACTIVE
+INDHOTEL,Indian Hotels Co. Ltd.,Consumer Services,1512,NSE_EQ,EQUITY,ACTIVE
+INDIACEM,India Cements Ltd.,Construction Materials,1515,NSE_EQ,EQUITY,ACTIVE
+INDIAMART,Indiamart Intermesh Ltd.,Consumer Services,10726,NSE_EQ,EQUITY,ACTIVE
+INDIANB,Indian Bank,Financial Services,14309,NSE_EQ,EQUITY,ACTIVE
+INDIGO,InterGlobe Aviation Ltd.,Services,11195,NSE_EQ,EQUITY,ACTIVE
+INDUSINDBK,IndusInd Bank Ltd.,Financial Services,5258,NSE_EQ,EQUITY,ACTIVE
+INDUSTOWER,Indus Towers Ltd.,Telecommunication,29135,NSE_EQ,EQUITY,ACTIVE
+INFY,Infosys Ltd.,Information Technology,1594,NSE_EQ,EQUITY,ACTIVE
+INOXWIND,Inox Wind Ltd.,Capital Goods,7852,NSE_EQ,EQUITY,ACTIVE
+INTELLECT,Intellect Design Arena Ltd.,Information Technology,5926,NSE_EQ,EQUITY,ACTIVE
+IOB,Indian Overseas Bank,Financial Services,9348,NSE_EQ,EQUITY,ACTIVE
+IOC,Indian Oil Corporation Ltd.,Oil Gas & Consumable Fuels,1624,NSE_EQ,EQUITY,ACTIVE
+IPCALAB,Ipca Laboratories Ltd.,Healthcare,1633,NSE_EQ,EQUITY,ACTIVE
+IRB,IRB Infrastructure Developers Ltd.,Construction,15313,NSE_EQ,EQUITY,ACTIVE
+IRCON,IRCON International Ltd.,Construction,4986,NSE_EQ,EQUITY,ACTIVE
+IRCTC,Indian Railway Catering And Tourism Corporation Ltd.,Consumer Services,13611,NSE_EQ,EQUITY,ACTIVE
+IREDA,Indian Renewable Energy Development Agency Ltd.,Financial Services,20261,NSE_EQ,EQUITY,ACTIVE
+IRFC,Indian Railway Finance Corporation Ltd.,Financial Services,2029,NSE_EQ,EQUITY,ACTIVE
+ITC,ITC Ltd.,Fast Moving Consumer Goods,1660,NSE_EQ,EQUITY,ACTIVE
+ITCHOTELS,ITC Hotels Ltd.,Consumer Services,29251,NSE_EQ,EQUITY,ACTIVE
+ITI,ITI Ltd.,Telecommunication,1675,NSE_EQ,EQUITY,ACTIVE
+J&KBANK,Jammu & Kashmir Bank Ltd.,Financial Services,5633,NSE_EQ,EQUITY,ACTIVE
+JAINREC,Jain Resource Recycling Ltd.,Metals & Mining,759244,NSE_EQ,EQUITY,ACTIVE
+JBCHEPHARM,J.B. Chemicals & Pharmaceuticals Ltd.,Healthcare,1726,NSE_EQ,EQUITY,ACTIVE
+JBMA,JBM Auto Ltd.,Automobile and Auto Components,11655,NSE_EQ,EQUITY,ACTIVE
+JINDALSAW,Jindal Saw Ltd.,Capital Goods,3024,NSE_EQ,EQUITY,ACTIVE
+JINDALSTEL,Jindal Steel Ltd.,Metals & Mining,6733,NSE_EQ,EQUITY,ACTIVE
+JIOFIN,Jio Financial Services Ltd.,Financial Services,18143,NSE_EQ,EQUITY,ACTIVE
+JKCEMENT,J.K. Cement Ltd.,Construction Materials,13270,NSE_EQ,EQUITY,ACTIVE
+JKTYRE,JK Tyre & Industries Ltd.,Automobile and Auto Components,14435,NSE_EQ,EQUITY,ACTIVE
+JMFINANCIL,JM Financial Ltd.,Financial Services,13637,NSE_EQ,EQUITY,ACTIVE
+JPPOWER,Jaiprakash Power Ventures Ltd.,Power,11763,NSE_EQ,EQUITY,ACTIVE
+JSL,Jindal Stainless Ltd.,Metals & Mining,11236,NSE_EQ,EQUITY,ACTIVE
+JSWCEMENT,JSW Cement Ltd.,Construction Materials,758460,NSE_EQ,EQUITY,ACTIVE
+JSWDULUX,JSW Dulux Ltd.,Consumer Durables,1467,NSE_EQ,EQUITY,ACTIVE
+JSWENERGY,JSW Energy Ltd.,Power,17869,NSE_EQ,EQUITY,ACTIVE
+JSWINFRA,JSW Infrastructure Ltd.,Services,19020,NSE_EQ,EQUITY,ACTIVE
+JSWSTEEL,JSW Steel Ltd.,Metals & Mining,11723,NSE_EQ,EQUITY,ACTIVE
+JUBLFOOD,Jubilant Foodworks Ltd.,Consumer Services,18096,NSE_EQ,EQUITY,ACTIVE
+JUBLINGREA,Jubilant Ingrevia Ltd.,Chemicals,2783,NSE_EQ,EQUITY,ACTIVE
+JUBLPHARMA,Jubilant Pharmova Ltd.,Healthcare,3637,NSE_EQ,EQUITY,ACTIVE
+JWL,Jupiter Wagons Ltd.,Capital Goods,20224,NSE_EQ,EQUITY,ACTIVE
+JYOTICNC,Jyoti CNC Automation Ltd.,Capital Goods,21334,NSE_EQ,EQUITY,ACTIVE
+KAJARIACER,Kajaria Ceramics Ltd.,Consumer Durables,1808,NSE_EQ,EQUITY,ACTIVE
+KALYANKJIL,Kalyan Jewellers India Ltd.,Consumer Durables,2955,NSE_EQ,EQUITY,ACTIVE
+KARURVYSYA,Karur Vysya Bank Ltd.,Financial Services,1838,NSE_EQ,EQUITY,ACTIVE
+KAYNES,Kaynes Technology India Ltd.,Capital Goods,12092,NSE_EQ,EQUITY,ACTIVE
+KEC,Kec International Ltd.,Construction,13260,NSE_EQ,EQUITY,ACTIVE
+KEI,KEI Industries Ltd.,Capital Goods,13310,NSE_EQ,EQUITY,ACTIVE
+KFINTECH,Kfin Technologies Ltd.,Financial Services,13359,NSE_EQ,EQUITY,ACTIVE
+KIMS,Krishna Institute of Medical Sciences Ltd.,Healthcare,4847,NSE_EQ,EQUITY,ACTIVE
+KIRLOSENG,Kirloskar Oil Eng Ltd.,Capital Goods,20936,NSE_EQ,EQUITY,ACTIVE
+KOTAKBANK,Kotak Mahindra Bank Ltd.,Financial Services,1922,NSE_EQ,EQUITY,ACTIVE
+KPIL,Kalpataru Projects International Ltd.,Construction,1814,NSE_EQ,EQUITY,ACTIVE
+KPITTECH,KPIT Technologies Ltd.,Information Technology,9683,NSE_EQ,EQUITY,ACTIVE
+KPRMILL,K.P.R. Mill Ltd.,Textiles,14912,NSE_EQ,EQUITY,ACTIVE
+LALPATHLAB,Dr. Lal Path Labs Ltd.,Healthcare,11654,NSE_EQ,EQUITY,ACTIVE
+LATENTVIEW,Latent View Analytics Ltd.,Information Technology,6818,NSE_EQ,EQUITY,ACTIVE
+LAURUSLABS,Laurus Labs Ltd.,Healthcare,19234,NSE_EQ,EQUITY,ACTIVE
+LEMONTREE,Lemon Tree Hotels Ltd.,Consumer Services,2606,NSE_EQ,EQUITY,ACTIVE
+LENSKART,Lenskart Solutions Ltd.,Consumer Services,759605,NSE_EQ,EQUITY,ACTIVE
+LGEINDIA,LG Electronics India Ltd.,Consumer Durables,760213,NSE_EQ,EQUITY,ACTIVE
+LICHSGFIN,LIC Housing Finance Ltd.,Financial Services,1997,NSE_EQ,EQUITY,ACTIVE
+LICI,Life Insurance Corporation of India,Financial Services,9480,NSE_EQ,EQUITY,ACTIVE
+LINDEINDIA,Linde India Ltd.,Chemicals,1627,NSE_EQ,EQUITY,ACTIVE
+LLOYDSME,Lloyds Metals And Energy Ltd.,Metals & Mining,17313,NSE_EQ,EQUITY,ACTIVE
+LODHA,Lodha Developers Ltd.,Realty,3220,NSE_EQ,EQUITY,ACTIVE
+LT,Larsen & Toubro Ltd.,Construction,11483,NSE_EQ,EQUITY,ACTIVE
+LTF,L&T Finance Ltd.,Financial Services,24948,NSE_EQ,EQUITY,ACTIVE
+LTFOODS,LT Foods Ltd.,Fast Moving Consumer Goods,13816,NSE_EQ,EQUITY,ACTIVE
+LTM,LTM Ltd.,Information Technology,17818,NSE_EQ,EQUITY,ACTIVE
+LTTS,L&T Technology Services Ltd.,Information Technology,18564,NSE_EQ,EQUITY,ACTIVE
+LUPIN,Lupin Ltd.,Healthcare,10440,NSE_EQ,EQUITY,ACTIVE
+M&M,Mahindra & Mahindra Ltd.,Automobile and Auto Components,2031,NSE_EQ,EQUITY,ACTIVE
+M&MFIN,Mahindra & Mahindra Financial Services Ltd.,Financial Services,13285,NSE_EQ,EQUITY,ACTIVE
+MAHABANK,Bank of Maharashtra,Financial Services,11377,NSE_EQ,EQUITY,ACTIVE
+MANAPPURAM,Manappuram Finance Ltd.,Financial Services,19061,NSE_EQ,EQUITY,ACTIVE
+MANKIND,Mankind Pharma Ltd.,Healthcare,15380,NSE_EQ,EQUITY,ACTIVE
+MAPMYINDIA,C.E. Info Systems Ltd.,Information Technology,7227,NSE_EQ,EQUITY,ACTIVE
+MARICO,Marico Ltd.,Fast Moving Consumer Goods,4067,NSE_EQ,EQUITY,ACTIVE
+MARUTI,Maruti Suzuki India Ltd.,Automobile and Auto Components,10999,NSE_EQ,EQUITY,ACTIVE
+MAXHEALTH,Max Healthcare Institute Ltd.,Healthcare,22377,NSE_EQ,EQUITY,ACTIVE
+MAZDOCK,Mazagoan Dock Shipbuilders Ltd.,Capital Goods,509,NSE_EQ,EQUITY,ACTIVE
+MCX,Multi Commodity Exchange of India Ltd.,Financial Services,31181,NSE_EQ,EQUITY,ACTIVE
+MEDANTA,Global Health Ltd.,Healthcare,11956,NSE_EQ,EQUITY,ACTIVE
+MEESHO,Meesho Ltd.,Consumer Services,760229,NSE_EQ,EQUITY,ACTIVE
+MFSL,Max Financial Services Ltd.,Financial Services,2142,NSE_EQ,EQUITY,ACTIVE
+MGL,Mahanagar Gas Ltd.,Oil Gas & Consumable Fuels,17534,NSE_EQ,EQUITY,ACTIVE
+MINDACORP,Minda Corporation Ltd.,Automobile and Auto Components,25897,NSE_EQ,EQUITY,ACTIVE
+MMTC,MMTC Ltd.,Services,17957,NSE_EQ,EQUITY,ACTIVE
+MOTHERSON,Samvardhana Motherson International Ltd.,Automobile and Auto Components,25510,NSE_EQ,EQUITY,ACTIVE
+MOTILALOFS,Motilal Oswal Financial Services Ltd.,Financial Services,14947,NSE_EQ,EQUITY,ACTIVE
+MPHASIS,MphasiS Ltd.,Information Technology,4503,NSE_EQ,EQUITY,ACTIVE
+MRF,MRF Ltd.,Automobile and Auto Components,2277,NSE_EQ,EQUITY,ACTIVE
+MRPL,Mangalore Refinery & Petrochemicals Ltd.,Oil Gas & Consumable Fuels,2283,NSE_EQ,EQUITY,ACTIVE
+MSUMI,Motherson Sumi Wiring India Ltd.,Automobile and Auto Components,8596,NSE_EQ,EQUITY,ACTIVE
+MUTHOOTFIN,Muthoot Finance Ltd.,Financial Services,23650,NSE_EQ,EQUITY,ACTIVE
+NAM-INDIA,Nippon Life India Asset Management Ltd.,Financial Services,357,NSE_EQ,EQUITY,ACTIVE
+NATCOPHARM,NATCO Pharma Ltd.,Healthcare,3918,NSE_EQ,EQUITY,ACTIVE
+NATIONALUM,National Aluminium Co. Ltd.,Metals & Mining,6364,NSE_EQ,EQUITY,ACTIVE
+NAUKRI,Info Edge (India) Ltd.,Consumer Services,13751,NSE_EQ,EQUITY,ACTIVE
+NAVA,Nava Ltd.,Power,4014,NSE_EQ,EQUITY,ACTIVE
+NAVINFLUOR,Navin Fluorine International Ltd.,Chemicals,14672,NSE_EQ,EQUITY,ACTIVE
+NBCC,NBCC (India) Ltd.,Construction,31415,NSE_EQ,EQUITY,ACTIVE
+NCC,NCC Ltd.,Construction,2319,NSE_EQ,EQUITY,ACTIVE
+NESTLEIND,Nestle India Ltd.,Fast Moving Consumer Goods,17963,NSE_EQ,EQUITY,ACTIVE
+NETWEB,Netweb Technologies India Ltd.,Information Technology,17433,NSE_EQ,EQUITY,ACTIVE
+NEULANDLAB,Neuland Laboratories Ltd.,Healthcare,2406,NSE_EQ,EQUITY,ACTIVE
+NEWGEN,Newgen Software Technologies Ltd.,Information Technology,1164,NSE_EQ,EQUITY,ACTIVE
+NH,Narayana Hrudayalaya Ltd.,Healthcare,11840,NSE_EQ,EQUITY,ACTIVE
+NHPC,NHPC Ltd.,Power,17400,NSE_EQ,EQUITY,ACTIVE
+NIACL,The New India Assurance Company Ltd.,Financial Services,399,NSE_EQ,EQUITY,ACTIVE
+NIVABUPA,Niva Bupa Health Insurance Company Ltd.,Financial Services,27097,NSE_EQ,EQUITY,ACTIVE
+NLCINDIA,NLC India Ltd.,Power,8585,NSE_EQ,EQUITY,ACTIVE
+NMDC,NMDC Ltd.,Metals & Mining,15332,NSE_EQ,EQUITY,ACTIVE
+NSLNISP,NMDC Steel Ltd.,Metals & Mining,14180,NSE_EQ,EQUITY,ACTIVE
+NTPC,NTPC Ltd.,Power,11630,NSE_EQ,EQUITY,ACTIVE
+NTPCGREEN,NTPC Green Energy Ltd.,Power,27176,NSE_EQ,EQUITY,ACTIVE
+NUVAMA,Nuvama Wealth Management Ltd.,Financial Services,18721,NSE_EQ,EQUITY,ACTIVE
+NUVOCO,Nuvoco Vistas Corporation Ltd.,Construction Materials,5426,NSE_EQ,EQUITY,ACTIVE
+NYKAA,FSN E-Commerce Ventures Ltd.,Consumer Services,6545,NSE_EQ,EQUITY,ACTIVE
+OBEROIRLTY,Oberoi Realty Ltd.,Realty,20242,NSE_EQ,EQUITY,ACTIVE
+OFSS,Oracle Financial Services Software Ltd.,Information Technology,10738,NSE_EQ,EQUITY,ACTIVE
+OIL,Oil India Ltd.,Oil Gas & Consumable Fuels,17438,NSE_EQ,EQUITY,ACTIVE
+OLAELEC,Ola Electric Mobility Ltd.,Automobile and Auto Components,24777,NSE_EQ,EQUITY,ACTIVE
+OLECTRA,Olectra Greentech Ltd.,Automobile and Auto Components,10637,NSE_EQ,EQUITY,ACTIVE
+ONESOURCE,Onesource Specialty Pharma Ltd.,Healthcare,29224,NSE_EQ,EQUITY,ACTIVE
+ONGC,Oil & Natural Gas Corporation Ltd.,Oil Gas & Consumable Fuels,2475,NSE_EQ,EQUITY,ACTIVE
+PAGEIND,Page Industries Ltd.,Textiles,14413,NSE_EQ,EQUITY,ACTIVE
+PARADEEP,Paradeep Phosphates Ltd.,Chemicals,9741,NSE_EQ,EQUITY,ACTIVE
+PATANJALI,Patanjali Foods Ltd.,Fast Moving Consumer Goods,17029,NSE_EQ,EQUITY,ACTIVE
+PAYTM,One 97 Communications Ltd.,Financial Services,6705,NSE_EQ,EQUITY,ACTIVE
+PCBL,PCBL Chemical Ltd.,Chemicals,2649,NSE_EQ,EQUITY,ACTIVE
+PERSISTENT,Persistent Systems Ltd.,Information Technology,18365,NSE_EQ,EQUITY,ACTIVE
+PETRONET,Petronet LNG Ltd.,Oil Gas & Consumable Fuels,11351,NSE_EQ,EQUITY,ACTIVE
+PFC,Power Finance Corporation Ltd.,Financial Services,14299,NSE_EQ,EQUITY,ACTIVE
+PFIZER,Pfizer Ltd.,Healthcare,2643,NSE_EQ,EQUITY,ACTIVE
+PGEL,PG Electroplast Ltd.,Consumer Durables,25358,NSE_EQ,EQUITY,ACTIVE
+PHOENIXLTD,Phoenix Mills Ltd.,Realty,14552,NSE_EQ,EQUITY,ACTIVE
+PIDILITIND,Pidilite Industries Ltd.,Chemicals,2664,NSE_EQ,EQUITY,ACTIVE
+PIIND,PI Industries Ltd.,Chemicals,24184,NSE_EQ,EQUITY,ACTIVE
+PINELABS,Pine Labs Ltd.,Financial Services,759820,NSE_EQ,EQUITY,ACTIVE
+PIRAMALFIN,Piramal Finance Ltd.,Financial Services,759551,NSE_EQ,EQUITY,ACTIVE
+PNB,Punjab National Bank,Financial Services,10666,NSE_EQ,EQUITY,ACTIVE
+PNBHOUSING,PNB Housing Finance Ltd.,Financial Services,18908,NSE_EQ,EQUITY,ACTIVE
+POLICYBZR,PB Fintech Ltd.,Financial Services,6656,NSE_EQ,EQUITY,ACTIVE
+POLYCAB,Polycab India Ltd.,Capital Goods,9590,NSE_EQ,EQUITY,ACTIVE
+POLYMED,Poly Medicure Ltd.,Healthcare,25718,NSE_EQ,EQUITY,ACTIVE
+POONAWALLA,Poonawalla Fincorp Ltd.,Financial Services,11403,NSE_EQ,EQUITY,ACTIVE
+POWERGRID,Power Grid Corporation of India Ltd.,Power,14977,NSE_EQ,EQUITY,ACTIVE
+POWERINDIA,Hitachi Energy India Ltd.,Capital Goods,18457,NSE_EQ,EQUITY,ACTIVE
+PPLPHARMA,Piramal Pharma Ltd.,Healthcare,11571,NSE_EQ,EQUITY,ACTIVE
+PREMIERENE,Premier Energies Ltd.,Capital Goods,25049,NSE_EQ,EQUITY,ACTIVE
+PRESTIGE,Prestige Estates Projects Ltd.,Realty,20302,NSE_EQ,EQUITY,ACTIVE
+PTCIL,PTC Industries Ltd.,Capital Goods,16682,NSE_EQ,EQUITY,ACTIVE
+PVRINOX,PVR INOX Ltd.,Media Entertainment & Publication,13147,NSE_EQ,EQUITY,ACTIVE
+PWL,Physicswallah Ltd.,Consumer Services,759723,NSE_EQ,EQUITY,ACTIVE
+RADICO,Radico Khaitan Ltd,Fast Moving Consumer Goods,10990,NSE_EQ,EQUITY,ACTIVE
+RAILTEL,Railtel Corporation Of India Ltd.,Telecommunication,2431,NSE_EQ,EQUITY,ACTIVE
+RAINBOW,Rainbow Childrens Medicare Ltd.,Healthcare,9408,NSE_EQ,EQUITY,ACTIVE
+RAMCOCEM,The Ramco Cements Ltd.,Construction Materials,2043,NSE_EQ,EQUITY,ACTIVE
+RBLBANK,RBL Bank Ltd.,Financial Services,18391,NSE_EQ,EQUITY,ACTIVE
+RECLTD,REC Ltd.,Financial Services,15355,NSE_EQ,EQUITY,ACTIVE
+REDINGTON,Redington Ltd.,Services,14255,NSE_EQ,EQUITY,ACTIVE
+RELIANCE,Reliance Industries Ltd.,Oil Gas & Consumable Fuels,2885,NSE_EQ,EQUITY,ACTIVE
+RHIM,RHI MAGNESITA INDIA LTD.,Capital Goods,31163,NSE_EQ,EQUITY,ACTIVE
+RITES,RITES Ltd.,Construction,3761,NSE_EQ,EQUITY,ACTIVE
+RKFORGE,Ramkrishna Forgings Ltd.,Automobile and Auto Components,11411,NSE_EQ,EQUITY,ACTIVE
+RPOWER,Reliance Power Ltd.,Power,15259,NSE_EQ,EQUITY,ACTIVE
+RRKABEL,R R Kabel Ltd.,Capital Goods,18566,NSE_EQ,EQUITY,ACTIVE
+RVNL,Rail Vikas Nigam Ltd.,Construction,9552,NSE_EQ,EQUITY,ACTIVE
+SAGILITY,Sagility Ltd.,Information Technology,27052,NSE_EQ,EQUITY,ACTIVE
+SAIL,Steel Authority of India Ltd.,Metals & Mining,2963,NSE_EQ,EQUITY,ACTIVE
+SAILIFE,Sai Life Sciences Ltd.,Healthcare,27839,NSE_EQ,EQUITY,ACTIVE
+SAMMAANCAP,Sammaan Capital Ltd.,Financial Services,30125,NSE_EQ,EQUITY,ACTIVE
+SAPPHIRE,Sapphire Foods India Ltd.,Consumer Services,6718,NSE_EQ,EQUITY,ACTIVE
+SARDAEN,Sarda Energy and Minerals Ltd.,Metals & Mining,17758,NSE_EQ,EQUITY,ACTIVE
+SAREGAMA,Saregama India Ltd,Media Entertainment & Publication,4892,NSE_EQ,EQUITY,ACTIVE
+SBFC,SBFC Finance Ltd.,Financial Services,18026,NSE_EQ,EQUITY,ACTIVE
+SBICARD,SBI Cards and Payment Services Ltd.,Financial Services,17971,NSE_EQ,EQUITY,ACTIVE
+SBILIFE,SBI Life Insurance Company Ltd.,Financial Services,21808,NSE_EQ,EQUITY,ACTIVE
+SBIN,State Bank of India,Financial Services,3045,NSE_EQ,EQUITY,ACTIVE
+SCHAEFFLER,Schaeffler India Ltd.,Automobile and Auto Components,1011,NSE_EQ,EQUITY,ACTIVE
+SCHNEIDER,Schneider Electric Infrastructure Ltd.,Capital Goods,31234,NSE_EQ,EQUITY,ACTIVE
+SCI,Shipping Corporation of India Ltd.,Services,3048,NSE_EQ,EQUITY,ACTIVE
+SHREECEM,Shree Cement Ltd.,Construction Materials,3103,NSE_EQ,EQUITY,ACTIVE
+SHRIRAMFIN,Shriram Finance Ltd.,Financial Services,4306,NSE_EQ,EQUITY,ACTIVE
+SHYAMMETL,Shyam Metalics and Energy Ltd.,Capital Goods,4693,NSE_EQ,EQUITY,ACTIVE
+SIEMENS,Siemens Ltd.,Capital Goods,3150,NSE_EQ,EQUITY,ACTIVE
+SIGNATURE,Signatureglobal (India) Ltd.,Realty,18743,NSE_EQ,EQUITY,ACTIVE
+SJVN,SJVN Ltd.,Power,18883,NSE_EQ,EQUITY,ACTIVE
+SOBHA,Sobha Ltd.,Realty,13826,NSE_EQ,EQUITY,ACTIVE
+SOLARINDS,Solar Industries India Ltd.,Chemicals,13332,NSE_EQ,EQUITY,ACTIVE
+SONACOMS,Sona BLW Precision Forgings Ltd.,Automobile and Auto Components,4684,NSE_EQ,EQUITY,ACTIVE
+SONATSOFTW,Sonata Software Ltd.,Information Technology,6596,NSE_EQ,EQUITY,ACTIVE
+SPLPETRO,Supreme Petrochem Ltd.,Chemicals,9617,NSE_EQ,EQUITY,ACTIVE
+SRF,SRF Ltd.,Chemicals,3273,NSE_EQ,EQUITY,ACTIVE
+STARHEALTH,Star Health and Allied Insurance Company Ltd.,Financial Services,7083,NSE_EQ,EQUITY,ACTIVE
+SUMICHEM,Sumitomo Chemical India Ltd.,Chemicals,17105,NSE_EQ,EQUITY,ACTIVE
+SUNDARMFIN,Sundaram Finance Ltd.,Financial Services,3339,NSE_EQ,EQUITY,ACTIVE
+SUNPHARMA,Sun Pharmaceutical Industries Ltd.,Healthcare,3351,NSE_EQ,EQUITY,ACTIVE
+SUNTV,Sun TV Network Ltd.,Media Entertainment & Publication,13404,NSE_EQ,EQUITY,ACTIVE
+SUPREMEIND,Supreme Industries Ltd.,Capital Goods,3363,NSE_EQ,EQUITY,ACTIVE
+SUZLON,Suzlon Energy Ltd.,Capital Goods,12018,NSE_EQ,EQUITY,ACTIVE
+SWANCORP,Swan Corp Ltd.,Chemicals,27095,NSE_EQ,EQUITY,ACTIVE
+SWIGGY,Swiggy Ltd.,Consumer Services,27066,NSE_EQ,EQUITY,ACTIVE
+SYNGENE,Syngene International Ltd.,Healthcare,10243,NSE_EQ,EQUITY,ACTIVE
+SYRMA,Syrma SGS Technology Ltd.,Capital Goods,10793,NSE_EQ,EQUITY,ACTIVE
+TARIL,Transformers And Rectifiers (India) Ltd.,Capital Goods,15174,NSE_EQ,EQUITY,ACTIVE
+TATACAP,Tata Capital Ltd.,Financial Services,759265,NSE_EQ,EQUITY,ACTIVE
+TATACHEM,Tata Chemicals Ltd.,Chemicals,3405,NSE_EQ,EQUITY,ACTIVE
+TATACOMM,Tata Communications Ltd.,Telecommunication,3721,NSE_EQ,EQUITY,ACTIVE
+TATACONSUM,Tata Consumer Products Ltd.,Fast Moving Consumer Goods,3432,NSE_EQ,EQUITY,ACTIVE
+TATAELXSI,Tata Elxsi Ltd.,Information Technology,3411,NSE_EQ,EQUITY,ACTIVE
+TATAINVEST,Tata Investment Corporation Ltd.,Financial Services,1621,NSE_EQ,EQUITY,ACTIVE
+TATAPOWER,Tata Power Co. Ltd.,Power,3426,NSE_EQ,EQUITY,ACTIVE
+TATASTEEL,Tata Steel Ltd.,Metals & Mining,3499,NSE_EQ,EQUITY,ACTIVE
+TATATECH,Tata Technologies Ltd.,Information Technology,20293,NSE_EQ,EQUITY,ACTIVE
+TBOTEK,TBO Tek Ltd.,Consumer Services,23740,NSE_EQ,EQUITY,ACTIVE
+TCS,Tata Consultancy Services Ltd.,Information Technology,11536,NSE_EQ,EQUITY,ACTIVE
+TECHM,Tech Mahindra Ltd.,Information Technology,13538,NSE_EQ,EQUITY,ACTIVE
+TECHNOE,Techno Electric & Engineering Company Ltd.,Construction,6445,NSE_EQ,EQUITY,ACTIVE
+TEGA,Tega Industries Ltd.,Capital Goods,7105,NSE_EQ,EQUITY,ACTIVE
+TEJASNET,Tejas Networks Ltd.,Telecommunication,21131,NSE_EQ,EQUITY,ACTIVE
+TENNIND,Tenneco Clean Air India Ltd.,Automobile and Auto Components,759880,NSE_EQ,EQUITY,ACTIVE
+THELEELA,Leela Palaces Hotels & Resorts Ltd.,Consumer Services,757014,NSE_EQ,EQUITY,ACTIVE
+THERMAX,Thermax Ltd.,Capital Goods,3475,NSE_EQ,EQUITY,ACTIVE
+TIINDIA,Tube Investments of India Ltd.,Automobile and Auto Components,312,NSE_EQ,EQUITY,ACTIVE
+TIMKEN,Timken India Ltd.,Capital Goods,14198,NSE_EQ,EQUITY,ACTIVE
+TITAGARH,Titagarh Rail Systems Ltd.,Capital Goods,15414,NSE_EQ,EQUITY,ACTIVE
+TITAN,Titan Company Ltd.,Consumer Durables,3506,NSE_EQ,EQUITY,ACTIVE
+TMCV,Tata Motors Ltd.,Capital Goods,759782,NSE_EQ,EQUITY,ACTIVE
+TMPV,Tata Motors Passenger Vehicles Ltd.,Automobile and Auto Components,3456,NSE_EQ,EQUITY,ACTIVE
+TORNTPHARM,Torrent Pharmaceuticals Ltd.,Healthcare,3518,NSE_EQ,EQUITY,ACTIVE
+TORNTPOWER,Torrent Power Ltd.,Power,13786,NSE_EQ,EQUITY,ACTIVE
+TRAVELFOOD,Travel Food Services Ltd.,Consumer Services,757545,NSE_EQ,EQUITY,ACTIVE
+TRENT,Trent Ltd.,Consumer Services,1964,NSE_EQ,EQUITY,ACTIVE
+TRIDENT,Trident Ltd.,Textiles,9685,NSE_EQ,EQUITY,ACTIVE
+TRITURBINE,Triveni Turbine Ltd.,Capital Goods,25584,NSE_EQ,EQUITY,ACTIVE
+TTML,Tata Teleservices (Maharashtra) Ltd.,Telecommunication,8954,NSE_EQ,EQUITY,ACTIVE
+TVSMOTOR,TVS Motor Company Ltd.,Automobile and Auto Components,8479,NSE_EQ,EQUITY,ACTIVE
+UBL,United Breweries Ltd.,Fast Moving Consumer Goods,16713,NSE_EQ,EQUITY,ACTIVE
+UCOBANK,UCO Bank,Financial Services,11223,NSE_EQ,EQUITY,ACTIVE
+ULTRACEMCO,UltraTech Cement Ltd.,Construction Materials,11532,NSE_EQ,EQUITY,ACTIVE
+UNIONBANK,Union Bank of India,Financial Services,10753,NSE_EQ,EQUITY,ACTIVE
+UNITDSPR,United Spirits Ltd.,Fast Moving Consumer Goods,10447,NSE_EQ,EQUITY,ACTIVE
+UNOMINDA,UNO Minda Ltd.,Automobile and Auto Components,14154,NSE_EQ,EQUITY,ACTIVE
+UPL,UPL Ltd.,Chemicals,11287,NSE_EQ,EQUITY,ACTIVE
+URBANCO,Urban Company Ltd.,Consumer Services,759084,NSE_EQ,EQUITY,ACTIVE
+USHAMART,Usha Martin Ltd.,Capital Goods,8840,NSE_EQ,EQUITY,ACTIVE
+UTIAMC,UTI Asset Management Company Ltd.,Financial Services,527,NSE_EQ,EQUITY,ACTIVE
+VBL,Varun Beverages Ltd.,Fast Moving Consumer Goods,18921,NSE_EQ,EQUITY,ACTIVE
+VEDL,Vedanta Ltd.,Metals & Mining,3063,NSE_EQ,EQUITY,ACTIVE
+VIJAYA,Vijaya Diagnostic Centre Ltd.,Healthcare,5585,NSE_EQ,EQUITY,ACTIVE
+VMM,Vishal Mega Mart Ltd.,Consumer Services,27969,NSE_EQ,EQUITY,ACTIVE
+VOLTAS,Voltas Ltd.,Consumer Durables,3718,NSE_EQ,EQUITY,ACTIVE
+VTL,Vardhman Textiles Ltd.,Textiles,2073,NSE_EQ,EQUITY,ACTIVE
+WAAREEENER,Waaree Energies Ltd.,Capital Goods,25907,NSE_EQ,EQUITY,ACTIVE
+WELCORP,Welspun Corp Ltd.,Capital Goods,11821,NSE_EQ,EQUITY,ACTIVE
+WELSPUNLIV,Welspun Living Ltd.,Textiles,11253,NSE_EQ,EQUITY,ACTIVE
+WHIRLPOOL,Whirlpool of India Ltd.,Consumer Durables,18011,NSE_EQ,EQUITY,ACTIVE
+WIPRO,Wipro Ltd.,Information Technology,3787,NSE_EQ,EQUITY,ACTIVE
+WOCKPHARMA,Wockhardt Ltd.,Healthcare,7506,NSE_EQ,EQUITY,ACTIVE
+YESBANK,Yes Bank Ltd.,Financial Services,11915,NSE_EQ,EQUITY,ACTIVE
+ZEEL,Zee Entertainment Enterprises Ltd.,Media Entertainment & Publication,3812,NSE_EQ,EQUITY,ACTIVE
+ZENSARTECH,Zensar Technolgies Ltd.,Information Technology,1076,NSE_EQ,EQUITY,ACTIVE
+ZENTEC,Zen Technologies Ltd.,Capital Goods,7508,NSE_EQ,EQUITY,ACTIVE
+ZFCVINDIA,ZF Commercial Vehicle Control Systems India Ltd.,Automobile and Auto Components,16915,NSE_EQ,EQUITY,ACTIVE
+ZYDUSLIFE,Zydus Lifesciences Ltd.,Healthcare,7929,NSE_EQ,EQUITY,ACTIVE
+ZYDUSWELL,Zydus Wellness Ltd.,Fast Moving Consumer Goods,17635,NSE_EQ,EQUITY,ACTIVE

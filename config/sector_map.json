@@ -1,0 +1,2022 @@
+{
+  "default_index": "NIFTY 50",
+  "generated_at": "2026-05-19T16:50:29",
+  "symbols": {
+    "360ONE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "3MINDIA": {
+      "industry": "Diversified",
+      "sector_index": "NIFTY 50"
+    },
+    "AADHARHFC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "AARTIIND": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "AAVAS": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ABB": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ABBOTINDIA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ABCAPITAL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ABDL": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "ABFRL": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "ABLBL": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "ABREL": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "ABSLAMC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ACC": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ACE": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ACMESOLAR": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "ACUTAAS": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ADANIENSOL": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "ADANIENT": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "ADANIGREEN": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "ADANIPORTS": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "ADANIPOWER": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "AEGISLOG": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "AEGISVOPAK": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "AFCONS": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "AFFLE": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "AIAENG": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "AIIL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "AJANTPHARM": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ALKEM": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "AMBER": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "AMBUJACEM": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ANANDRATHI": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ANANTRAJ": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "ANGELONE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ANTHEM": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ANURAS": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "APARINDS": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "APLAPOLLO": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "APOLLOHOSP": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "APOLLOTYRE": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "APTUS": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ARE&M": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "ASAHIINDIA": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "ASHOKLEY": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ASIANPAINT": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "ASTERDM": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ASTRAL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ATGL": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "ATHERENERG": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "ATUL": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "AUBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "AUROPHARMA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "AWL": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "AXISBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BAJAJ-AUTO": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "BAJAJFINSV": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BAJAJHFL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BAJAJHLDNG": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BAJFINANCE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BALKRISIND": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "BALRAMCHIN": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BANDHANBNK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BANKBARODA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BANKINDIA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BATAINDIA": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BAYERCROP": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "BBTC": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BDL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "BEL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "BELRISE": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "BEML": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "BERGEPAINT": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BHARATFORG": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "BHARTIARTL": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "BHARTIHEXA": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "BHEL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "BIKAJI": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BIOCON": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "BLS": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BLUEDART": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "BLUEJET": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "BLUESTARCO": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BOSCHLTD": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "BPCL": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "BRIGADE": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "BRITANNIA": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "BSE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "BSOFT": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "CAMS": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CANBK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CANFINHOME": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CANHLIFE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CAPLIPOINT": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "CARBORUNIV": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "CARTRADE": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "CASTROLIND": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "CCL": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "CDSL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CEATLTD": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "CEMPRO": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "CENTRALBK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CESC": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "CGCL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CGPOWER": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "CHALET": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "CHAMBLFERT": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "CHENNPETRO": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "CHOICEIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CHOLAFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CHOLAHLDNG": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CIEINDIA": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "CIPLA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "CLEAN": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "COALINDIA": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "COCHINSHIP": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "COFORGE": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "COHANCE": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "COLPAL": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "CONCOR": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "CONCORDBIO": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "COROMANDEL": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "CPPLUS": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "CRAFTSMAN": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "CREDITACC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CRISIL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CROMPTON": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "CUB": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "CUMMINSIND": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "CYIENT": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "DABUR": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "DALBHARAT": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "DATAPATTNS": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "DCMSHRIRAM": {
+      "industry": "Diversified",
+      "sector_index": "NIFTY 50"
+    },
+    "DEEPAKFERT": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "DEEPAKNTR": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "DELHIVERY": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "DEVYANI": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "DIVISLAB": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "DIXON": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "DLF": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "DMART": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "DOMS": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "DRREDDY": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "DUMMYVEDL1": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "DUMMYVEDL2": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "DUMMYVEDL3": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "DUMMYVEDL4": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "ECLERX": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "EICHERMOT": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "EIDPARRY": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "EIHOTEL": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "ELECON": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ELGIEQUIP": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "EMAMILTD": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "EMCURE": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "EMMVEE": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ENDURANCE": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "ENGINERSIN": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ENRIN": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ERIS": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ESCORTS": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ETERNAL": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "EXIDEIND": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "FACT": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "FEDERALBNK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "FINCABLES": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "FIRSTCRY": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "FIVESTAR": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "FLUOROCHEM": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "FORCEMOT": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "FORTIS": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "FSL": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "GABRIEL": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "GAIL": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "GALLANTT": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "GESHIP": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "GICRE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "GILLETTE": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "GLAND": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "GLAXO": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "GLENMARK": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "GMDCLTD": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "GMRAIRPORT": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "GODFRYPHLP": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "GODIGIT": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "GODREJCP": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "GODREJIND": {
+      "industry": "Diversified",
+      "sector_index": "NIFTY 50"
+    },
+    "GODREJPROP": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "GPIL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "GRANULES": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "GRAPHITE": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "GRASIM": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "GRAVITA": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "GROWW": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "GRSE": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "GVT&D": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "HAL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "HAVELLS": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "HBLENGINE": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "HCLTECH": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "HDBFS": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "HDFCAMC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "HDFCBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "HDFCLIFE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "HEG": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "HEROMOTOCO": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "HEXT": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "HFCL": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "HINDALCO": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "HINDCOPPER": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "HINDPETRO": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "HINDUNILVR": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "HINDZINC": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "HOMEFIRST": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "HONASA": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "HONAUT": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "HSCL": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "HUDCO": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "HYUNDAI": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "ICICIAMC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ICICIBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ICICIGI": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ICICIPRULI": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IDBI": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IDEA": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "IDFCFIRSTB": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IEX": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IFCI": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IGIL": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "IGL": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "IIFL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IKS": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "INDGN": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "INDHOTEL": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "INDIACEM": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "INDIAMART": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "INDIANB": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "INDIGO": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "INDUSINDBK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "INDUSTOWER": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "INFY": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "INOXWIND": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "INTELLECT": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "IOB": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IOC": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "IPCALAB": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "IRB": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "IRCON": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "IRCTC": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "IREDA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "IRFC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ITC": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "ITCHOTELS": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "ITI": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "J&KBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "JAINREC": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "JBCHEPHARM": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "JBMA": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "JINDALSAW": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "JINDALSTEL": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "JIOFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "JKCEMENT": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "JKTYRE": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "JMFINANCIL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "JPPOWER": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "JSL": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "JSWCEMENT": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "JSWDULUX": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "JSWENERGY": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "JSWINFRA": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "JSWSTEEL": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "JUBLFOOD": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "JUBLINGREA": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "JUBLPHARMA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "JWL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "JYOTICNC": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "KAJARIACER": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "KALYANKJIL": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "KARURVYSYA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "KAYNES": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "KEC": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "KEI": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "KFINTECH": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "KIMS": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "KIRLOSENG": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "KOTAKBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "KPIL": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "KPITTECH": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "KPRMILL": {
+      "industry": "Textiles",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "LALPATHLAB": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "LATENTVIEW": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "LAURUSLABS": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "LEMONTREE": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "LENSKART": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "LGEINDIA": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "LICHSGFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "LICI": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "LINDEINDIA": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "LLOYDSME": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "LODHA": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "LT": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "LTF": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "LTFOODS": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "LTM": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "LTTS": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "LUPIN": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "M&M": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "M&MFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "MAHABANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "MANAPPURAM": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "MANKIND": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "MAPMYINDIA": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "MARICO": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "MARUTI": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "MAXHEALTH": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "MAZDOCK": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "MCX": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "MEDANTA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "MEESHO": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "MFSL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "MGL": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "MINDACORP": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "MMTC": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "MOTHERSON": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "MOTILALOFS": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "MPHASIS": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "MRF": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "MRPL": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "MSUMI": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "MUTHOOTFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "NAM-INDIA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "NATCOPHARM": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "NATIONALUM": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "NAUKRI": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "NAVA": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "NAVINFLUOR": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "NBCC": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "NCC": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "NESTLEIND": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "NETWEB": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "NEULANDLAB": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "NEWGEN": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "NH": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "NHPC": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "NIACL": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "NIVABUPA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "NLCINDIA": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "NMDC": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "NSLNISP": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "NTPC": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "NTPCGREEN": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "NUVAMA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "NUVOCO": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "NYKAA": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "OBEROIRLTY": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "OFSS": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "OIL": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "OLAELEC": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "OLECTRA": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "ONESOURCE": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ONGC": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "PAGEIND": {
+      "industry": "Textiles",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "PARADEEP": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "PATANJALI": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "PAYTM": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "PCBL": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "PERSISTENT": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "PETRONET": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "PFC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "PFIZER": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "PGEL": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "PHOENIXLTD": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "PIDILITIND": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "PIIND": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "PINELABS": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "PIRAMALFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "PNB": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "PNBHOUSING": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "POLICYBZR": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "POLYCAB": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "POLYMED": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "POONAWALLA": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "POWERGRID": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "POWERINDIA": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "PPLPHARMA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "PREMIERENE": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "PRESTIGE": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "PTCIL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "PVRINOX": {
+      "industry": "Media Entertainment & Publication",
+      "sector_index": "NIFTY MEDIA"
+    },
+    "PWL": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "RADICO": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "RAILTEL": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "RAINBOW": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "RAMCOCEM": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "RBLBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "RECLTD": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "REDINGTON": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "RELIANCE": {
+      "industry": "Oil Gas & Consumable Fuels",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "RHIM": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "RITES": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "RKFORGE": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "RPOWER": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "RRKABEL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "RVNL": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "SAGILITY": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "SAIL": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "SAILIFE": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "SAMMAANCAP": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SAPPHIRE": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "SARDAEN": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "SAREGAMA": {
+      "industry": "Media Entertainment & Publication",
+      "sector_index": "NIFTY MEDIA"
+    },
+    "SBFC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SBICARD": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SBILIFE": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SBIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SCHAEFFLER": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "SCHNEIDER": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "SCI": {
+      "industry": "Services",
+      "sector_index": "NIFTY 50"
+    },
+    "SHREECEM": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "SHRIRAMFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SHYAMMETL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "SIEMENS": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "SIGNATURE": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "SJVN": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "SOBHA": {
+      "industry": "Realty",
+      "sector_index": "NIFTY REALTY"
+    },
+    "SOLARINDS": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "SONACOMS": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "SONATSOFTW": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "SPLPETRO": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "SRF": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "STARHEALTH": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SUMICHEM": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "SUNDARMFIN": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "SUNPHARMA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "SUNTV": {
+      "industry": "Media Entertainment & Publication",
+      "sector_index": "NIFTY MEDIA"
+    },
+    "SUPREMEIND": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "SUZLON": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "SWANCORP": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "SWIGGY": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "SYNGENE": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "SYRMA": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TARIL": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TATACAP": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "TATACHEM": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "TATACOMM": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "TATACONSUM": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "TATAELXSI": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "TATAINVEST": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "TATAPOWER": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "TATASTEEL": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "TATATECH": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "TBOTEK": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "TCS": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "TECHM": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "TECHNOE": {
+      "industry": "Construction",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TEGA": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TEJASNET": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "TENNIND": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "THELEELA": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "THERMAX": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TIINDIA": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "TIMKEN": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TITAGARH": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TITAN": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "TMCV": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TMPV": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "TORNTPHARM": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "TORNTPOWER": {
+      "industry": "Power",
+      "sector_index": "NIFTY ENERGY"
+    },
+    "TRAVELFOOD": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "TRENT": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "TRIDENT": {
+      "industry": "Textiles",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "TRITURBINE": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "TTML": {
+      "industry": "Telecommunication",
+      "sector_index": "NIFTY 50"
+    },
+    "TVSMOTOR": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "UBL": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "UCOBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ULTRACEMCO": {
+      "industry": "Construction Materials",
+      "sector_index": "NIFTY INFRA"
+    },
+    "UNIONBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "UNITDSPR": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "UNOMINDA": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "UPL": {
+      "industry": "Chemicals",
+      "sector_index": "NIFTY 50"
+    },
+    "URBANCO": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "USHAMART": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "UTIAMC": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "VBL": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "VEDL": {
+      "industry": "Metals & Mining",
+      "sector_index": "NIFTY METAL"
+    },
+    "VIJAYA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "VMM": {
+      "industry": "Consumer Services",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "VOLTAS": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "VTL": {
+      "industry": "Textiles",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "WAAREEENER": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "WELCORP": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "WELSPUNLIV": {
+      "industry": "Textiles",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "WHIRLPOOL": {
+      "industry": "Consumer Durables",
+      "sector_index": "NIFTY CONSUMPTION"
+    },
+    "WIPRO": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "WOCKPHARMA": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "YESBANK": {
+      "industry": "Financial Services",
+      "sector_index": "NIFTY FIN SERVICE"
+    },
+    "ZEEL": {
+      "industry": "Media Entertainment & Publication",
+      "sector_index": "NIFTY MEDIA"
+    },
+    "ZENSARTECH": {
+      "industry": "Information Technology",
+      "sector_index": "NIFTY IT"
+    },
+    "ZENTEC": {
+      "industry": "Capital Goods",
+      "sector_index": "NIFTY INFRA"
+    },
+    "ZFCVINDIA": {
+      "industry": "Automobile and Auto Components",
+      "sector_index": "NIFTY AUTO"
+    },
+    "ZYDUSLIFE": {
+      "industry": "Healthcare",
+      "sector_index": "NIFTY PHARMA"
+    },
+    "ZYDUSWELL": {
+      "industry": "Fast Moving Consumer Goods",
+      "sector_index": "NIFTY CONSUMPTION"
+    }
+  }
+}
