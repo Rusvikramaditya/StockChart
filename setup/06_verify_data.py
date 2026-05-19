@@ -16,7 +16,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config import settings
-from engine import storage
+from engine import storage, universe
+from filters import liquidity
 
 BROAD_MIN_COVERAGE = 0.95
 BROAD_SAMPLE_SYMBOLS = ["MRPL", "MAZDOCK", "GRSE", "ADANIPOWER", "AEROFLEX", "STLTECH", "VEDL"]
@@ -208,6 +209,43 @@ def _check_watchlist_coverage(conn: sqlite3.Connection) -> tuple[bool, str]:
     return ok, detail
 
 
+def _check_small_mid_liquid_profile(conn: sqlite3.Connection) -> tuple[bool, str]:
+    if not settings.SMALL_MID_LIQUID_CSV.exists():
+        return False, "config/small_mid_liquid.csv missing"
+    frame = pd.read_csv(settings.SMALL_MID_LIQUID_CSV, dtype=str).fillna("")
+    required = set(liquidity.PROFILE_COLUMNS)
+    missing_columns = sorted(required - set(frame.columns))
+    if missing_columns:
+        return False, f"missing column(s): {missing_columns}"
+    resolved = universe.load_universe_profile("small_mid_liquid")
+    active_symbols = resolved["symbol"].astype(str).str.upper().tolist()
+    daily_symbols = _table_symbols(conn, "ohlcv_daily")
+    covered, total, coverage, missing_daily = _coverage_detail(active_symbols, daily_symbols)
+    nifty_overlap = sorted(set(active_symbols) & set(_active_symbols_from_csv(settings.NIFTY500_DHAN_CSV)))
+    active = frame[frame["status"].astype(str).str.upper().eq("ACTIVE")].copy()
+    pass_flags = active["liquidity_pass"].astype(str).str.lower().isin({"true", "1", "yes"})
+    traded_value = pd.to_numeric(active["avg_traded_value_50d"], errors="coerce").fillna(0)
+    avg_volume = pd.to_numeric(active["avg_volume_50d"], errors="coerce").fillna(0)
+    latest_close = pd.to_numeric(active["latest_close"], errors="coerce").fillna(0)
+    rules = liquidity.DEFAULT_RULES
+    ok = (
+        total >= 100
+        and covered == total
+        and pass_flags.all()
+        and traded_value.min() >= rules.min_avg_traded_value_50d
+        and avg_volume.min() >= rules.min_avg_volume_50d
+        and latest_close.min() >= rules.min_price
+        and not nifty_overlap
+    )
+    detail = (
+        f"{total} symbols, daily {covered}/{total} ({coverage:.1%}), "
+        f"min_avg_value={traded_value.min():.0f}, min_avg_volume={avg_volume.min():.0f}, "
+        f"min_close={latest_close.min():.2f}, nifty_overlap={nifty_overlap[:10]}, "
+        f"missing_daily={missing_daily[:10]}"
+    )
+    return ok, detail
+
+
 def verify_data() -> tuple[int, int, list[dict[str, str]]]:
     details: list[dict[str, str]] = []
     conn = storage.connect()
@@ -223,6 +261,7 @@ def verify_data() -> tuple[int, int, list[dict[str, str]]]:
         ("broad_daily_coverage", lambda: _check_broad_daily(conn)),
         ("broad_weekly_coverage", lambda: _check_broad_weekly(conn)),
         ("watchlist_coverage", lambda: _check_watchlist_coverage(conn)),
+        ("small_mid_liquid_profile", lambda: _check_small_mid_liquid_profile(conn)),
     ]
     passed = 0
     for name, check in checks:
