@@ -39,11 +39,11 @@
 <!-- OVERVIEW -->
 <div id="overview" style="margin-bottom:40px">
   <h2 class="s2">Project Overview</h2>
-  <p class="d">Python scanner runs daily on Windows. Scans Nifty 500. Detects 7 patterns. Stacks 4 institutional filters. Scores conviction 0–100. Outputs Carbon Ember HTML + Telegram alerts. <strong>No server. No React. No framework.</strong></p>
+  <p class="d">Python scanner runs daily on Windows. Stores broad NSE tradable equity data first, then scans a selected universe. Nifty 500 remains the stable default, but small/mid/liquid/recent-listing/watchlist universes must be supported. Detects 7 patterns. Stacks 4 institutional filters. Scores conviction 0–100. Outputs Carbon Ember HTML + Telegram alerts. <strong>No server. No React. No framework.</strong></p>
   <table class="st">
     <tr><th>Attribute</th><th>Value</th></tr>
-    <tr><td>Universe</td><td class="mono accent">Nifty 500</td></tr>
-    <tr><td>Data</td><td class="mono">Dhan API — stocks (NSE_EQ) + indices (IDX_I). yfinance fallback only.</td></tr>
+    <tr><td>Universe</td><td class="mono accent">Broad NSE equity DB; scanner default = Nifty 500; selectable profiles = all_nse_equity, small_mid_liquid, recent_listings, watchlist</td></tr>
+    <tr><td>Data</td><td class="mono">Dhan API — all eligible NSE_EQ stocks + indices (IDX_I). yfinance fallback only.</td></tr>
     <tr><td>Store</td><td class="mono">SQLite (fresh build)</td></tr>
     <tr><td>Platform</td><td class="mono">Windows local</td></tr>
     <tr><td>Output</td><td class="mono">HTML dashboard + Telegram</td></tr>
@@ -55,8 +55,8 @@
     <tr><th>Component</th><th>Tool</th><th>Why</th></tr>
     <tr><td>Language</td><td class="mono">Python 3.11+</td><td>Existing setup</td></tr>
     <tr><td>Data</td><td class="mono">Dhan API (dhanhq)</td><td>Single source — stocks + indices</td></tr>
-    <tr><td>Async fetch</td><td class="mono">aiohttp + asyncio</td><td>Bulk 500-stock download with rate-limited semaphore</td></tr>
-    <tr><td>Parallel detect</td><td class="mono">ProcessPoolExecutor</td><td>7 detectors × 500 stocks across 8 CPU cores</td></tr>
+    <tr><td>Async fetch</td><td class="mono">aiohttp + asyncio</td><td>Broad NSE historical download with rate-limited semaphore and resumable progress</td></tr>
+    <tr><td>Parallel detect</td><td class="mono">ProcessPoolExecutor</td><td>7 detectors across the selected universe on 8 CPU cores</td></tr>
     <tr><td>Math</td><td class="mono">NumPy + SciPy</td><td>argrelextrema, polyfit, rolling stats</td></tr>
     <tr><td>Store</td><td class="mono">SQLite</td><td>Zero setup, portable, fast</td></tr>
     <tr><td>Dashboard</td><td class="mono">Jinja2 → HTML</td><td>Self-contained, no server</td></tr>
@@ -72,8 +72,12 @@
 ├── .env                               ← DHAN + TELEGRAM keys
 ├── config/
 │   ├── settings.py                    ← ALL thresholds
+│   ├── all_nse_equity.csv             ← broad Dhan NSE_EQ universe
 │   ├── nifty500.csv
-│   ├── nifty500_dhan.csv
+│   ├── nifty500_dhan.csv              ← stable default scanner profile
+│   ├── small_mid_liquid.csv           ← generated liquidity-filtered profile
+│   ├── recent_listings.csv            ← IPO/SME/recent-listing profile
+│   ├── watchlist.csv                  ← manual high-interest names
 │   └── sector_map.json
 ├── data/nse_ohlcv.db                  ← ohlcv_daily, ohlcv_weekly, index_daily
 ├── setup/
@@ -83,7 +87,7 @@
 │   ├── 04_download_indices.py         ← Dhan IDX_I segment
 │   ├── 05_create_sector_map.py
 │   ├── 06_verify_data.py
-│   └── 07_rebalance_check.py         ← quarterly Nifty 500 refresh
+│   └── 07_rebalance_check.py         ← broad universe/profile refresh
 ├── patterns/
 │   ├── __init__.py                    ← ALL_DETECTORS list
 │   ├── base.py                        ← PatternResult dataclass
@@ -121,7 +125,7 @@
     │
 STAGE 2: FETCH                [async I/O, ~2min bulk / ~3s daily]
     │   Bulk:  asyncio + aiohttp + semaphore(5) + retry(3×)
-    │   Daily: Dhan batch OHLC → 1 API call for 500 stocks
+    │   Daily: Dhan batch OHLC → chunked calls for selected universe
     │
 STAGE 3: PRE-COMPUTE          [sync, ~3s]
     │   ├── Market Regime (4-check, compute ONCE)
@@ -129,7 +133,7 @@ STAGE 3: PRE-COMPUTE          [sync, ~3s]
     │   └── If regime.score ≤ 1 → BEAR → Telegram warn → exit
     │
 STAGE 4: DETECT               [ProcessPoolExecutor(8), ~12s]
-    │   500 workers × 7 detectors each
+    │   selected universe × 7 detectors each
     │   Pass NumPy arrays (not DataFrames) — lower pickle cost
     │   per-detector try/except — 1 crash ≠ stock lost
     │   per-stock 30s timeout — 1 hang ≠ scan stuck
@@ -149,17 +153,20 @@ STAGE 6: OUTPUT               [sync, ~2s]
     ├── Telegram: send chart photo + caption for conviction ≥ 70
     └── Daily summary
 
-TOTAL: ~35s daily (data in DB) · ~2.5min first run (fetch-dominated)</div></div>
+TOTAL: depends on selected universe. Nifty 500 daily target stays fast; broad all_nse_equity first build is fetch-dominated and can take much longer.</div></div>
 
   <h2 class="s2">PipelineContext + Pipeline Class</h2>
   <div class="sb"><div class="sbh">scanner.py — exact implementation spec <span>▼</span></div><div class="sbb">@dataclass
 class PipelineContext:
     scan_date: str              # YYYY-MM-DD
+    universe_name: str = "nifty500"
+    universe_path: str = "config/nifty500_dhan.csv"
     dry_run: bool = False       # --dry-run flag
     skip_fetch: bool = False    # --skip-fetch flag
 
     loader: Optional[DataLoader] = None
     symbols: list = field(default_factory=list)
+    liquidity_profile: dict = field(default_factory=dict)
 
     # Pre-computed (Stage 3 — compute once)
     market_regime: dict = field(default_factory=dict)
@@ -207,6 +214,10 @@ class Pipeline:
 
 # CLI:
 #   python scanner.py
+#   python scanner.py --universe nifty500
+#   python scanner.py --universe all_nse_equity --dry-run
+#   python scanner.py --universe small_mid_liquid
+#   python scanner.py --fetch-all-data
 #   python scanner.py --skip-fetch
 #   python scanner.py --stage detect
 #   python scanner.py --dry-run
@@ -284,7 +295,7 @@ def _scan_one_stock(args):
             "price": float(daily["close"][-1]),
             "patterns": results}
 
-@stage("Pattern Detection (7×500)", critical=False)
+@stage("Pattern Detection (selected universe)", critical=False)
 def detect(self):
     work = [(sym, loader.get_arrays(sym, "daily"), loader.get_arrays(sym, "weekly"))
             for sym in self.ctx.symbols]
@@ -301,12 +312,12 @@ def detect(self):
                 self.ctx.errors.append({"stage":"detect","symbol":futures[f]})</div></div>
 
   <h2 class="s2">Daily Refresh — Dhan Batch OHLC</h2>
-  <div class="sb"><div class="sbh">1 API call for all 500 stocks (no loop) <span>▼</span></div><div class="sbb">POST https://api.dhan.co/v2/marketfeed/ohlc
-Body: {"NSE_EQ": [sec_id_1, sec_id_2, ..., sec_id_500]}
+  <div class="sb"><div class="sbh">Chunked batch calls for selected universe <span>▼</span></div><div class="sbb">POST https://api.dhan.co/v2/marketfeed/ohlc
+Body: {"NSE_EQ": [sec_id_1, sec_id_2, ..., sec_id_n]}
 
-Returns OHLC for all 500 in one response.
+Returns OHLC for selected symbols in batch responses.
 Append today's candle to ohlcv_daily.
-Up to 1000 instruments per call — 500 fits in one.</div></div>
+Chunk large universes safely; never loop one HTTP request per stock.</div></div>
 </div>
 
 <!-- DATA -->
@@ -314,12 +325,13 @@ Up to 1000 instruments per call — 500 fits in one.</div></div>
   <h2 class="s2">Data — All From Dhan API</h2>
   <table class="st">
     <tr><th>#</th><th>Data</th><th>Interval</th><th>History</th><th>Segment</th></tr>
-    <tr><td>1</td><td>Stock OHLCV</td><td class="mono">Daily</td><td class="mono">5yr</td><td class="mono">NSE_EQ</td></tr>
-    <tr><td>2</td><td>Stock OHLCV</td><td class="mono">Weekly</td><td class="mono">5yr</td><td class="mono">Aggregated</td></tr>
+    <tr><td>1</td><td>Stock OHLCV</td><td class="mono">Daily</td><td class="mono">5yr where available; listing-date history for recent names</td><td class="mono">NSE_EQ</td></tr>
+    <tr><td>2</td><td>Stock OHLCV</td><td class="mono">Weekly</td><td class="mono">From available daily history</td><td class="mono">Aggregated</td></tr>
     <tr><td>3</td><td>Nifty 50 + Sector Indices</td><td class="mono">Daily</td><td class="mono">2yr</td><td class="mono accent">IDX_I</td></tr>
     <tr><td>4</td><td>Live CMP (daily refresh)</td><td class="mono">Current</td><td class="mono">—</td><td class="mono">NSE_EQ batch</td></tr>
     <tr><td>5</td><td>Instrument master</td><td class="mono">Static</td><td class="mono">—</td><td class="mono">NSE_EQ + IDX_I</td></tr>
   </table>
+  <div class="co"><strong>Universe rule:</strong> The database should be broad. Alerts should be selective. Store all eligible NSE_EQ history first, then choose scan/alert profiles by liquidity, listing age, and user watchlist.</div>
 
   <h2 class="s2">Dhan Index API</h2>
   <div class="sb"><div class="sbh">IDX_I segment — Nifty 50 (sid=13), BankNifty (sid=25), sectors from instrument master <span>▼</span></div><div class="sbb">POST https://api.dhan.co/v2/charts/historical
@@ -342,7 +354,7 @@ To get ALL sector security_ids:
 Fallback: yfinance (^CNXIT etc) only if specific index missing.</div></div>
 
   <h2 class="s2">SQLite Schema</h2>
-  <div class="sb"><div class="sbh">3 tables <span>▼</span></div><div class="sbb">CREATE TABLE ohlcv_daily (
+  <div class="sb"><div class="sbh">OHLCV tables + CSV universe profiles <span>▼</span></div><div class="sbb">CREATE TABLE ohlcv_daily (
     symbol TEXT, security_id TEXT, date TEXT,
     open REAL, high REAL, low REAL, close REAL, volume INTEGER,
     PRIMARY KEY (symbol, date));
@@ -356,7 +368,14 @@ CREATE TABLE ohlcv_weekly (
 CREATE TABLE index_daily (
     index_name TEXT, date TEXT,
     open REAL, high REAL, low REAL, close REAL, volume INTEGER,
-    PRIMARY KEY (index_name, date));</div></div>
+    PRIMARY KEY (index_name, date));
+
+Universe/profile files:
+    config/all_nse_equity.csv
+    config/nifty500_dhan.csv
+    config/small_mid_liquid.csv
+    config/recent_listings.csv
+    config/watchlist.csv</div></div>
 </div>
 
 <!-- RESILIENCE -->
@@ -366,7 +385,7 @@ CREATE TABLE index_daily (
     <tr><th>Failure</th><th>Handling</th></tr>
     <tr><td>Dhan API down (bulk)</td><td>Retry 3× per stock, exponential backoff (1s→2s→4s). Continue with available data.</td></tr>
     <tr><td>Dhan batch OHLC fail (daily)</td><td>Fall back to yesterday's data. Dashboard shows "as of yesterday".</td></tr>
-    <tr><td>1 stock crashes in detection</td><td>try/except per stock in worker. Other 499 continue. Error logged.</td></tr>
+    <tr><td>1 stock crashes in detection</td><td>try/except per stock in worker. Other selected symbols continue. Error logged.</td></tr>
     <tr><td>1 detector crashes on a stock</td><td>try/except per detector inside worker. Other 6 detectors still run.</td></tr>
     <tr><td>SQLite corrupt</td><td>Critical. Verify catches it. Pipeline aborts with clear message.</td></tr>
     <tr><td>Telegram down</td><td>Non-critical. Retry 2× with 5s. HTML still generates.</td></tr>
@@ -688,25 +707,34 @@ Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
 </div></div>
 
 <!-- PHASE 6 -->
-<div class="phase" id="p6"><div class="phase-header" onclick="tp(this)"><div class="pn">6</div><div class="pt">Scanner Orchestrator + First Run</div><div class="ps pending" id="p6s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
-  <p class="d">Pipeline class. Stage decorator. ProcessPoolExecutor(8). argparse CLI. Target: &lt;25s daily.</p>
-  <div class="task"><input type="checkbox" data-task="6-1"><div class="tc"><div class="tl">PipelineContext dataclass</div><div class="tf">scanner.py</div></div></div>
+<div class="phase" id="p6"><div class="phase-header" onclick="tp(this)"><div class="pn">6</div><div class="pt">Broad Universe + Scanner Orchestrator + First Run</div><div class="ps pending" id="p6s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">First expand the DB beyond Nifty 500. Store broad NSE tradable equity data, then scan selected universe profiles. Nifty 500 is the default baseline, not the ceiling. Pipeline class. Stage decorator. ProcessPoolExecutor(8). argparse CLI.</p>
+
+  <h2 class="s2" style="margin-top:12px">Broad NSE Universe Expansion (MUST RUN BEFORE SCANNER)</h2>
+  <div class="task"><input type="checkbox" data-task="6-0"><div class="tc"><div class="tl"><code>setup/08_build_universe.py</code> — build <code>config/all_nse_equity.csv</code> from Dhan instrument master NSE_EQ. Include active tradable equity symbols, security_id, name, series/instrument type, exchange segment, lot size, listing date if available. Do not depend on a hand-curated custom list.</div><div class="tf">setup/08_build_universe.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-0b"><div class="tc"><div class="tl">Create selectable universe profiles: <code>all_nse_equity</code>, <code>nifty500</code>, <code>small_mid_liquid</code>, <code>recent_listings</code>, and <code>watchlist</code>. Watchlist should support names like MRPL, MAZDOCK/Mazagon Dock, GRSE, ADANIPOWER, AEROFLEX, and exact Sterlite-family symbols resolved from Dhan master.</div><div class="tf">config/all_nse_equity.csv + config/watchlist.csv</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-0c"><div class="tc"><div class="tl">Fetch historical daily data for all eligible NSE equity. Use resumable/rate-limited Dhan fetch. 5yr where available; for recent listings and SME/Emerge names fetch from listing date/available history. Keep failures as recoverable rows in the run report.</div><div class="tf">setup/02_download_historical.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-0d"><div class="tc"><div class="tl">Build liquidity profile before alerting small/micro names: average traded value, 50-day average volume, minimum price, enough history, and risk tier. Smallcap alerts require liquidity pass; dashboard still shows lower-liquidity setups with warnings.</div><div class="tf">filters/liquidity.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-0e"><div class="tc"><div class="tl">Verify broad DB: total NSE_EQ count, active count, history coverage, missing-data list, and sample symbols present or honestly unresolved: MRPL, MAZDOCK, GRSE, ADANIPOWER, AEROFLEX, plus the intended Sterlite symbol.</div><div class="tf">setup/06_verify_data.py</div></div></div>
+
+  <h2 class="s2">Scanner Orchestrator</h2>
+  <div class="task"><input type="checkbox" data-task="6-1"><div class="tc"><div class="tl">PipelineContext dataclass with universe_name, universe_path, selected symbols, liquidity profile, and alert profile</div><div class="tf">scanner.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="6-2"><div class="tc"><div class="tl">stage() decorator — timing + error handling (critical/non-critical)</div><div class="tf">scanner.py</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-3"><div class="tc"><div class="tl">Pipeline.verify() — verify checks, allow 1 non-critical fail</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-4"><div class="tc"><div class="tl">Pipeline.fetch() — DataLoader + batch OHLC (unless --skip-fetch)</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-5"><div class="tc"><div class="tl">Pipeline.pre_compute() — regime (once) + sector RS (cached) + bear early exit</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-6"><div class="tc"><div class="tl">Pipeline.detect() — <strong>ProcessPoolExecutor(8)</strong>, as_completed, 30s timeout, per-stock error isolation</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-3"><div class="tc"><div class="tl">Pipeline.verify() — broad DB checks, selected universe checks, chart/output writability, allow 1 non-critical fail</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-4"><div class="tc"><div class="tl">Pipeline.fetch() — DataLoader + chunked batch OHLC for selected universe (unless --skip-fetch)</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-5"><div class="tc"><div class="tl">Pipeline.pre_compute() — regime (once) + sector RS (cached) + liquidity profile + bear early exit</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-6"><div class="tc"><div class="tl">Pipeline.detect() — <strong>ProcessPoolExecutor(8)</strong>, as_completed, 30s timeout, per-stock error isolation across selected universe</div></div></div>
   <div class="task"><input type="checkbox" data-task="6-7"><div class="tc"><div class="tl">Pipeline.filter_and_score() — 4 filters, conviction, explain. <strong>Then DEDUP:</strong> group all patterns per symbol → single consolidated card. One conviction score per stock (use highest-scoring pattern as primary, others listed as "also detected"). Dashboard shows "DEEPAKNTR: Asc.Triangle (primary) + Bull Flag + IH&amp;S" not 3 separate cards.</div></div></div>
   <div class="task"><input type="checkbox" data-task="6-7b"><div class="tc"><div class="tl"><strong>Dedup logic:</strong> (1) Group scored_results by symbol. (2) For each group, pick the pattern with highest individual conviction as PRIMARY. (3) Merge: use primary's pivot/target/stop, but conviction gets +5 bonus per additional pattern (stacked patterns = stronger signal, capped at +15). (4) Explanation mentions all detected patterns. (5) Telegram shows stacked count in alert.</div><div class="tf">engine/dedup.py</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-8"><div class="tc"><div class="tl">Pipeline.output() — Jinja2 HTML + Telegram (≥70) + daily summary + console</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-9"><div class="tc"><div class="tl">argparse: --skip-fetch, --stage, --dry-run, --workers</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-10"><div class="tc"><div class="tl">First full Nifty 500 run. HTML + Telegram verified. Target &lt;25s.</div></div></div>
-  <div class="task"><input type="checkbox" data-task="6-11"><div class="tc"><div class="tl">Windows Task Scheduler: python scanner.py at 3:45 PM IST daily</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-8"><div class="tc"><div class="tl">Pipeline.output() — Jinja2 HTML + Telegram (≥70 + liquidity pass) + daily summary + console</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-9"><div class="tc"><div class="tl">argparse: --universe, --skip-fetch, --stage, --dry-run, --workers, --fetch-all-data, --min-liquidity</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-10"><div class="tc"><div class="tl">First proven runs: (1) broad all_nse_equity data build/verify, (2) Nifty 500 default scan, (3) small_mid_liquid dry run, (4) watchlist run with MRPL/MAZDOCK/GRSE/ADANIPOWER/AEROFLEX sample coverage. HTML + Telegram verified.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="6-11"><div class="tc"><div class="tl">Windows Task Scheduler: daily selected-universe scan at 3:45 PM IST. Default profile remains Nifty 500 until broad universe and liquidity alerts are proven.</div></div></div>
 </div></div>
 
 <!-- PHASE 7 -->
-<div class="phase" id="p7"><div class="phase-header" onclick="tp(this)"><div class="pn">7</div><div class="pt">Data Maintenance + Pattern Dedup Engine</div><div class="ps pending" id="p7s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
-  <p class="d">Incremental weekly updates, quarterly Nifty 500 rebalance detection, and pattern dedup consolidation.</p>
+<div class="phase" id="p7"><div class="phase-header" onclick="tp(this)"><div class="pn">7</div><div class="pt">Universe Maintenance + Pattern Dedup Engine</div><div class="ps pending" id="p7s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
+  <p class="d">Incremental weekly updates, broad NSE universe refresh, Nifty 500 profile rebalance detection, and pattern dedup consolidation.</p>
 
   <h2 class="s2" style="margin-top:12px">Incremental Weekly Update</h2>
   <div class="sb"><div class="sbh">03_generate_weekly.py — incremental logic <span>▼</span></div><div class="sbb">def generate_weekly_incremental(conn):
@@ -717,35 +745,36 @@ Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
     4. INSERT new weekly candles (no delete, no rebuild)
     5. Only run full rebuild if --full flag passed
 
-    Why: Full rebuild processes 500×1250 = 625K rows every time.
-         Incremental processes only this week's 500 rows.
-         100x less work on daily runs.
+    Why: Full rebuild across broad NSE equity is expensive.
+         Incremental processes only new rows for symbols that changed.
+         Daily runs stay fast even as the DB expands.
     """
 
 # Also called by scanner.py after fetch_todays_candles():
 #   if today is Friday:
 #       generate_weekly_incremental()</div></div>
 
-  <h2 class="s2">Quarterly Rebalance Detection</h2>
-  <div class="sb"><div class="sbh">07_rebalance_check.py — auto-detect Nifty 500 changes <span>▼</span></div><div class="sbb">def check_rebalance():
+  <h2 class="s2">Universe Refresh + Profile Rebalance Detection</h2>
+  <div class="sb"><div class="sbh">07_rebalance_check.py — auto-detect broad universe and Nifty 500 profile changes <span>▼</span></div><div class="sbb">def check_rebalance():
     """
-    1. Download fresh Nifty 500 CSV from NSE
-    2. Load existing nifty500_dhan.csv
-    3. Compute:
+    1. Refresh Dhan instrument master and all_nse_equity.csv
+    2. Download fresh Nifty 500 CSV from NSE
+    3. Load existing universe/profile CSVs
+    4. Compute:
         added   = new_symbols - old_symbols
         removed = old_symbols - new_symbols
-    4. For ADDED stocks:
+    5. For ADDED stocks:
         - Lookup security_id from Dhan instrument master
         - Download 5yr daily OHLCV from Dhan
         - Insert into ohlcv_daily
         - Generate weekly candles
         - Map to sector in sector_map.json
-    5. For REMOVED stocks:
-        - Set status='INACTIVE' in nifty500_dhan.csv
+    6. For REMOVED/inactive stocks:
+        - Set status='INACTIVE' in universe/profile CSV
         - Keep all historical data (needed for backtesting)
-        - Exclude from future scans (filter in data_loader)
-    6. Update nifty500_dhan.csv with new master
-    7. Print summary
+        - Exclude from future active scans unless explicitly requested
+    7. Regenerate liquidity-derived profiles (small_mid_liquid, recent_listings)
+    8. Print summary
 
     Trigger:
         python setup/07_rebalance_check.py           # manual
@@ -805,8 +834,8 @@ Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
 
   <div class="task"><input type="checkbox" data-task="7-1"><div class="tc"><div class="tl">Implement incremental weekly in <code>03_generate_weekly.py</code> — find MAX(week), append new candles only. <code>--full</code> for rebuild.</div><div class="tf">setup/03_generate_weekly.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-2"><div class="tc"><div class="tl">Auto-trigger weekly increment in scanner.py: if today is Friday, run incremental after fetch.</div><div class="tf">scanner.py</div></div></div>
-  <div class="task"><input type="checkbox" data-task="7-3"><div class="tc"><div class="tl">Build <code>07_rebalance_check.py</code> — diff old vs new Nifty 500, add/remove stocks, update all config files.</div><div class="tf">setup/07_rebalance_check.py</div></div></div>
-  <div class="task"><input type="checkbox" data-task="7-4"><div class="tc"><div class="tl">Add <code>--check-rebalance</code> flag to scanner.py. Auto-prompt if current month is Mar/Jun/Sep/Dec.</div><div class="tf">scanner.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-3"><div class="tc"><div class="tl">Build <code>07_rebalance_check.py</code> — refresh all_nse_equity from Dhan master, diff old vs new Nifty 500 profile, add/remove/inactivate symbols, regenerate liquidity-derived profiles, update config files.</div><div class="tf">setup/07_rebalance_check.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-4"><div class="tc"><div class="tl">Add <code>--check-rebalance</code> and <code>--refresh-universe</code> flags to scanner.py. Auto-prompt Nifty 500 profile refresh if current month is Mar/Jun/Sep/Dec.</div><div class="tf">scanner.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-5"><div class="tc"><div class="tl">Build <code>engine/dedup.py</code> — group by symbol, pick primary, stack bonus (+5/pattern, cap +15), merge explanation.</div><div class="tf">engine/dedup.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-6"><div class="tc"><div class="tl">Update dashboard template: show stacked count badge on cards ("3 patterns"), expandable lists all patterns.</div><div class="tf">dashboard/template.html</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-7"><div class="tc"><div class="tl">Update Telegram alert: show stacked count and all pattern names in alert message.</div><div class="tf">engine/telegram.py</div></div></div>
@@ -867,25 +896,26 @@ STACK BONUS VALIDATION:
     win_rate_1_pattern  vs  win_rate_2_stacked  vs  win_rate_3_stacked
     → Proves whether stacked patterns actually perform better</div></div>
 
-  <div class="sb"><div class="sbh">backtest/engine.py — core walkforward loop <span>▼</span></div><div class="sbb">def run_backtest(db_path, lookback_years=3, entry_mode="next_open",
+  <div class="sb"><div class="sbh">backtest/engine.py — core walkforward loop <span>▼</span></div><div class="sbb">def run_backtest(db_path, universe="nifty500", lookback_years=3, entry_mode="next_open",
                   max_hold_days=30, min_conviction=50):
     """
     Walkforward backtest. NO future leakage.
 
     lookback_years: how far back to test (3yr = ~750 trading days)
+    universe: profile to test separately (nifty500, small_mid_liquid, recent_listings, watchlist)
     entry_mode: "pivot" (enter at exact pivot) or "next_open" (realistic)
     max_hold_days: close trade if neither target nor stop hit in N days
     min_conviction: only test hits above this threshold
     """
     loader = DataLoader(db_path)
-    all_symbols = loader.get_all_symbols()
+    symbols = loader.get_symbols_for_universe(universe)
     trades = []
 
     # Walk day by day
     for day_idx in range(start_idx, end_idx):
         current_date = trading_days[day_idx]
 
-        for symbol in all_symbols:
+        for symbol in symbols:
             # Slice data UP TO current_date only
             daily_slice = loader.get_daily_up_to(symbol, current_date)
             weekly_slice = loader.get_weekly_up_to(symbol, current_date)
@@ -986,7 +1016,7 @@ def track_trade_forward(symbol, entry_date, entry, target, stop, max_days):
   <div class="task"><input type="checkbox" data-task="8-3"><div class="tc"><div class="tl"><code>track_trade_forward()</code> — for each entry, walk forward max 30 days. First hit of target or stop = outcome. Timeout = close at last price.</div><div class="tf">backtest/engine.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="8-4"><div class="tc"><div class="tl"><code>BacktestResult</code> class — compute all metrics: win rate, PF, expectancy, Sharpe, max drawdown, per-pattern, per-tier, per-filter, per-stack-count.</div><div class="tf">backtest/metrics.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="8-5"><div class="tc"><div class="tl"><code>backtest/report.py</code> — Carbon Ember HTML report: summary table, conviction tier table, filter impact table, stack validation, equity curve SVG, monthly heatmap.</div><div class="tf">backtest/report.py</div></div></div>
-  <div class="task"><input type="checkbox" data-task="8-6"><div class="tc"><div class="tl">Run backtest on 3yr Nifty 500 data. Expect: 500–2000 trades depending on thresholds.</div></div></div>
+  <div class="task"><input type="checkbox" data-task="8-6"><div class="tc"><div class="tl">Run backtest separately by universe profile: Nifty 500 baseline, small_mid_liquid, recent_listings, and watchlist. Do not mix illiquid smallcaps with largecap baseline metrics.</div></div></div>
   <div class="task"><input type="checkbox" data-task="8-7"><div class="tc"><div class="tl">Validate: does conviction 90+ actually beat 50-69 by a meaningful margin? If not → retune weights.</div></div></div>
   <div class="task"><input type="checkbox" data-task="8-8"><div class="tc"><div class="tl">Validate: does stack bonus actually improve win rate? If 3-stacked ≈ 1-pattern → remove bonus.</div></div></div>
   <div class="task"><input type="checkbox" data-task="8-9"><div class="tc"><div class="tl">CLI: <code>python -m backtest --years 3 --min-conviction 50 --entry next_open</code></div></div></div>
@@ -1007,7 +1037,8 @@ def track_trade_forward(symbol, entry_date, entry, target, stop, max_days):
   <h2 class="s2" style="margin-top:0">Daily Workflow</h2>
   <div class="mono" style="font-size:12px;line-height:2">
     <span class="muted">3:30</span> Market closes · <span class="muted">3:35</span> Dhan updates<br>
-    <span class="accent">3:40</span> <span class="bright">python scanner.py</span> — verify(2s) → batch fetch(3s) → pre-compute(3s) → detect 8-core(12s) → filter(3s) → output(2s)<br>
+    <span class="accent">3:40</span> <span class="bright">python scanner.py --universe nifty500</span> — verify → batch fetch selected universe → pre-compute → detect 8-core → filter → charts → dashboard/Telegram<br>
+    <span class="muted">Weekly/off-hours</span> <span class="bright">python scanner.py --fetch-all-data --universe all_nse_equity</span> — refresh broad DB before small/mid/recent-listing scans<br>
     <span class="accent">3:41</span> Open <span class="bright">output/scan_YYYYMMDD.html</span> · Review picks · Place GTT on Dhan
   </div>
 </div>
