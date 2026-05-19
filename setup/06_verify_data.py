@@ -1,4 +1,4 @@
-"""Verify Phase 1 data infrastructure."""
+"""Verify local market data infrastructure and broad universe coverage."""
 
 from __future__ import annotations
 
@@ -17,6 +17,9 @@ if str(ROOT) not in sys.path:
 
 from config import settings
 from engine import storage
+
+BROAD_MIN_COVERAGE = 0.95
+BROAD_SAMPLE_SYMBOLS = ["MRPL", "MAZDOCK", "GRSE", "ADANIPOWER", "AEROFLEX", "STLTECH", "VEDL"]
 
 
 def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
@@ -109,6 +112,102 @@ def _check_sector_map() -> tuple[bool, str]:
     return len(mapped) >= 450, f"{len(mapped)} symbols mapped"
 
 
+def _active_symbols_from_csv(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    frame = pd.read_csv(path, dtype=str).fillna("")
+    if "status" in frame.columns:
+        frame = frame[frame["status"].astype(str).str.upper().eq("ACTIVE")]
+    return sorted(set(frame["symbol"].astype(str).str.upper().str.strip()) - {""})
+
+
+def _table_symbols(conn: sqlite3.Connection, table: str, symbol_col: str = "symbol") -> set[str]:
+    if not _table_exists(conn, table):
+        return set()
+    frame = storage.query_frame(
+        conn,
+        f"""
+        SELECT DISTINCT {symbol_col} AS symbol
+        FROM {table}
+        WHERE close > 0
+        """,
+    )
+    if frame.empty:
+        return set()
+    return set(frame["symbol"].astype(str).str.upper())
+
+
+def _coverage_detail(active: list[str], covered: set[str]) -> tuple[int, int, float, list[str]]:
+    active_set = set(active)
+    covered_count = len(active_set & covered)
+    total = len(active_set)
+    coverage = (covered_count / total) if total else 0.0
+    missing = sorted(active_set - covered)
+    return covered_count, total, coverage, missing
+
+
+def _check_broad_universe_csv() -> tuple[bool, str]:
+    if not settings.ALL_NSE_EQUITY_CSV.exists():
+        return False, "config/all_nse_equity.csv missing"
+    frame = pd.read_csv(settings.ALL_NSE_EQUITY_CSV, dtype=str).fillna("")
+    if "status" in frame.columns:
+        active = frame[frame["status"].astype(str).str.upper().eq("ACTIVE")].copy()
+    else:
+        active = frame.copy()
+    security_ids = active["security_id"].astype(str).str.strip()
+    missing_ids = int(security_ids.eq("").sum())
+    sample_missing = sorted(set(BROAD_SAMPLE_SYMBOLS) - set(active["symbol"].astype(str).str.upper()))
+    ok = len(active) >= 1500 and missing_ids == 0 and not sample_missing
+    detail = (
+        f"{len(active)} active broad NSE symbols, missing_security_id={missing_ids}, "
+        f"sample_missing={sample_missing[:10]}"
+    )
+    return ok, detail
+
+
+def _check_broad_daily(conn: sqlite3.Connection) -> tuple[bool, str]:
+    active = _active_symbols_from_csv(settings.ALL_NSE_EQUITY_CSV)
+    daily_symbols = _table_symbols(conn, "ohlcv_daily")
+    covered, total, coverage, missing = _coverage_detail(active, daily_symbols)
+    latest = conn.execute("SELECT MAX(date) FROM ohlcv_daily WHERE close > 0").fetchone()[0] or "none"
+    ok = total > 0 and coverage >= BROAD_MIN_COVERAGE
+    detail = (
+        f"{covered}/{total} broad symbols have daily rows ({coverage:.1%}), "
+        f"latest {latest}, missing_count={len(missing)}, missing_sample={missing[:20]}"
+    )
+    return ok, detail
+
+
+def _check_broad_weekly(conn: sqlite3.Connection) -> tuple[bool, str]:
+    active = _active_symbols_from_csv(settings.ALL_NSE_EQUITY_CSV)
+    daily_symbols = _table_symbols(conn, "ohlcv_daily")
+    weekly_symbols = _table_symbols(conn, "ohlcv_weekly")
+    downloaded = sorted(set(active) & daily_symbols)
+    covered, total, coverage, missing = _coverage_detail(downloaded, weekly_symbols)
+    latest = conn.execute("SELECT MAX(week) FROM ohlcv_weekly WHERE close > 0").fetchone()[0] or "none"
+    ok = total > 0 and covered == total
+    detail = (
+        f"{covered}/{total} downloaded broad symbols have weekly rows ({coverage:.1%}), "
+        f"latest {latest}, missing_count={len(missing)}, missing_sample={missing[:20]}"
+    )
+    return ok, detail
+
+
+def _check_watchlist_coverage(conn: sqlite3.Connection) -> tuple[bool, str]:
+    active = _active_symbols_from_csv(settings.WATCHLIST_CSV)
+    daily_symbols = _table_symbols(conn, "ohlcv_daily")
+    weekly_symbols = _table_symbols(conn, "ohlcv_weekly")
+    daily_covered, total, daily_coverage, daily_missing = _coverage_detail(active, daily_symbols)
+    weekly_covered, _, weekly_coverage, weekly_missing = _coverage_detail(active, weekly_symbols)
+    ok = total > 0 and daily_covered == total and weekly_covered == total
+    detail = (
+        f"daily {daily_covered}/{total} ({daily_coverage:.1%}), "
+        f"weekly {weekly_covered}/{total} ({weekly_coverage:.1%}), "
+        f"daily_missing={daily_missing}, weekly_missing={weekly_missing}"
+    )
+    return ok, detail
+
+
 def verify_data() -> tuple[int, int, list[dict[str, str]]]:
     details: list[dict[str, str]] = []
     conn = storage.connect()
@@ -120,6 +219,10 @@ def verify_data() -> tuple[int, int, list[dict[str, str]]]:
         ("ohlcv_weekly", lambda: _check_weekly(conn)),
         ("index_daily", lambda: _check_indices(conn)),
         ("sector_map", _check_sector_map),
+        ("broad_universe_csv", _check_broad_universe_csv),
+        ("broad_daily_coverage", lambda: _check_broad_daily(conn)),
+        ("broad_weekly_coverage", lambda: _check_broad_weekly(conn)),
+        ("watchlist_coverage", lambda: _check_watchlist_coverage(conn)),
     ]
     passed = 0
     for name, check in checks:
@@ -136,7 +239,7 @@ def main() -> int:
     argparse.ArgumentParser().parse_args()
     passed, total, details = verify_data()
     print(tabulate(details, headers="keys", tablefmt="github"))
-    print(f"Phase 1 data checks: {passed}/{total}")
+    print(f"Data coverage checks: {passed}/{total}")
     return 0 if passed == total else 1
 
 
