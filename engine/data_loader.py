@@ -61,6 +61,10 @@ class DataLoader:
         frame = self.get_stock_daily(symbol)
         return dataframe_to_arrays(frame)
 
+    def get_stock_weekly_arrays(self, symbol: str) -> dict[str, np.ndarray]:
+        frame = self.get_stock_weekly(symbol).rename(columns={"week": "date"})
+        return dataframe_to_arrays(frame)
+
     def get_all_active_symbols(self) -> list[str]:
         if not settings.NIFTY500_DHAN_CSV.exists():
             return []
@@ -164,4 +168,3 @@ def _float(value) -> float:
         return float(value or 0)
     except (TypeError, ValueError):
         return 0.0
-
