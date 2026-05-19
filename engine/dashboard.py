@@ -1,0 +1,453 @@
+"""Self-contained Carbon Ember dashboard rendering."""
+
+from __future__ import annotations
+
+import base64
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Iterable
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+from config import settings
+from engine.explainer import PATTERN_101
+
+
+TEMPLATE_PATH = settings.BASE_DIR / "dashboard" / "template.html"
+TIER_ORDER = ("HIGHEST", "HIGH", "MEDIUM", "SKIP")
+TIER_LABELS = {
+    "HIGHEST": "Highest conviction",
+    "HIGH": "High conviction",
+    "MEDIUM": "Watchlist quality",
+    "SKIP": "Rejected / avoid",
+}
+REGIME_CHECK_LABELS = {
+    "nifty_above_50ma": "Nifty above 50 MA",
+    "nifty_above_200ma": "Nifty above 200 MA",
+    "ma50_above_ma200": "50 MA above 200 MA",
+    "advance_decline_confirmed": "Breadth confirmed",
+}
+BREAKDOWN_LABELS = {
+    "pattern": "Pattern quality",
+    "stage2": "Stage 2 uptrend",
+    "volume": "Volume confirmation",
+    "sector_rs": "Sector relative strength",
+    "market_regime": "Market regime",
+    "multi_tf": "Multi-timeframe",
+    "rsi_adjustment": "RSI adjustment",
+}
+FILTER_LABELS = {
+    "stage2": "Stage 2",
+    "volume": "Volume",
+    "sector_rs": "Sector RS",
+    "market_regime": "Regime",
+    "rsi": "RSI",
+    "multi_tf": "Multi-TF",
+}
+
+
+def render_dashboard(context: dict[str, Any], *, template_path: str | Path | None = None) -> str:
+    """Render a self-contained dashboard HTML string from scanner context."""
+    path = Path(template_path) if template_path else TEMPLATE_PATH
+    env = Environment(
+        loader=FileSystemLoader(str(path.parent)),
+        autoescape=select_autoescape(("html", "xml")),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    template = env.get_template(path.name)
+    return template.render(**build_dashboard_context(context))
+
+
+def write_dashboard(
+    context: dict[str, Any],
+    output_path: str | Path | None = None,
+    *,
+    template_path: str | Path | None = None,
+) -> Path:
+    """Render the dashboard and write it to disk."""
+    if output_path is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = settings.OUTPUT_DIR / f"dashboard_{timestamp}.html"
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_dashboard(context, template_path=template_path), encoding="utf-8")
+    return path
+
+
+def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
+    """Normalize scanner output into a stable template contract."""
+    market_regime = _normalize_market_regime(context.get("market_regime") or context.get("regime") or {})
+    results = [_normalize_result(item) for item in _list(context, "results", "scored_results")]
+    results.sort(key=lambda item: (TIER_ORDER.index(item["tier"]) if item["tier"] in TIER_ORDER else 99, -item["score"]))
+    sectors = _normalize_sectors(context.get("sector_rs") or context.get("sector_cache") or context.get("sectors") or {})
+    errors = [_normalize_error(item) for item in _list(context, "errors", "failed_stages")]
+
+    generated_at = _format_datetime(_coalesce(context.get("generated_at"), context.get("scan_time")))
+    duration = _fmt_number(_coalesce(context.get("duration_seconds"), context.get("duration")), suffix="s")
+    stocks_scanned = _coalesce(context.get("stocks_scanned"), context.get("scan_count"), context.get("symbols_scanned"), "N/A")
+    alerts_sent = context.get("alerts_sent")
+    if alerts_sent is None:
+        alerts_sent = sum(1 for item in results if item["tradable"] and item["score"] >= settings.TELEGRAM_MIN_CONVICTION)
+
+    tier_groups = []
+    for tier in TIER_ORDER:
+        items = [item for item in results if item["tier"] == tier]
+        tier_groups.append(
+            {
+                "name": tier,
+                "label": TIER_LABELS[tier],
+                "results": items,
+                "count": len(items),
+                "avg_score": _average_score(items),
+            }
+        )
+
+    return {
+        "generated_at": generated_at,
+        "market_regime": market_regime,
+        "nifty_cmp": _fmt_money(_coalesce(context.get("nifty_cmp"), market_regime["details"].get("nifty_close"))),
+        "stocks_scanned": stocks_scanned,
+        "duration": duration,
+        "results": results,
+        "tier_groups": tier_groups,
+        "sectors": sectors,
+        "errors": errors,
+        "summary": {
+            "hit_count": len(results),
+            "alert_count": alerts_sent,
+            "error_count": len(errors),
+            "highest_count": len([item for item in results if item["tier"] == "HIGHEST"]),
+        },
+    }
+
+
+def _normalize_market_regime(regime: dict[str, Any]) -> dict[str, Any]:
+    checks = regime.get("checks") or {}
+    details = regime.get("details") or {}
+    return {
+        "score": _int(regime.get("score"), default=0),
+        "verdict": str(regime.get("verdict") or "UNKNOWN"),
+        "class_name": _status_class(regime.get("verdict")),
+        "checks": [
+            {
+                "key": key,
+                "label": REGIME_CHECK_LABELS.get(key, key.replace("_", " ").title()),
+                "passed": bool(value),
+            }
+            for key, value in checks.items()
+        ],
+        "details": details,
+        "detail_rows": [
+            ("Nifty close", _fmt_money(details.get("nifty_close"))),
+            ("50 MA", _fmt_money(details.get("nifty_ma50"))),
+            ("200 MA", _fmt_money(details.get("nifty_ma200"))),
+            ("A/D ratio", _fmt_number(details.get("advance_decline_ratio"))),
+        ],
+    }
+
+
+def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
+    pattern_result = item.get("pattern_result")
+    pattern = str(_coalesce(item.get("pattern"), _field(pattern_result, "pattern"), "Pattern"))
+    pivot = _number(_coalesce(item.get("pivot"), _field(pattern_result, "pivot")))
+    target = _number(_coalesce(item.get("target"), _field(pattern_result, "target")))
+    stop_loss = _number(_coalesce(item.get("stop_loss"), _field(pattern_result, "stop_loss")))
+    score = _int(_coalesce(item.get("score"), item.get("final_score"), _field(pattern_result, "confidence")), default=0)
+    tier = str(_coalesce(item.get("tier"), _tier(score))).upper()
+    explanation = str(_coalesce(item.get("explanation"), _field(pattern_result, "explanation"), ""))
+    sections = _build_sections(pattern, explanation, item, pivot, target, stop_loss)
+    filters = _normalize_filters(item.get("filters") or {})
+    breakdown = _normalize_breakdown(item.get("breakdown") or {})
+    all_patterns = _pattern_names(item.get("all_patterns") or item.get("patterns") or [])
+    chart_src = _chart_data_uri(item.get("chart_data_uri") or item.get("chart_path"))
+
+    return {
+        "symbol": str(item.get("symbol") or "UNKNOWN").upper(),
+        "cmp": _fmt_money(_coalesce(item.get("cmp"), item.get("current_price"), _filter_detail(item, "stage2", "close"))),
+        "pattern": pattern,
+        "status": str(_coalesce(item.get("status"), _field(pattern_result, "status"), "")),
+        "timeframe": str(_coalesce(item.get("timeframe"), _field(pattern_result, "timeframe"), "daily")),
+        "pivot": pivot,
+        "target": target,
+        "stop_loss": stop_loss,
+        "pivot_text": _fmt_money(pivot),
+        "target_text": _fmt_money(target),
+        "stop_text": _fmt_money(stop_loss),
+        "risk_reward": _risk_reward(pivot, target, stop_loss),
+        "score": score,
+        "tier": tier if tier in TIER_ORDER else "SKIP",
+        "tier_label": TIER_LABELS.get(tier, tier.title()),
+        "tier_class": tier.lower(),
+        "tradable": bool(item.get("tradable", tier != "SKIP")),
+        "skip_reason": item.get("skip_reason"),
+        "stacked_count": _int(item.get("stacked_count") or item.get("stack_count") or len(all_patterns) or 1, default=1),
+        "all_patterns": all_patterns,
+        "filters": filters,
+        "breakdown": breakdown,
+        "sections": sections,
+        "chart_src": chart_src,
+        "chart_available": bool(chart_src),
+    }
+
+
+def _normalize_filters(filters: dict[str, Any]) -> list[dict[str, Any]]:
+    normalized = []
+    for key, label in FILTER_LABELS.items():
+        value = filters.get(key) or {}
+        if key == "market_regime":
+            status = str(value.get("verdict") or value.get("status") or "UNKNOWN")
+            passed = _int(value.get("score"), default=0) >= 3
+        elif key == "rsi":
+            status = str(value.get("status") or "UNKNOWN")
+            passed = "DIVERGENCE" not in status.upper() and _number(value.get("value")) is not None
+        else:
+            status = str(value.get("status") or "UNKNOWN")
+            passed = bool(value.get("passed"))
+        normalized.append(
+            {
+                "key": key,
+                "label": label,
+                "status": status,
+                "passed": passed,
+                "class_name": "pass" if passed else "fail",
+            }
+        )
+    return normalized
+
+
+def _normalize_breakdown(breakdown: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for key, label in BREAKDOWN_LABELS.items():
+        if key not in breakdown:
+            continue
+        rows.append({"label": label, "value": _fmt_number(breakdown.get(key))})
+    return rows
+
+
+def _normalize_sectors(raw: Any) -> list[dict[str, Any]]:
+    sectors = raw.get("sectors", raw) if isinstance(raw, dict) else raw
+    if not sectors:
+        return []
+    if isinstance(sectors, dict):
+        iterable = [{"name": name, **(value or {})} for name, value in sectors.items()]
+    else:
+        iterable = list(sectors)
+
+    normalized = []
+    for item in iterable:
+        name = str(item.get("name") or item.get("sector") or item.get("sector_index") or "UNKNOWN")
+        vs_nifty = _number(item.get("vs_nifty_pct"))
+        return_pct = _number(item.get("return_pct"))
+        status = _sector_status(vs_nifty)
+        normalized.append(
+            {
+                "name": name,
+                "return_pct": _fmt_percent(return_pct),
+                "vs_nifty_pct": _fmt_percent(vs_nifty),
+                "score": 0 if vs_nifty is None else max(-12.0, min(12.0, vs_nifty)),
+                "class_name": status.lower(),
+                "status": status,
+            }
+        )
+    return sorted(normalized, key=lambda item: item["score"], reverse=True)
+
+
+def _normalize_error(item: Any) -> dict[str, Any]:
+    if isinstance(item, dict):
+        return {
+            "stage": str(item.get("stage") or item.get("where") or "pipeline"),
+            "symbol": str(item.get("symbol") or "-"),
+            "message": str(item.get("message") or item.get("error") or "Unknown error"),
+            "critical": bool(item.get("critical", False)),
+        }
+    return {"stage": "pipeline", "symbol": "-", "message": str(item), "critical": False}
+
+
+def _build_sections(
+    pattern: str,
+    explanation: str,
+    item: dict[str, Any],
+    pivot: float | None,
+    target: float | None,
+    stop_loss: float | None,
+) -> dict[str, str]:
+    parsed = _parse_explanation_sections(explanation)
+    breakdown_lines = []
+    for row in _normalize_breakdown(item.get("breakdown") or {}):
+        breakdown_lines.append(f"{row['label']}: {row['value']}")
+
+    return {
+        "pattern_header": parsed.get(0) or pattern.upper(),
+        "pattern_101": parsed.get(1) or PATTERN_101.get(pattern, "Pattern education is not available yet."),
+        "stock_specific": parsed.get(2) or _field(item.get("pattern_result"), "explanation", "Detector details are not available."),
+        "action_plan": parsed.get(3) or _default_action_plan(pivot, target, stop_loss),
+        "risk": parsed.get(4) or _default_risk_note(stop_loss),
+        "conviction": parsed.get(5) or "\n".join(breakdown_lines) or "Conviction breakdown is not available.",
+    }
+
+
+def _parse_explanation_sections(explanation: str) -> dict[int, str]:
+    if not explanation:
+        return {}
+    matches = list(re.finditer(r"SECTION\s+(\d+):\s*([^\n]*)(?:\n|$)", explanation))
+    if not matches:
+        return {}
+    sections: dict[int, str] = {}
+    for idx, match in enumerate(matches):
+        number = int(match.group(1))
+        title = match.group(2).strip()
+        start = match.end()
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(explanation)
+        body = explanation[start:end].strip()
+        sections[number] = body or title
+    return sections
+
+
+def _chart_data_uri(value: Any) -> str | None:
+    if not value:
+        return None
+    text = str(value)
+    if text.startswith("data:image/"):
+        return text
+    path = Path(text)
+    if not path.is_absolute():
+        path = settings.BASE_DIR / path
+    if not path.exists() or not path.is_file():
+        return None
+    mime = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
+    payload = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{payload}"
+
+
+def _list(context: dict[str, Any], *keys: str) -> list[Any]:
+    for key in keys:
+        value = context.get(key)
+        if value is not None:
+            return list(value)
+    return []
+
+
+def _field(obj: Any, key: str, default: Any = None) -> Any:
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _coalesce(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _filter_detail(item: dict[str, Any], filter_name: str, detail_name: str) -> Any:
+    return ((item.get("filters") or {}).get(filter_name) or {}).get("details", {}).get(detail_name)
+
+
+def _pattern_names(values: Iterable[Any]) -> list[str]:
+    names = []
+    for value in values:
+        name = value if isinstance(value, str) else _field(value, "pattern")
+        if name:
+            names.append(str(name))
+    return names
+
+
+def _risk_reward(pivot: float | None, target: float | None, stop_loss: float | None) -> str:
+    if pivot is None or target is None or stop_loss is None:
+        return "N/A"
+    risk = max(pivot - stop_loss, 0.0)
+    reward = max(target - pivot, 0.0)
+    return _fmt_number(reward / risk if risk > 0 else 0.0) + ":1"
+
+
+def _default_action_plan(pivot: float | None, target: float | None, stop_loss: float | None) -> str:
+    return (
+        f"Entry above {_fmt_money(pivot)}. Target {_fmt_money(target)}. "
+        f"Stop {_fmt_money(stop_loss)}. Respect the stop if the setup fails."
+    )
+
+
+def _default_risk_note(stop_loss: float | None) -> str:
+    return f"The setup is invalid if price closes below {_fmt_money(stop_loss)}."
+
+
+def _average_score(items: list[dict[str, Any]]) -> str:
+    if not items:
+        return "N/A"
+    return _fmt_number(sum(item["score"] for item in items) / len(items))
+
+
+def _sector_status(vs_nifty: float | None) -> str:
+    if vs_nifty is None:
+        return "UNKNOWN"
+    if vs_nifty >= settings.SECTOR_RS["leading_threshold"]:
+        return "LEADING"
+    if vs_nifty <= -settings.SECTOR_RS["lagging_threshold"]:
+        return "LAGGING"
+    return "NEUTRAL"
+
+
+def _status_class(value: Any) -> str:
+    text = str(value or "unknown").lower()
+    if "bear" in text:
+        return "bear"
+    if "uptrend" in text or "bull" in text:
+        return "bull"
+    if "neutral" in text:
+        return "neutral"
+    return "unknown"
+
+
+def _tier(score: int) -> str:
+    if score >= settings.CONVICTION_TIERS["HIGHEST"]:
+        return "HIGHEST"
+    if score >= settings.CONVICTION_TIERS["HIGH"]:
+        return "HIGH"
+    if score >= settings.CONVICTION_TIERS["MEDIUM"]:
+        return "MEDIUM"
+    return "SKIP"
+
+
+def _format_datetime(value: Any) -> str:
+    if value is None:
+        return datetime.now().strftime("%d %b %Y, %H:%M")
+    if isinstance(value, datetime):
+        return value.strftime("%d %b %Y, %H:%M")
+    return str(value)
+
+
+def _fmt_money(value: Any) -> str:
+    number = _number(value)
+    if number is None:
+        return "N/A"
+    return "Rs." + f"{number:,.2f}".rstrip("0").rstrip(".")
+
+
+def _fmt_percent(value: Any) -> str:
+    number = _number(value)
+    if number is None:
+        return "N/A"
+    return f"{number:+.2f}%".replace("+0.00", "0.00")
+
+
+def _fmt_number(value: Any, *, suffix: str = "") -> str:
+    number = _number(value)
+    if number is None:
+        return "N/A"
+    return f"{number:,.2f}".rstrip("0").rstrip(".") + suffix
+
+
+def _number(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
+def _int(value: Any, *, default: int = 0) -> int:
+    number = _number(value)
+    return default if number is None else int(round(number))

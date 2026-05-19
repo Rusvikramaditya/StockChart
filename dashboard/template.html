@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NSE Pattern Intelligence Dashboard</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0a0a0a;
+      --panel: #141414;
+      --panel-2: #1a1a1a;
+      --line: #2a2a2a;
+      --line-soft: #202020;
+      --text: #eeeeee;
+      --muted: #a3a3a3;
+      --faint: #707070;
+      --accent: #ff4800;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #facc15;
+      --blue: #38bdf8;
+      --shadow: rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Syne, "Segoe UI", Inter, Arial, sans-serif;
+      line-height: 1.45;
+      letter-spacing: 0;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button,
+    input,
+    summary {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    .shell {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 0 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--text);
+      font-size: 30px;
+      line-height: 1.1;
+      font-weight: 800;
+    }
+
+    .subline {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .regime-badge {
+      min-width: 220px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      text-align: right;
+      box-shadow: 0 10px 28px var(--shadow);
+    }
+
+    .regime-badge .label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .regime-badge .value {
+      display: block;
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .regime-badge.bull .value { color: var(--green); }
+    .regime-badge.bear .value { color: var(--red); }
+    .regime-badge.neutral .value { color: var(--yellow); }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin: 20px 0 22px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .stat .label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stat .value {
+      display: block;
+      margin-top: 6px;
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 18px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 28px 0 12px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .section-title .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .market-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.3fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .panel-head h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .score-pill,
+    .tier-pill,
+    .stack-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 26px;
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .check-list,
+    .detail-list {
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .check-row,
+    .detail-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .check-row:last-child,
+    .detail-row:last-child {
+      border-bottom: 0;
+    }
+
+    .check-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      flex: 0 0 auto;
+    }
+
+    .check-dot.pass { background: var(--green); }
+
+    .sector-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .sector {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #101010;
+    }
+
+    .sector .name {
+      display: block;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sector .metric {
+      display: block;
+      margin-top: 7px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .sector.leading .metric { color: var(--green); }
+    .sector.neutral .metric { color: var(--yellow); }
+    .sector.lagging .metric { color: var(--red); }
+    .sector.unknown .metric { color: var(--muted); }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .segments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .segments button,
+    .compact-button {
+      min-height: 36px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .segments button:hover,
+    .compact-button:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .segments button.active {
+      color: var(--text);
+      border-color: var(--accent);
+      background: #1e120d;
+    }
+
+    .tier-section {
+      margin-bottom: 18px;
+    }
+
+    .tier-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tier-header h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .result-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+      box-shadow: 0 10px 30px var(--shadow);
+    }
+
+    .result-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .symbol-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .symbol {
+      color: var(--text);
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .pattern {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .pattern strong {
+      color: var(--text);
+    }
+
+    .score-block {
+      text-align: right;
+    }
+
+    .score {
+      color: var(--accent);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .score-label {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line-soft);
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 12px;
+      background: #101010;
+    }
+
+    .metric .label {
+      display: block;
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    .metric .value {
+      display: block;
+      margin-top: 5px;
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      background: #101010;
+    }
+
+    .filter::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+
+    .filter.pass::before { background: var(--green); }
+
+    details {
+      border: 0;
+    }
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 44px;
+      padding: 12px 16px;
+      color: var(--text);
+      cursor: pointer;
+      list-style: none;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    summary .chevron {
+      color: var(--accent);
+      transition: transform 0.18s ease;
+    }
+
+    details[open] summary .chevron {
+      transform: rotate(180deg);
+    }
+
+    .detail-content {
+      padding: 0 16px 16px;
+    }
+
+    .pattern-title {
+      margin: 4px 0 12px;
+      color: var(--text);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .chart-frame {
+      margin: 0 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #050505;
+    }
+
+    .chart-frame img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 3 / 2;
+      object-fit: contain;
+      background: #050505;
+    }
+
+    .chart-missing {
+      padding: 18px;
+      color: var(--yellow);
+      font-size: 13px;
+      border: 1px dashed var(--yellow);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .detail-block {
+      padding: 13px 0;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .detail-block h4 {
+      margin: 0 0 7px;
+      color: var(--accent);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .detail-block p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .breakdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .breakdown-table th,
+    .breakdown-table td {
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line-soft);
+      text-align: left;
+    }
+
+    .breakdown-table th {
+      color: var(--faint);
+      font-weight: 600;
+    }
+
+    .breakdown-table td:last-child {
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      text-align: right;
+      font-weight: 800;
+    }
+
+    .empty-state,
+    .errors {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 16px;
+      color: var(--muted);
+    }
+
+    .errors table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .errors th,
+    .errors td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line-soft);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .errors th {
+      color: var(--faint);
+      font-weight: 600;
+    }
+
+    .errors tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1100px) {
+      .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .market-grid { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .shell { padding: 16px; }
+      .topbar { flex-direction: column; }
+      .regime-badge { width: 100%; text-align: left; }
+      h1 { font-size: 24px; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .result-main { grid-template-columns: 1fr; }
+      .score-block { text-align: left; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .section-title { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media (max-width: 430px) {
+      .summary-grid,
+      .sector-grid,
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+      .segments button,
+      .compact-button {
+        flex: 1 1 auto;
+      }
+      .symbol { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">NSE Pattern Engine</p>
+        <h1>Pattern Intelligence Dashboard</h1>
+        <p class="subline">Generated {{ generated_at }}. Charts and results are embedded in this file.</p>
+      </div>
+      <div class="regime-badge {{ market_regime.class_name }}">
+        <span class="label">Market Regime</span>
+        <span class="value">{{ market_regime.verdict }}</span>
+        <span class="label">{{ market_regime.score }}/4 checks passed</span>
+      </div>
+    </header>
+
+    <section class="summary-grid" aria-label="Scan summary">
+      <div class="stat"><span class="label">Nifty CMP</span><span class="value">{{ nifty_cmp }}</span></div>
+      <div class="stat"><span class="label">Stocks Scanned</span><span class="value">{{ stocks_scanned }}</span></div>
+      <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
+      <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
+      <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
+      <div class="stat"><span class="label">Errors</span><span class="value">{{ summary.error_count }}</span></div>
+    </section>
+
+    <section class="market-grid" aria-label="Market context">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Market Regime Panel</h3>
+          <span class="score-pill">{{ market_regime.score }}/4</span>
+        </div>
+        <ul class="check-list">
+          {% for check in market_regime.checks %}
+          <li class="check-row">
+            <span>{{ check.label }}</span>
+            <span class="check-dot{% if check.passed %} pass{% endif %}" aria-label="{{ 'passed' if check.passed else 'failed' }}"></span>
+          </li>
+          {% endfor %}
+        </ul>
+        <ul class="detail-list">
+          {% for label, value in market_regime.detail_rows %}
+          <li class="detail-row"><span>{{ label }}</span><strong>{{ value }}</strong></li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Sector Heatmap</h3>
+          <span class="score-pill">{{ sectors|length }} sectors</span>
+        </div>
+        {% if sectors %}
+        <div class="sector-grid">
+          {% for sector in sectors %}
+          <div class="sector {{ sector.class_name }}">
+            <span class="name" title="{{ sector.name }}">{{ sector.name }}</span>
+            <span class="metric">{{ sector.vs_nifty_pct }}</span>
+            <span class="label">{{ sector.status }} vs Nifty</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">Sector relative strength data is not available for this run.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section aria-label="Pattern results">
+      <div class="section-title">
+        <div>
+          <h2>Result Cards by Conviction Tier</h2>
+          <span class="hint">Sorted by tier and conviction score.</span>
+        </div>
+        <div class="toolbar">
+          <div class="segments" role="tablist" aria-label="Tier filter">
+            <button type="button" class="active" data-tier-filter="ALL">All</button>
+            {% for group in tier_groups %}
+            <button type="button" data-tier-filter="{{ group.name }}">{{ group.name }} ({{ group.count }})</button>
+            {% endfor %}
+          </div>
+          <button type="button" class="compact-button" id="toggleDetails">Open details</button>
+        </div>
+      </div>
+
+      {% if results %}
+        {% for group in tier_groups %}
+        <section class="tier-section" data-tier-section="{{ group.name }}">
+          <div class="tier-header">
+            <h3>{{ group.label }}</h3>
+            <span class="score-pill">{{ group.count }} hits | Avg {{ group.avg_score }}</span>
+          </div>
+          {% if group.results %}
+          <div class="cards">
+            {% for result in group.results %}
+            <article class="result-card" data-tier-card="{{ result.tier }}">
+              <div class="result-main">
+                <div>
+                  <div class="symbol-line">
+                    <span class="symbol">{{ result.symbol }}</span>
+                    <span class="tier-pill">{{ result.tier }}</span>
+                    {% if result.stacked_count > 1 %}
+                    <span class="stack-pill">{{ result.stacked_count }} patterns</span>
+                    {% endif %}
+                  </div>
+                  <div class="pattern">
+                    <strong>{{ result.pattern }}</strong> | {{ result.status }} | {{ result.timeframe }}
+                    {% if result.all_patterns %}
+                    <br>Also detected: {{ result.all_patterns|join(', ') }}
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="score-block">
+                  <div class="score">{{ result.score }}</div>
+                  <div class="score-label">conviction</div>
+                </div>
+              </div>
+
+              <div class="metric-grid" aria-label="{{ result.symbol }} levels">
+                <div class="metric"><span class="label">CMP</span><span class="value">{{ result.cmp }}</span></div>
+                <div class="metric"><span class="label">Entry</span><span class="value">{{ result.pivot_text }}</span></div>
+                <div class="metric"><span class="label">Target</span><span class="value">{{ result.target_text }}</span></div>
+                <div class="metric"><span class="label">Stop / R:R</span><span class="value">{{ result.stop_text }} / {{ result.risk_reward }}</span></div>
+              </div>
+
+              <div class="filters" aria-label="{{ result.symbol }} filters">
+                {% for filter in result.filters %}
+                <span class="filter {{ filter.class_name }}" title="{{ filter.status }}">{{ filter.label }}: {{ filter.status }}</span>
+                {% endfor %}
+              </div>
+
+              <details>
+                <summary>
+                  <span>View analysis</span>
+                  <span class="chevron">v</span>
+                </summary>
+                <div class="detail-content">
+                  <h3 class="pattern-title">{{ result.sections.pattern_header }}</h3>
+                  {% if result.chart_available %}
+                  <figure class="chart-frame">
+                    <img src="{{ result.chart_src }}" alt="{{ result.symbol }} {{ result.pattern }} annotated chart" loading="lazy">
+                  </figure>
+                  {% else %}
+                  <div class="chart-missing">Chart image was not available for this result.</div>
+                  {% endif %}
+
+                  <section class="detail-block">
+                    <h4>Pattern 101</h4>
+                    <p>{{ result.sections.pattern_101 }}</p>
+                  </section>
+                  <section class="detail-block">
+                    <h4>This Stock Specifically</h4>
+                    <p>{{ result.sections.stock_specific }}</p>
+                  </section>
+                  <section class="detail-block">
+                    <h4>Action Plan</h4>
+                    <p>{{ result.sections.action_plan }}</p>
+                  </section>
+                  <section class="detail-block">
+                    <h4>Risk Note</h4>
+                    <p>{{ result.sections.risk }}</p>
+                  </section>
+                  <section class="detail-block">
+                    <h4>Conviction Breakdown</h4>
+                    {% if result.breakdown %}
+                    <table class="breakdown-table">
+                      <thead><tr><th>Component</th><th>Points</th></tr></thead>
+                      <tbody>
+                        {% for row in result.breakdown %}
+                        <tr><td>{{ row.label }}</td><td>{{ row.value }}</td></tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                    {% else %}
+                    <p>{{ result.sections.conviction }}</p>
+                    {% endif %}
+                  </section>
+                </div>
+              </details>
+            </article>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">No {{ group.name }} results in this scan.</div>
+          {% endif %}
+        </section>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state">No pattern results were produced for this scan.</div>
+      {% endif %}
+    </section>
+
+    <section aria-label="Pipeline errors">
+      <div class="section-title">
+        <div>
+          <h2>Errors Panel</h2>
+          <span class="hint">Failed stocks or stages are shown for transparency.</span>
+        </div>
+      </div>
+      <div class="errors">
+        {% if errors %}
+        <table>
+          <thead><tr><th>Stage</th><th>Symbol</th><th>Message</th><th>Critical</th></tr></thead>
+          <tbody>
+            {% for error in errors %}
+            <tr>
+              <td>{{ error.stage }}</td>
+              <td>{{ error.symbol }}</td>
+              <td>{{ error.message }}</td>
+              <td>{{ 'Yes' if error.critical else 'No' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        No scanner errors were reported.
+        {% endif %}
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const buttons = Array.from(document.querySelectorAll("[data-tier-filter]"));
+    const sections = Array.from(document.querySelectorAll("[data-tier-section]"));
+    const detailsButton = document.getElementById("toggleDetails");
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const tier = button.dataset.tierFilter;
+        buttons.forEach((item) => item.classList.toggle("active", item === button));
+        sections.forEach((section) => {
+          section.classList.toggle("hidden", tier !== "ALL" && section.dataset.tierSection !== tier);
+        });
+      });
+    });
+
+    detailsButton.addEventListener("click", () => {
+      const cards = Array.from(document.querySelectorAll(".result-card details"));
+      const shouldOpen = cards.some((item) => !item.open);
+      cards.forEach((item) => { item.open = shouldOpen; });
+      detailsButton.textContent = shouldOpen ? "Close details" : "Open details";
+    });
+  </script>
+</body>
+</html>
