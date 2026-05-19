@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from config import settings
-from engine import dhan_client, storage, symbols
+from engine import dhan_client, storage, universe
 
 
 class DataLoader:
@@ -66,15 +66,23 @@ class DataLoader:
         return dataframe_to_arrays(frame)
 
     def get_all_active_symbols(self) -> list[str]:
-        if not settings.NIFTY500_DHAN_CSV.exists():
-            return []
-        active = symbols.load_active_symbols()
+        return self.get_symbols_for_universe("nifty500")
+
+    def get_symbols_for_universe(self, universe_name: str = "nifty500") -> list[str]:
+        active = universe.load_universe_profile(universe_name)
         return active["symbol"].tolist()
 
-    def fetch_todays_candles(self, symbols_df: pd.DataFrame | None = None) -> int:
+    def get_universe_profile(self, universe_name: str = "nifty500") -> pd.DataFrame:
+        return universe.load_universe_profile(universe_name)
+
+    def fetch_todays_candles(
+        self,
+        symbols_df: pd.DataFrame | None = None,
+        universe_name: str = "nifty500",
+    ) -> int:
         """Fetch Dhan marketfeed OHLC in batches and append today's rows."""
         if symbols_df is None:
-            symbols_df = symbols.load_active_symbols()
+            symbols_df = universe.load_universe_profile(universe_name)
         today = date.today().isoformat()
         total = 0
         for chunk in _chunks(symbols_df.to_dict("records"), 800):

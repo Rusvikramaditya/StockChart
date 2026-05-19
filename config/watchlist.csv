@@ -1,0 +1,8 @@
+symbol,company_name,security_id,exchange_segment,instrument,instrument_type,series,lot_size,listing_date,status
+MRPL,Mangalore Refinery & Petroleum,2283,NSE_EQ,EQUITY,ES,EQ,1,,ACTIVE
+MAZDOCK,Mazagon Dock Shipbuilders,509,NSE_EQ,EQUITY,ES,EQ,1,,ACTIVE
+GRSE,Garden Reach Shipbuilders,5475,NSE_EQ,EQUITY,ES,EQ,1,,ACTIVE
+ADANIPOWER,Adani Power,17388,NSE_EQ,EQUITY,ES,EQ,1,,ACTIVE
+AEROFLEX,Aeroflex Industries,18268,NSE_EQ,EQUITY,ES,EQ,1,,ACTIVE
+STLTECH,Sterlite Technologies,9313,NSE_EQ,EQUITY,ES,BE,1,,ACTIVE
+VEDL,Vedanta,3063,NSE_EQ,EQUITY,ES,EQ,1,,ACTIVE

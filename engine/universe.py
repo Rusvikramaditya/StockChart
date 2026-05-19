@@ -36,6 +36,25 @@ OUTPUT_COLUMNS = [
 PREFERRED_EQUITY_SERIES = ("EQ", "BE", "SM", "ST", "BZ", "E1", "IT")
 DEFAULT_CHUNK_SIZE = 50_000
 PREFERRED_SERIES_RANK = {series: idx for idx, series in enumerate(PREFERRED_EQUITY_SERIES)}
+PROFILE_REQUIRED_COLUMNS = ("symbol", "security_id", "exchange_segment", "instrument", "status")
+SYMBOL_ONLY_COLUMNS = ("symbol",)
+DEFAULT_WATCHLIST_SYMBOLS = (
+    "MRPL",
+    "MAZDOCK",
+    "GRSE",
+    "ADANIPOWER",
+    "AEROFLEX",
+    "STLTECH",
+    "VEDL",
+)
+PROFILE_PATHS = {
+    "all_nse_equity": settings.ALL_NSE_EQUITY_CSV,
+    "nifty500": settings.NIFTY500_DHAN_CSV,
+    "small_mid_liquid": settings.SMALL_MID_LIQUID_CSV,
+    "recent_listings": settings.RECENT_LISTINGS_CSV,
+    "watchlist": settings.WATCHLIST_CSV,
+}
+DATA_DERIVED_PROFILES = frozenset({"small_mid_liquid", "recent_listings"})
 
 
 @dataclass(frozen=True)
@@ -77,8 +96,19 @@ class UniverseBuildResult:
     series_counts: dict[str, int]
 
 
+@dataclass(frozen=True)
+class WatchlistBuildResult:
+    output_path: Path
+    rows: int
+    symbols: tuple[str, ...]
+
+
 class UniverseBuildError(RuntimeError):
     """Raised when the broad universe cannot be built safely."""
+
+
+class UniverseProfileError(RuntimeError):
+    """Raised when a requested universe profile is unavailable or invalid."""
 
 
 def build_all_nse_equity_universe(
@@ -138,6 +168,284 @@ def build_all_nse_equity_universe(
         duplicates_removed=duplicates_removed,
         series_counts=universe["series"].value_counts().sort_index().to_dict(),
     )
+
+
+def load_universe_profile(
+    profile_name: str,
+    *,
+    profile_path: Path | None = None,
+    broad_path: Path | None = None,
+    allow_empty: bool = False,
+) -> pd.DataFrame:
+    """Load and validate a selectable universe profile.
+
+    All returned profiles use ``OUTPUT_COLUMNS`` and active rows only. Profiles
+    that only contain symbols are resolved through ``all_nse_equity.csv`` so
+    security ids are never guessed.
+    """
+
+    name = normalise_profile_name(profile_name)
+    if name not in PROFILE_PATHS:
+        supported = ", ".join(sorted(PROFILE_PATHS))
+        raise UniverseProfileError(f"Unsupported universe profile '{profile_name}'. Supported: {supported}")
+
+    broad = load_all_nse_equity(path=broad_path)
+    if name == "all_nse_equity":
+        return _active_only(broad, "all_nse_equity", allow_empty=allow_empty)
+
+    path = Path(profile_path) if profile_path is not None else PROFILE_PATHS.get(name)
+    if not path.exists():
+        if name in DATA_DERIVED_PROFILES:
+            raise UniverseProfileError(_derived_profile_message(name, path))
+        raise UniverseProfileError(f"Universe profile '{name}' missing: {path}")
+
+    raw = _read_csv(path)
+    if raw.empty:
+        if name in DATA_DERIVED_PROFILES:
+            raise UniverseProfileError(_derived_profile_message(name, path))
+        if not allow_empty:
+            raise UniverseProfileError(f"Universe profile '{name}' has no rows: {path}")
+
+    if _has_required_columns(raw, PROFILE_REQUIRED_COLUMNS):
+        frame = normalise_profile_frame(
+            raw,
+            source=str(path),
+            required_columns=PROFILE_REQUIRED_COLUMNS,
+            require_security_id=False,
+        )
+        return _validate_against_broad(
+            frame,
+            broad,
+            source=str(path),
+            allow_empty=allow_empty,
+            allow_unresolved_blank_ids=name == "nifty500",
+            allow_security_id_repair=name == "nifty500",
+        )
+
+    symbol_frame = normalise_profile_frame(raw, source=str(path), required_columns=SYMBOL_ONLY_COLUMNS)
+    return resolve_symbols_from_broad(
+        symbol_frame["symbol"].tolist(),
+        broad_df=broad,
+        source=str(path),
+        allow_empty=allow_empty,
+    )
+
+
+def load_all_nse_equity(*, path: Path | None = None) -> pd.DataFrame:
+    path = Path(path) if path is not None else settings.ALL_NSE_EQUITY_CSV
+    if not path.exists():
+        raise UniverseProfileError(f"Broad NSE equity universe missing: {path}")
+    frame = normalise_profile_frame(
+        _read_csv(path),
+        source=str(path),
+        required_columns=OUTPUT_COLUMNS,
+    )
+    return _active_only(frame, str(path))
+
+
+def build_watchlist_profile(
+    symbols: Iterable[str] = DEFAULT_WATCHLIST_SYMBOLS,
+    *,
+    output_path: Path | None = None,
+    broad_path: Path | None = None,
+) -> WatchlistBuildResult:
+    """Resolve watchlist symbols from the broad universe and write a profile CSV."""
+
+    output_path = Path(output_path) if output_path is not None else settings.WATCHLIST_CSV
+    resolved = resolve_symbols_from_broad(symbols, broad_path=broad_path, source="watchlist")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved.to_csv(output_path, index=False)
+    return WatchlistBuildResult(
+        output_path=output_path,
+        rows=len(resolved),
+        symbols=tuple(resolved["symbol"].tolist()),
+    )
+
+
+def resolve_symbols_from_broad(
+    symbols: Iterable[str],
+    *,
+    broad_df: pd.DataFrame | None = None,
+    broad_path: Path | None = None,
+    source: str = "symbols",
+    allow_empty: bool = False,
+) -> pd.DataFrame:
+    """Resolve symbols to full profile rows using ``all_nse_equity.csv``."""
+
+    requested = _dedupe_symbols(symbols)
+    if not requested and not allow_empty:
+        raise UniverseProfileError(f"{source} did not provide any symbols")
+    broad = broad_df.copy() if broad_df is not None else load_all_nse_equity(path=broad_path)
+    broad = normalise_profile_frame(broad, source="all_nse_equity", required_columns=OUTPUT_COLUMNS)
+    indexed = broad.drop_duplicates(subset=["symbol"], keep="first").set_index("symbol", drop=False)
+    missing = [symbol for symbol in requested if symbol not in indexed.index]
+    if missing:
+        raise UniverseProfileError(
+            f"{source} contains symbol(s) not present in all_nse_equity: {', '.join(missing)}"
+        )
+    if not requested:
+        return broad.head(0)[OUTPUT_COLUMNS].copy()
+    return indexed.loc[requested, OUTPUT_COLUMNS].reset_index(drop=True)
+
+
+def normalise_profile_frame(
+    frame: pd.DataFrame,
+    *,
+    source: str,
+    required_columns: Iterable[str],
+    require_security_id: bool = True,
+) -> pd.DataFrame:
+    """Return a validated profile frame with normalized lowercase columns."""
+
+    if frame is None:
+        raise UniverseProfileError(f"{source} could not be read")
+    normalized = frame.copy()
+    normalized.columns = [str(column).strip().lower() for column in normalized.columns]
+    required = tuple(required_columns)
+    missing_columns = [column for column in required if column not in normalized.columns]
+    if missing_columns:
+        raise UniverseProfileError(f"{source} missing required column(s): {', '.join(missing_columns)}")
+    for column in required:
+        normalized[column] = _valid_text(normalized[column])
+    if "symbol" in normalized.columns:
+        normalized["symbol"] = normalized["symbol"].str.upper()
+        blank_symbols = int(normalized["symbol"].eq("").sum())
+        if blank_symbols:
+            raise UniverseProfileError(f"{source} has {blank_symbols} blank symbol row(s)")
+        duplicate_symbols = normalized.loc[normalized["symbol"].duplicated(), "symbol"].tolist()
+        if duplicate_symbols:
+            preview = ", ".join(duplicate_symbols[:10])
+            raise UniverseProfileError(f"{source} has duplicate symbol row(s): {preview}")
+    if require_security_id and "security_id" in required:
+        blank_security_ids = int(normalized["security_id"].eq("").sum())
+        if blank_security_ids:
+            raise UniverseProfileError(f"{source} has {blank_security_ids} blank security_id row(s)")
+    if "status" in normalized.columns:
+        normalized["status"] = normalized["status"].str.upper().mask(
+            normalized["status"].eq(""),
+            "ACTIVE",
+        )
+    return normalized
+
+
+def normalise_profile_name(profile_name: str) -> str:
+    name = str(profile_name).strip().lower().replace("-", "_")
+    if not name:
+        raise UniverseProfileError("Universe profile name is required")
+    return name
+
+
+def _read_csv(path: Path) -> pd.DataFrame:
+    return pd.read_csv(path, dtype=str, keep_default_na=False)
+
+
+def _has_required_columns(frame: pd.DataFrame, required_columns: Iterable[str]) -> bool:
+    available = {str(column).strip().lower() for column in frame.columns}
+    return all(column in available for column in required_columns)
+
+
+def _active_only(frame: pd.DataFrame, source: str, *, allow_empty: bool = False) -> pd.DataFrame:
+    if "status" not in frame.columns:
+        active = frame.copy()
+        active["status"] = "ACTIVE"
+    else:
+        active = frame[frame["status"].astype(str).str.upper().eq("ACTIVE")].copy()
+    if active.empty and not allow_empty:
+        raise UniverseProfileError(f"{source} has no ACTIVE symbols")
+    return active.reset_index(drop=True)
+
+
+def _validate_against_broad(
+    frame: pd.DataFrame,
+    broad: pd.DataFrame,
+    *,
+    source: str,
+    allow_empty: bool = False,
+    allow_unresolved_blank_ids: bool = False,
+    allow_security_id_repair: bool = False,
+) -> pd.DataFrame:
+    active = _active_only(frame, source, allow_empty=True)
+    if active.empty:
+        if allow_empty:
+            return broad.head(0)[OUTPUT_COLUMNS].copy()
+        raise UniverseProfileError(f"{source} has no ACTIVE symbols")
+
+    broad_index = broad.drop_duplicates(subset=["symbol"], keep="first").set_index("symbol")
+    missing = [symbol for symbol in active["symbol"].tolist() if symbol not in broad_index.index]
+    if missing:
+        missing_rows = active[active["symbol"].isin(missing)]
+        unresolved_blank_ids = missing_rows["security_id"].astype(str).str.strip().eq("").all()
+        if allow_unresolved_blank_ids and unresolved_blank_ids:
+            active = active[~active["symbol"].isin(missing)].copy()
+            if active.empty:
+                raise UniverseProfileError(f"{source} has no resolvable ACTIVE symbols")
+        else:
+            raise UniverseProfileError(
+                f"{source} contains symbol(s) not present in all_nse_equity: {', '.join(missing)}"
+            )
+
+    if active.empty:
+        if allow_empty:
+            return broad.head(0)[OUTPUT_COLUMNS].copy()
+        raise UniverseProfileError(
+            f"{source} has no resolvable ACTIVE symbols"
+        )
+
+    mismatched = []
+    for row in active[["symbol", "security_id"]].itertuples(index=False):
+        if not str(row.security_id).strip():
+            continue
+        expected = str(broad_index.at[row.symbol, "security_id"]).strip()
+        if str(row.security_id).strip() != expected:
+            mismatched.append(f"{row.symbol} expected {expected} got {row.security_id}")
+    if mismatched:
+        if not allow_security_id_repair:
+            preview = "; ".join(mismatched[:10])
+            raise UniverseProfileError(f"{source} has security_id mismatch against all_nse_equity: {preview}")
+
+    resolved = resolve_symbols_from_broad(
+        active["symbol"].tolist(),
+        broad_df=broad,
+        source=source,
+        allow_empty=allow_empty,
+    )
+    if missing:
+        resolved.attrs["unresolved_symbols"] = tuple(missing)
+    if mismatched:
+        resolved.attrs["security_id_mismatches"] = tuple(mismatched)
+    return resolved
+
+
+def _dedupe_symbols(symbols: Iterable[str]) -> list[str]:
+    requested = []
+    seen = set()
+    duplicates = []
+    for symbol in symbols:
+        clean = str(symbol).strip().upper()
+        if not clean:
+            continue
+        if clean in seen:
+            duplicates.append(clean)
+            continue
+        seen.add(clean)
+        requested.append(clean)
+    if duplicates:
+        raise UniverseProfileError("Duplicate symbol(s): " + ", ".join(sorted(set(duplicates))))
+    return requested
+
+
+def _derived_profile_message(profile_name: str, path: Path) -> str:
+    if profile_name == "small_mid_liquid":
+        return (
+            f"Universe profile '{profile_name}' is not generated yet: {path}. "
+            "It requires OHLCV-derived liquidity metrics from Phase 6-0c/6-0d; refusing to fake it."
+        )
+    if profile_name == "recent_listings":
+        return (
+            f"Universe profile '{profile_name}' is not generated yet: {path}. "
+            "The current broad universe has no reliable listing dates; refusing to fake it."
+        )
+    return f"Universe profile '{profile_name}' is not generated yet: {path}"
 
 
 def resolve_master_columns(master_path: Path) -> MasterColumns:
