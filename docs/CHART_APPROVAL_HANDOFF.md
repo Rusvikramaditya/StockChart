@@ -14,6 +14,7 @@ python scripts\gen_sample_thesis_chart.py --sample-pack
 
 The browser screenshot exporter validated nonblank canvases for each desktop and mobile PNG.
 The approval screenshots are copied into `docs/chart_approval_samples/` so the pushed repo contains the review evidence; the same files also remain in ignored local `output/charts/` after regeneration.
+Open `docs/CHART_APPROVAL_GALLERY.html` for a single-page visual review of every desktop/mobile sample.
 
 | Overlay family | Symbol | Desktop QA file | Mobile QA file |
 |---|---|---|---|
