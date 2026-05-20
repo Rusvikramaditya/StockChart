@@ -157,6 +157,8 @@ class BacktestMetricsReportPhase8Test(unittest.TestCase):
                     "exit_date": "2026-01-06",
                     "score": 75,
                     "pattern_quality_score": 82,
+                    "bars_in_pattern": 90,
+                    "pattern_extra": {"depth_pct": 18.0, "volume_declining": True, "contractions_pct": [18.0, 12.0, 6.0]},
                     "filters": {"stage2": {"passed": True}},
                 },
                 {
@@ -171,6 +173,8 @@ class BacktestMetricsReportPhase8Test(unittest.TestCase):
                     "exit_date": "2026-02-04",
                     "score": 55,
                     "pattern_quality_score": 58,
+                    "bars_in_pattern": 70,
+                    "pattern_extra": {"depth_pct": 32.0, "volume_declining": False, "contractions_pct": [30.0, 20.0, 18.0]},
                     "filters": {"stage2": {"passed": False}},
                 },
             ],
@@ -184,6 +188,10 @@ class BacktestMetricsReportPhase8Test(unittest.TestCase):
         self.assertEqual({row["bucket"] for row in result.conviction_validation}, {"90+", "70-89", "50-69"})
         self.assertEqual({row["bucket"] for row in result.quality_validation}, {"80+", "65-79", "50-64", "<50"})
         self.assertEqual({row["bucket"] for row in result.stack_validation}, {"1 pattern", "2 stacked"})
+        traits = {(row["pattern"], row["trait"]) for row in result.trait_diagnostics}
+        self.assertIn(("Ascending Triangle", "depth_pct"), traits)
+        self.assertIn(("Ascending Triangle", "contractions_pct_last"), traits)
+        self.assertIn(("Bull Flag", "volume_declining"), traits)
 
         html = render_report(result)
         self.assertIn("Summary By Pattern", html)
@@ -191,6 +199,7 @@ class BacktestMetricsReportPhase8Test(unittest.TestCase):
         self.assertIn("Quality Score Validation", html)
         self.assertIn("Filter Impact", html)
         self.assertIn("Stack Validation", html)
+        self.assertIn("Pattern Trait Diagnostics", html)
         self.assertIn("Equity Curve", html)
         self.assertIn("Monthly Returns", html)
 
@@ -216,7 +225,9 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
             markdown = render_markdown(analysis)
 
         self.assertEqual(parsed["universe"], "nifty500")
+        self.assertTrue(parsed["trait_diagnostics"])
         self.assertEqual(analysis["conviction"]["recommendation"], "retune conviction weights")
+        self.assertTrue(analysis["trait_diagnostics"]["candidates"])
         self.assertEqual(
             analysis["stack_bonus"]["recommendation"],
             "remove stack score bonus but keep stacked pattern visibility",
@@ -225,6 +236,7 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         self.assertIn("Weak Pattern", analysis["pattern_candidates"]["remove"])
         self.assertIn("Phase 8 Backtest Tuning Analysis", markdown)
         self.assertIn("Quality Score Validation", markdown)
+        self.assertIn("Pattern Trait Diagnostics", markdown)
 
     def test_watchlist_only_analysis_does_not_claim_core_rules_are_validated(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -269,6 +281,26 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         row = analysis["quality_score"]["by_universe"][0]
         self.assertEqual(row["status"], "GATED")
         self.assertEqual(analysis["quality_score"]["recommendation"], "keep minimum tradable quality score")
+
+    def test_conviction_analysis_uses_sampled_mid_bucket_when_low_bucket_is_empty(self):
+        trades = []
+        for idx in range(40):
+            trades.append(_analysis_trade(idx, "High Conviction", 90, 1, "WIN" if idx < 32 else "LOSS"))
+        for idx in range(40, 80):
+            trades.append(_analysis_trade(idx, "Mid Conviction", 70, 1, "WIN" if idx < 60 else "LOSS"))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "small_mid.html"
+            write_report(BacktestResult(trades, universe="small_mid_liquid"), path)
+
+            analysis = analyze_reports([path])
+            markdown = render_markdown(analysis)
+
+        row = analysis["conviction"]["by_universe"][0]
+        self.assertEqual(row["status"], "PASS")
+        self.assertEqual(row["low_bucket"], "70-89")
+        self.assertEqual(analysis["conviction"]["recommendation"], "keep conviction weights")
+        self.assertIn("70-89 win=50%", markdown)
 
     def test_large_sample_loser_detectors_are_removed_from_live_registry(self):
         detector_modules = {detector.__module__ for detector in ALL_DETECTORS}
@@ -636,6 +668,12 @@ def _analysis_trade(idx: int, pattern: str, score: int, stack_count: int, result
         "exit_date": "2026-01-06",
         "score": score,
         "pattern_quality_score": score,
+        "bars_in_pattern": 60 + idx % 10,
+        "pattern_extra": {
+            "trait_score": 100.0 if result == "WIN" else 40.0,
+            "winner_shape": result == "WIN",
+            "trait_series": [float(idx % 5), float(idx % 5 + (2 if result == "WIN" else -2))],
+        },
         "filters": {},
     }
 

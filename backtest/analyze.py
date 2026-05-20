@@ -38,6 +38,7 @@ def parse_report(path: str | Path) -> dict:
         "quality_validation": _coerce_metric_rows(sections.get("quality_score_validation", []), "bucket"),
         "filter_impact": _coerce_filter_rows(sections.get("filter_impact", [])),
         "stack_validation": _coerce_metric_rows(sections.get("stack_validation", []), "bucket"),
+        "trait_diagnostics": _coerce_trait_rows(sections.get("pattern_trait_diagnostics", [])),
     }
 
 
@@ -50,6 +51,7 @@ def analyze_reports(paths: Iterable[str | Path], rules: AnalysisRules | None = N
         "quality_score": _analyze_quality_score(reports, rules),
         "stack_bonus": _analyze_stack_bonus(reports, rules),
         "pattern_candidates": _analyze_pattern_candidates(reports, rules),
+        "trait_diagnostics": _summarize_trait_diagnostics(reports, rules),
         "filter_impact": _summarize_filter_impact(reports),
         "rules": {
             "min_bucket_trades": rules.min_bucket_trades,
@@ -96,9 +98,10 @@ def render_markdown(analysis: dict) -> str:
 
     lines.extend(["", "## Conviction Validation", ""])
     for row in analysis["conviction"]["by_universe"]:
+        low_bucket = row.get("low_bucket") or "50-69"
         lines.append(
             f"- {row['universe']}: {row['status']} "
-            f"(90+ win={row.get('high_win_rate')}%, 50-69 win={row.get('low_win_rate')}%, "
+            f"(90+ win={row.get('high_win_rate')}%, {low_bucket} win={row.get('low_win_rate')}%, "
             f"margin={row.get('margin')})"
         )
     lines.append(f"- Recommendation: {analysis['conviction']['recommendation']}")
@@ -133,6 +136,18 @@ def render_markdown(analysis: dict) -> str:
             lines.append(f"- {pattern}: {details}")
     else:
         lines.append("- None from current rules.")
+
+    lines.extend(["", "## Pattern Trait Diagnostics", ""])
+    traits = analysis["trait_diagnostics"]["candidates"]
+    if traits:
+        for row in traits:
+            lines.append(
+                f"- {row['universe']} {row['pattern']} {row['trait']}: "
+                f"trades={row['trades']} wins/losses={row['wins']}/{row['losses']} "
+                f"win_avg={row['win_avg']} loss_avg={row['loss_avg']} spread={row['spread']}"
+            )
+    else:
+        lines.append("- Insufficient winner/loss trait samples from current rules.")
 
     lines.extend(["", "## Filter Impact", ""])
     for filter_name, rows in analysis["filter_impact"].items():
@@ -234,6 +249,45 @@ def _coerce_filter_rows(rows: list[dict[str, str]]) -> list[dict]:
     return parsed
 
 
+def _coerce_trait_rows(rows: list[dict[str, str]]) -> list[dict]:
+    parsed = []
+    for row in rows:
+        wins, losses = _split_count_rate(row.get("wins_losses", "0 / 0"))
+        trait = row.get("trait", "")
+        if not _is_retune_trait_name(trait):
+            continue
+        parsed.append(
+            {
+                "pattern": row.get("pattern", ""),
+                "trait": trait,
+                "trades": int(_number(row.get("trades", 0))),
+                "wins": wins,
+                "losses": int(losses),
+                "win_avg": _number(row.get("win_avg", 0)),
+                "loss_avg": _number(row.get("loss_avg", 0)),
+                "spread": _number(row.get("spread", 0)),
+            }
+        )
+    return parsed
+
+
+def _is_retune_trait_name(trait: str) -> bool:
+    normalized = str(trait).lower()
+    if normalized.endswith("_idx") or normalized.endswith("_index") or normalized in {"neckline", "pivot"}:
+        return False
+    return (
+        normalized == "bars_in_pattern"
+        or normalized.endswith("_pct")
+        or "_pct_" in normalized
+        or normalized.endswith("_ratio")
+        or "_ratio_" in normalized
+        or normalized.endswith("_count")
+        or normalized.endswith("_change")
+        or normalized in {"years", "volume_declining", "stage2"}
+        or "touch" in normalized
+    )
+
+
 def _analyze_conviction(reports: list[dict], rules: AnalysisRules) -> dict:
     rows = []
     failing_core = []
@@ -242,7 +296,7 @@ def _analyze_conviction(reports: list[dict], rules: AnalysisRules) -> dict:
         is_core = report["universe"] in CORE_UNIVERSES
         core_reports_present = core_reports_present or is_core
         high = _find_bucket(report["conviction_validation"], "90+")
-        low = _find_bucket(report["conviction_validation"], "50-69")
+        low = _first_sampled_bucket(report["conviction_validation"], rules, ["50-69", "70-89"])
         status = "INSUFFICIENT"
         margin = None
         if high and low and high["trades"] >= rules.min_bucket_trades and low["trades"] >= rules.min_bucket_trades:
@@ -253,6 +307,7 @@ def _analyze_conviction(reports: list[dict], rules: AnalysisRules) -> dict:
             "status": status,
             "high_trades": high.get("trades") if high else 0,
             "high_win_rate": high.get("win_rate") if high else None,
+            "low_bucket": low.get("bucket") if low else None,
             "low_trades": low.get("trades") if low else 0,
             "low_win_rate": low.get("win_rate") if low else None,
             "margin": margin,
@@ -382,6 +437,32 @@ def _summarize_filter_impact(reports: list[dict]) -> dict[str, list[dict]]:
                 }
             )
     return summary
+
+
+def _summarize_trait_diagnostics(reports: list[dict], rules: AnalysisRules) -> dict:
+    candidates = []
+    min_side_samples = max(5, rules.min_bucket_trades // 3)
+    for report in reports:
+        for row in report.get("trait_diagnostics", []):
+            if int(row.get("trades", 0)) < rules.min_pattern_trades:
+                continue
+            if int(row.get("wins", 0)) < min_side_samples or int(row.get("losses", 0)) < min_side_samples:
+                continue
+            candidates.append(
+                {
+                    "universe": report["universe"],
+                    "pattern": row["pattern"],
+                    "trait": row["trait"],
+                    "trades": row["trades"],
+                    "wins": row["wins"],
+                    "losses": row["losses"],
+                    "win_avg": row["win_avg"],
+                    "loss_avg": row["loss_avg"],
+                    "spread": row["spread"],
+                }
+            )
+    candidates.sort(key=lambda row: abs(float(row["spread"])), reverse=True)
+    return {"candidates": candidates[:12]}
 
 
 def _find_bucket(rows: list[dict], bucket: str) -> dict | None:

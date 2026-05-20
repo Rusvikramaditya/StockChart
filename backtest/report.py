@@ -66,6 +66,7 @@ def render_report(result: BacktestResult) -> str:
   {_section("Quality Score Validation", _bucket_table(result.quality_validation))}
   {_section("Filter Impact", _filter_table(result.filter_impact))}
   {_section("Stack Validation", _bucket_table(result.stack_validation))}
+  {_section("Pattern Trait Diagnostics", _trait_table(result.trait_diagnostics))}
   {_section("Equity Curve", _equity_svg(result.equity_curve))}
   {_section("Monthly Returns", _monthly_table(result.monthly_returns))}
 </main>
@@ -129,6 +130,24 @@ def _filter_table(rows: list[dict]) -> str:
             "</tr>"
         )
     return _table(["Filter", "With Filter", "Without", "Improvement"], body)
+
+
+def _trait_table(rows: list[dict]) -> str:
+    body = []
+    for row in rows:
+        klass = "pos" if float(row["spread"]) >= 0 else "neg"
+        body.append(
+            "<tr>"
+            f"<td>{escape(str(row['pattern']))}</td>"
+            f"<td>{escape(str(row['trait']))}</td>"
+            f"<td class='num'>{row['trades']}</td>"
+            f"<td class='num'>{row['wins']} / {row['losses']}</td>"
+            f"<td class='num'>{row['win_avg']}</td>"
+            f"<td class='num'>{row['loss_avg']}</td>"
+            f"<td class='num {klass}'>{row['spread']}</td>"
+            "</tr>"
+        )
+    return _table(["Pattern", "Trait", "Trades", "Wins / Losses", "Win Avg", "Loss Avg", "Spread"], body)
 
 
 def _monthly_table(rows: list[dict]) -> str:

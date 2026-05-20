@@ -130,6 +130,7 @@ def run_backtest(
                     if outcome is None:
                         continue
                     breakdown = scored.get("breakdown") or {}
+                    pattern_result: PatternResult | None = scored.get("pattern_result")
                     trade = {
                         "symbol": symbol,
                         "signal_date": current_date,
@@ -138,6 +139,9 @@ def run_backtest(
                         "tier": scored["tier"],
                         "pattern_quality_score": breakdown.get("pattern_quality_score"),
                         "pattern_confidence": breakdown.get("pattern_confidence"),
+                        "pattern_timeframe": scored.get("timeframe") or getattr(pattern_result, "timeframe", None),
+                        "bars_in_pattern": getattr(pattern_result, "bars_in_pattern", None),
+                        "pattern_extra": dict(getattr(pattern_result, "extra", {}) or {}),
                         "stacked_count": int(scored.get("stacked_count", 1)),
                         "all_patterns": scored.get("all_patterns", [scored["pattern"]]),
                         "filters": scored.get("filters", {}),

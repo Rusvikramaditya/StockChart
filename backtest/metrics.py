@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from math import sqrt
+from math import isfinite, sqrt
 from typing import Iterable
 
 
@@ -114,6 +114,10 @@ class BacktestResult:
             )
         return rows
 
+    @property
+    def trait_diagnostics(self) -> list[dict]:
+        return _trait_diagnostics(self.trades)
+
 
 def _metrics_for(trades: Iterable[dict]) -> dict:
     rows = list(trades)
@@ -153,6 +157,101 @@ def _grouped_metrics(trades: list[dict], key: str) -> list[dict]:
         {"group": group, **_metrics_for(rows)}
         for group, rows in sorted(grouped.items())
     ]
+
+
+def _trait_diagnostics(trades: list[dict]) -> list[dict]:
+    grouped: dict[tuple[str, str], list[tuple[float, dict]]] = defaultdict(list)
+    for trade in trades:
+        pattern = str(trade.get("pattern", "UNKNOWN"))
+        for trait, value in _trait_values(trade).items():
+            grouped[(pattern, trait)].append((value, trade))
+
+    rows = []
+    for (pattern, trait), values in grouped.items():
+        wins = [(value, trade) for value, trade in values if trade.get("result") == "WIN"]
+        losses = [(value, trade) for value, trade in values if trade.get("result") == "LOSS"]
+        win_avg = _average([value for value, _trade in wins])
+        loss_avg = _average([value for value, _trade in losses])
+        spread = _round(win_avg - loss_avg) if wins and losses else 0.0
+        rows.append(
+            {
+                "pattern": pattern,
+                "trait": trait,
+                "trades": len(values),
+                "wins": len(wins),
+                "losses": len(losses),
+                "win_avg": win_avg,
+                "loss_avg": loss_avg,
+                "spread": spread,
+            }
+        )
+    return sorted(rows, key=lambda row: (row["pattern"], -abs(float(row["spread"])), row["trait"]))
+
+
+def _trait_values(trade: dict) -> dict[str, float]:
+    values: dict[str, float] = {}
+    for key, value in (trade.get("pattern_extra") or {}).items():
+        values.update(_coerce_trait_value(str(key), value))
+    values.update(_coerce_trait_value("bars_in_pattern", trade.get("bars_in_pattern")))
+    return values
+
+
+def _coerce_trait_value(key: str, value) -> dict[str, float]:
+    if not _is_retune_trait_key(key) and not isinstance(value, (list, tuple)):
+        return {}
+    if isinstance(value, bool):
+        return {key: 1.0 if value else 0.0}
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        number = float(value)
+        return {key: number} if isfinite(number) else {}
+    if isinstance(value, (list, tuple)):
+        numbers = [_to_finite_float(item) for item in value]
+        numbers = [item for item in numbers if item is not None]
+        if not numbers:
+            return {}
+        if key.endswith("_indices") or key.endswith("_idxs"):
+            features = {f"{key}_count": float(len(numbers))}
+        else:
+            features = {
+                f"{key}_count": float(len(numbers)),
+                f"{key}_first": numbers[0],
+                f"{key}_last": numbers[-1],
+                f"{key}_min": min(numbers),
+                f"{key}_max": max(numbers),
+                f"{key}_change": numbers[-1] - numbers[0],
+            }
+        return {name: value for name, value in features.items() if _is_retune_trait_key(name)}
+    return {}
+
+
+def _is_retune_trait_key(key: str) -> bool:
+    normalized = key.lower()
+    if normalized.endswith("_idx") or normalized.endswith("_index") or normalized in {"neckline", "pivot"}:
+        return False
+    return (
+        normalized == "bars_in_pattern"
+        or normalized.endswith("_pct")
+        or "_pct_" in normalized
+        or normalized.endswith("_ratio")
+        or "_ratio_" in normalized
+        or normalized.endswith("_count")
+        or normalized.endswith("_change")
+        or normalized in {"years", "volume_declining", "stage2"}
+        or "touch" in normalized
+    )
+
+
+def _to_finite_float(value) -> float | None:
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+    if not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if isfinite(number) else None
+
+
+def _average(values: list[float]) -> float:
+    return _round(sum(values) / len(values)) if values else 0.0
 
 
 def _filter_passed(trade: dict, key: str) -> bool:
