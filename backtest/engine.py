@@ -221,7 +221,7 @@ def _score_hits(
     universe: str = "nifty500",
 ) -> list[dict]:
     scored = []
-    for detector in get_detectors_for_universe(universe):
+    for detector in get_detectors_for_universe(universe, symbol=symbol):
         for hit in detector(daily, weekly):
             try:
                 scored.append(

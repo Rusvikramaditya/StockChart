@@ -430,7 +430,7 @@ def _detect_symbol(symbol: str, daily: dict, weekly: dict | None = None, univers
 
     hits: list[PatternResult] = []
     errors: list[str] = []
-    for detector in get_detectors_for_universe(universe_name):
+    for detector in get_detectors_for_universe(universe_name, symbol=symbol):
         try:
             found = detector(daily, weekly or {})
             if found:

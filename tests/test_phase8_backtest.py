@@ -313,8 +313,8 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         self.assertIn("patterns.multiyear_breakout", detector_modules)
 
     def test_profile_detector_policy_uses_backtest_evidence(self):
-        def modules(profile: str) -> set[str]:
-            return {detector.__module__ for detector in get_detectors_for_universe(profile)}
+        def modules(profile: str, symbol: str | None = None) -> set[str]:
+            return {detector.__module__ for detector in get_detectors_for_universe(profile, symbol=symbol)}
 
         self.assertEqual(modules("nifty500"), {"patterns.vcp", "patterns.inv_head_shoulders"})
         self.assertEqual(
@@ -322,6 +322,28 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
             {"patterns.cup_handle", "patterns.vcp", "patterns.multiyear_breakout"},
         )
         self.assertEqual(modules("watchlist"), {detector.__module__ for detector in ALL_DETECTORS})
+
+    def test_all_nse_equity_detector_policy_routes_known_symbols_by_profile(self):
+        def fake_profile_symbols(profile: str) -> frozenset[str]:
+            return {
+                "watchlist": frozenset({"WATCH"}),
+                "nifty500": frozenset({"NIFTY"}),
+                "small_mid_liquid": frozenset({"SMALL"}),
+            }.get(profile, frozenset())
+
+        def modules(symbol: str) -> set[str]:
+            return {
+                detector.__module__
+                for detector in get_detectors_for_universe("all_nse_equity", symbol=symbol)
+            }
+
+        with patch("patterns._profile_symbols", side_effect=fake_profile_symbols):
+            self.assertEqual(modules("WATCH"), {detector.__module__ for detector in ALL_DETECTORS})
+            self.assertEqual(modules("NIFTY"), {"patterns.vcp", "patterns.inv_head_shoulders"})
+            self.assertEqual(
+                modules("SMALL"),
+                {"patterns.cup_handle", "patterns.vcp", "patterns.multiyear_breakout"},
+            )
 
     def test_scanner_detector_worker_uses_universe_policy(self):
         called = []
@@ -333,7 +355,7 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         with patch("patterns.get_detectors_for_universe", return_value=[detector]) as resolver:
             result = _detect_symbol("TEST", {"close": [1.0]}, {}, "small_mid_liquid")
 
-        resolver.assert_called_once_with("small_mid_liquid")
+        resolver.assert_called_once_with("small_mid_liquid", symbol="TEST")
         self.assertEqual(called, ["ran"])
         self.assertEqual(result["errors"], [])
 
