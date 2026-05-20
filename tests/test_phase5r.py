@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import re
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,6 +21,7 @@ from engine.chart_payload import (
 from engine.thesis_chart import export_thesis_chart_png
 from patterns.base import PatternResult
 from scripts.export_chart_screenshot import find_chrome_executable
+from scripts.gen_sample_thesis_chart import SYMBOL_DEFAULT, parse_args as parse_sample_args
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -251,6 +254,14 @@ class ScreenshotExportTest(unittest.TestCase):
         content = script.read_text(encoding="utf-8")
         self.assertIn("data-chart-ready", content)
         self.assertIn("colored_pixels", content)
+
+    def test_sample_chart_generator_has_safe_help_and_default_symbol(self):
+        self.assertEqual(parse_sample_args([]).symbol, SYMBOL_DEFAULT)
+        self.assertEqual(parse_sample_args(["infy"]).symbol, "infy")
+        with redirect_stdout(StringIO()):
+            with self.assertRaises(SystemExit) as cm:
+                parse_sample_args(["--help"])
+        self.assertEqual(cm.exception.code, 0)
 
     def test_local_browser_is_available_for_chart_screenshots(self):
         self.assertIsNotNone(find_chrome_executable())

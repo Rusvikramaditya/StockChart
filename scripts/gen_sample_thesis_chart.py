@@ -13,6 +13,7 @@ payload. Scanner-integrated chart export is verified separately by the pipeline.
 
 from __future__ import annotations
 
+import argparse
 import json
 import sqlite3
 import sys
@@ -46,6 +47,12 @@ COMPANY_NAMES: dict[str, str] = {
 OUTPUT_DIR = settings.OUTPUT_DIR / "charts"
 DASHBOARD_DIR = settings.BASE_DIR / "dashboard"
 VENDOR_DIR = DASHBOARD_DIR / "vendor"
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate a real-stock thesis chart renderer QA sample.")
+    parser.add_argument("symbol", nargs="?", default=SYMBOL_DEFAULT, help="NSE symbol present in the local DB.")
+    return parser.parse_args(argv)
 
 
 def load_ohlcv(symbol: str) -> pd.DataFrame:
@@ -187,5 +194,5 @@ def _build_standalone_html(payload: dict) -> str:
 
 
 if __name__ == "__main__":
-    sym = sys.argv[1] if len(sys.argv) > 1 else SYMBOL_DEFAULT
-    main(sym)
+    args = parse_args()
+    main(args.symbol)
