@@ -30,6 +30,7 @@ from engine.chart_payload import build_chart_payload, payload_to_json, validate_
 
 
 SYMBOL_DEFAULT = "ADANIENT"
+PATTERN_DEFAULT = "ascending_triangle"
 
 COMPANY_NAMES: dict[str, str] = {
     "ADANIENT": "Adani Enterprises Ltd",
@@ -44,6 +45,16 @@ COMPANY_NAMES: dict[str, str] = {
     "BAJFINANCE": "Bajaj Finance Ltd",
 }
 
+SAMPLE_PACK: tuple[tuple[str, str], ...] = (
+    ("ADANIENT", "ascending_triangle"),
+    ("INFY", "cup_handle"),
+    ("RELIANCE", "bull_flag"),
+    ("TCS", "vcp"),
+    ("SBIN", "inverse_head_shoulders"),
+    ("WIPRO", "supertrend"),
+    ("HDFCBANK", "multi_year_breakout"),
+)
+
 OUTPUT_DIR = settings.OUTPUT_DIR / "charts"
 DASHBOARD_DIR = settings.BASE_DIR / "dashboard"
 VENDOR_DIR = DASHBOARD_DIR / "vendor"
@@ -52,6 +63,17 @@ VENDOR_DIR = DASHBOARD_DIR / "vendor"
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate a real-stock thesis chart renderer QA sample.")
     parser.add_argument("symbol", nargs="?", default=SYMBOL_DEFAULT, help="NSE symbol present in the local DB.")
+    parser.add_argument(
+        "--pattern",
+        choices=sorted(PATTERN_BUILDERS),
+        default=PATTERN_DEFAULT,
+        help="Pattern overlay type to render.",
+    )
+    parser.add_argument(
+        "--sample-pack",
+        action="store_true",
+        help="Generate one real-stock QA sample for each supported pattern overlay.",
+    )
     return parser.parse_args(argv)
 
 
@@ -72,22 +94,22 @@ def load_ohlcv(symbol: str) -> pd.DataFrame:
 class _ManualResult:
     """Manually supplied trade levels — renderer QA only."""
 
-    def __init__(self, entry: float, target: float, stop: float, pattern: str = "Ascending Triangle"):
+    def __init__(self, entry: float, target: float, stop: float, pattern: str, bars: int, extra: dict):
         self.pattern = pattern
         self.status = "BREAKING OUT"
         self.pivot = entry
         self.target = target
         self.stop_loss = stop
         self.confidence = 0.0
-        self.bars_in_pattern = 60
-        self.extra = {
-            "touch_indices": [12, 34, 55],
-            "low_indices": [5, 28, 50],
-        }
+        self.bars_in_pattern = bars
+        self.extra = extra
 
 
-def main(symbol: str = SYMBOL_DEFAULT) -> None:
+def main(symbol: str = SYMBOL_DEFAULT, pattern_key: str = PATTERN_DEFAULT) -> None:
     symbol = symbol.upper()
+    if pattern_key not in PATTERN_BUILDERS:
+        supported = ", ".join(sorted(PATTERN_BUILDERS))
+        raise ValueError(f"Unsupported pattern '{pattern_key}'. Supported: {supported}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     print(f"Loading OHLCV for {symbol}...")
@@ -101,7 +123,8 @@ def main(symbol: str = SYMBOL_DEFAULT) -> None:
     print(f"  Manual levels — entry: {entry}  target: {target}  stop: {stop}")
 
     company = COMPANY_NAMES.get(symbol, symbol)
-    result = _ManualResult(entry=entry, target=target, stop=stop)
+    pattern_name, bars, extra = PATTERN_BUILDERS[pattern_key](len(df), stop)
+    result = _ManualResult(entry=entry, target=target, stop=stop, pattern=pattern_name, bars=bars, extra=extra)
 
     payload = build_chart_payload(
         df,
@@ -121,14 +144,15 @@ def main(symbol: str = SYMBOL_DEFAULT) -> None:
     validate_payload(payload)
 
     today = date.today().strftime("%Y%m%d")
+    pattern_suffix = "" if pattern_key == PATTERN_DEFAULT else f"_{pattern_key}"
 
     # Save JSON payload
-    json_path = OUTPUT_DIR / f"{symbol}_thesis_payload_{today}.json"
+    json_path = OUTPUT_DIR / f"{symbol}_thesis_payload{pattern_suffix}_{today}.json"
     json_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(f"  Payload -> {json_path}")
 
     # Build standalone HTML
-    html_path = OUTPUT_DIR / f"{symbol}_thesis_chart_{today}.html"
+    html_path = OUTPUT_DIR / f"{symbol}_thesis_chart{pattern_suffix}_{today}.html"
     html_path.write_text(_build_standalone_html(payload), encoding="utf-8")
     print(f"  Chart  -> {html_path}")
     print()
@@ -138,6 +162,66 @@ def main(symbol: str = SYMBOL_DEFAULT) -> None:
         f"{html_path.relative_to(settings.BASE_DIR)}"
     )
     print("Scanner-integrated chart export is verified separately by the pipeline.")
+
+
+def main_sample_pack() -> None:
+    for symbol, pattern_key in SAMPLE_PACK:
+        main(symbol, pattern_key)
+        print()
+
+
+def _ascending_triangle(_source_rows: int, _stop: float) -> tuple[str, int, dict]:
+    return "Ascending Triangle", 60, {
+        "touch_indices": [12, 34, 55],
+        "low_indices": [5, 28, 50],
+    }
+
+
+def _cup_handle(_source_rows: int, _stop: float) -> tuple[str, int, dict]:
+    return "Cup & Handle", 80, {
+        "left_rim_idx": 8,
+        "trough_idx": 36,
+        "right_rim_idx": 62,
+        "handle_start_idx": 66,
+    }
+
+
+def _bull_flag(source_rows: int, _stop: float) -> tuple[str, int, dict]:
+    return "Bull Flag", 70, {
+        "pole_start_idx": max(0, source_rows - 86),
+        "pole_end_idx": max(0, source_rows - 66),
+    }
+
+
+def _vcp(_source_rows: int, _stop: float) -> tuple[str, int, dict]:
+    return "VCP", 70, {"contractions": [14, 9, 5]}
+
+
+def _inverse_head_shoulders(_source_rows: int, _stop: float) -> tuple[str, int, dict]:
+    return "Inverse Head & Shoulders", 70, {
+        "left_shoulder_idx": 32,
+        "head_idx": 48,
+        "right_shoulder_idx": 62,
+    }
+
+
+def _supertrend(_source_rows: int, stop: float) -> tuple[str, int, dict]:
+    return "Supertrend Flip", 35, {"supertrend": round(stop, 2)}
+
+
+def _multi_year_breakout(_source_rows: int, _stop: float) -> tuple[str, int, dict]:
+    return "Multi-Year Breakout", 100, {"resistance_touch_indices": [8, 48, 88]}
+
+
+PATTERN_BUILDERS = {
+    "ascending_triangle": _ascending_triangle,
+    "cup_handle": _cup_handle,
+    "bull_flag": _bull_flag,
+    "vcp": _vcp,
+    "inverse_head_shoulders": _inverse_head_shoulders,
+    "supertrend": _supertrend,
+    "multi_year_breakout": _multi_year_breakout,
+}
 
 
 def _build_standalone_html(payload: dict) -> str:
@@ -195,4 +279,7 @@ def _build_standalone_html(payload: dict) -> str:
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.symbol)
+    if args.sample_pack:
+        main_sample_pack()
+    else:
+        main(args.symbol, args.pattern)

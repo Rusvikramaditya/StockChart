@@ -21,7 +21,7 @@ from engine.chart_payload import (
 from engine.thesis_chart import export_thesis_chart_png
 from patterns.base import PatternResult
 from scripts.export_chart_screenshot import find_chrome_executable
-from scripts.gen_sample_thesis_chart import SYMBOL_DEFAULT, parse_args as parse_sample_args
+from scripts.gen_sample_thesis_chart import PATTERN_BUILDERS, SYMBOL_DEFAULT, parse_args as parse_sample_args
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -258,10 +258,26 @@ class ScreenshotExportTest(unittest.TestCase):
     def test_sample_chart_generator_has_safe_help_and_default_symbol(self):
         self.assertEqual(parse_sample_args([]).symbol, SYMBOL_DEFAULT)
         self.assertEqual(parse_sample_args(["infy"]).symbol, "infy")
+        self.assertEqual(parse_sample_args(["infy", "--pattern", "cup_handle"]).pattern, "cup_handle")
+        self.assertTrue(parse_sample_args(["--sample-pack"]).sample_pack)
         with redirect_stdout(StringIO()):
             with self.assertRaises(SystemExit) as cm:
                 parse_sample_args(["--help"])
         self.assertEqual(cm.exception.code, 0)
+
+    def test_sample_chart_generator_covers_required_pattern_overlays(self):
+        self.assertEqual(
+            {
+                "ascending_triangle",
+                "bull_flag",
+                "cup_handle",
+                "inverse_head_shoulders",
+                "multi_year_breakout",
+                "supertrend",
+                "vcp",
+            },
+            set(PATTERN_BUILDERS),
+        )
 
     def test_local_browser_is_available_for_chart_screenshots(self):
         self.assertIsNotNone(find_chrome_executable())

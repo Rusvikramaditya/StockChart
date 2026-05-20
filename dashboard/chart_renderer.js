@@ -144,7 +144,7 @@
         'padding:0 8px',
         'text-align:center',
         'pointer-events:none',
-        'z-index:2',
+        'z-index:4',
         'user-select:none',
       ].join(';');
       titleEl.innerHTML =
