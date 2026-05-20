@@ -227,8 +227,10 @@ class ThesisChartHtmlTest(unittest.TestCase):
             "drawMultiYearBreakout",
         ]:
             self.assertIn(hook, js)
-        self.assertIn("Risk -", js)
-        self.assertIn("Upside +", js)
+        # Path B: downside fill box removed; upside shown in arrow box label
+        self.assertIn("upside_pct", js)
+        # Stop rendered as dashed line (no fill box)
+        self.assertIn("stopY", js)
 
     def test_mobile_chart_labels_avoid_right_axis_collision(self):
         renderer_js = (DASHBOARD_DIR / "chart_renderer.js").read_text(encoding="utf-8")

@@ -65,6 +65,7 @@ FETCH_RETRY_COUNT = 3
 # Telegram
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").strip()
 
 # Dhan index IDs. Setup scripts resolve from the instrument master first and use
 # these values only when the master cannot provide an exact match.
@@ -152,6 +153,7 @@ CUP_HANDLE = {
     "max_depth_pct": 55.0,
     "rim_tolerance_pct": 8.0,
     "handle_max_retrace_pct": 50.0,
+    "max_breakout_extension_pct": 8.0,
 }
 
 ASCENDING_TRIANGLE = {
@@ -161,6 +163,7 @@ ASCENDING_TRIANGLE = {
     "within_breakout_pct": 4.0,
     "min_rising_lows": 2,
     "argrelextrema_order": 4,
+    "max_breakout_extension_pct": 8.0,
 }
 
 BULL_FLAG = {
@@ -183,6 +186,7 @@ INV_HEAD_SHOULDERS = {
     "lookback_bars": 120,
     "shoulder_symmetry_pct": 10.0,
     "argrelextrema_order": 5,
+    "max_breakout_extension_pct": 8.0,  # skip if price already >8% past neckline (stale)
 }
 
 SUPERTREND = {
@@ -197,6 +201,7 @@ MULTIYEAR_BREAKOUT = {
     "resistance_tolerance_pct": 3.0,
     "volume_surge_ratio": 1.4,
     "timeframe": "weekly",
+    "max_breakout_extension_pct": 10.0,
 }
 
 # Filter thresholds

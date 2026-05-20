@@ -57,6 +57,11 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("VCP", html)
         self.assertIn("How to read this chart", html)
         self.assertIn("Result Cards by Conviction Tier", html)
+        self.assertIn('id="resultSearch"', html)
+        self.assertIn("Search setups", html)
+        self.assertIn("Open thesis", html)
+        self.assertIn("data-search-text=", html)
+        self.assertIn("No setups match the current filters.", html)
         self.assertIn("2 patterns", html)
         self.assertIn("Also detected: Ascending Triangle, Bull Flag", html)
         self.assertIn("Errors Panel", html)
@@ -131,6 +136,15 @@ class DashboardPhase5BTest(unittest.TestCase):
             self.assertEqual(result["score"], 0)
             self.assertEqual(result["tier"], "SKIP")
             self.assertEqual(result["cmp"], "Rs.0")
+
+    def test_no_results_state_explains_empty_scan(self):
+        context = self._context(Path("missing.png"))
+        context["results"] = []
+        html = render_dashboard(context)
+
+        self.assertIn("No setups passed this scan.", html)
+        self.assertIn("scanner did not produce tradable pattern cards", html)
+        self.assertIn('id="resultSearch"', html)
 
     def _context(self, chart_path: Path) -> dict:
         pattern = PatternResult(

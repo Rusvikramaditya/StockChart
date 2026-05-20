@@ -302,26 +302,27 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         self.assertEqual(analysis["conviction"]["recommendation"], "keep conviction weights")
         self.assertIn("70-89 win=50%", markdown)
 
-    def test_large_sample_loser_detectors_are_removed_from_live_registry(self):
+    def test_all_pattern_detectors_are_registered(self):
         detector_modules = {detector.__module__ for detector in ALL_DETECTORS}
+        for module in (
+            "patterns.cup_handle",
+            "patterns.inv_head_shoulders",
+            "patterns.multiyear_breakout",
+            "patterns.ascending_triangle",
+            "patterns.bull_flag",
+            "patterns.supertrend",
+            "patterns.vcp",
+        ):
+            self.assertIn(module, detector_modules)
 
-        self.assertNotIn("patterns.ascending_triangle", detector_modules)
-        self.assertNotIn("patterns.bull_flag", detector_modules)
-        self.assertNotIn("patterns.supertrend", detector_modules)
-        self.assertIn("patterns.cup_handle", detector_modules)
-        self.assertIn("patterns.inv_head_shoulders", detector_modules)
-        self.assertIn("patterns.multiyear_breakout", detector_modules)
-
-    def test_profile_detector_policy_uses_backtest_evidence(self):
+    def test_profile_detector_policy_uses_all_detectors(self):
         def modules(profile: str, symbol: str | None = None) -> set[str]:
             return {detector.__module__ for detector in get_detectors_for_universe(profile, symbol=symbol)}
 
-        self.assertEqual(modules("nifty500"), {"patterns.vcp", "patterns.inv_head_shoulders"})
-        self.assertEqual(
-            modules("small_mid_liquid"),
-            {"patterns.cup_handle", "patterns.vcp", "patterns.multiyear_breakout"},
-        )
-        self.assertEqual(modules("watchlist"), {detector.__module__ for detector in ALL_DETECTORS})
+        all_modules = {detector.__module__ for detector in ALL_DETECTORS}
+        self.assertEqual(modules("nifty500"), all_modules)
+        self.assertEqual(modules("small_mid_liquid"), all_modules)
+        self.assertEqual(modules("watchlist"), all_modules)
 
     def test_all_nse_equity_detector_policy_routes_known_symbols_by_profile(self):
         def fake_profile_symbols(profile: str) -> frozenset[str]:
@@ -338,12 +339,11 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
             }
 
         with patch("patterns._profile_symbols", side_effect=fake_profile_symbols):
-            self.assertEqual(modules("WATCH"), {detector.__module__ for detector in ALL_DETECTORS})
-            self.assertEqual(modules("NIFTY"), {"patterns.vcp", "patterns.inv_head_shoulders"})
-            self.assertEqual(
-                modules("SMALL"),
-                {"patterns.cup_handle", "patterns.vcp", "patterns.multiyear_breakout"},
-            )
+            all_modules = {detector.__module__ for detector in ALL_DETECTORS}
+            self.assertEqual(modules("WATCH"), all_modules)
+            # All profiles now route to ALL_DETECTORS so every pattern type is scanned.
+            self.assertEqual(modules("NIFTY"), all_modules)
+            self.assertEqual(modules("SMALL"), all_modules)
 
     def test_scanner_detector_worker_uses_universe_policy(self):
         called = []

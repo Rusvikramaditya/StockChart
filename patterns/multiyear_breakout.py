@@ -40,6 +40,9 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
     breakout = latest_close > resistance
     if not breakout and (resistance - latest_close) / resistance * 100.0 > tolerance:
         return []
+    max_ext = float(cfg.get("max_breakout_extension_pct", 10.0))
+    if breakout and (latest_close - resistance) / resistance * 100.0 > max_ext:
+        return []  # pattern already played out
 
     avg_volume = float(np.mean(volume_w[-51:-1])) if len(volume_w) >= 51 else float(np.mean(volume_w[:-1]))
     volume_ratio = float(volume_w[-1] / avg_volume) if avg_volume > 0 else 0.0

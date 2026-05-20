@@ -143,6 +143,7 @@ class Pipeline:
             universe_name=self.ctx.universe_name,
         )
         self.ctx.stats["rows_fetched"] = rows
+        _refresh_index_today(self.ctx.loader.conn)
         if self.ctx.scan_date.weekday() == 4:
             self._run_weekly_incremental()
 
@@ -154,15 +155,10 @@ class Pipeline:
         self.ctx.market_regime = compute_market_regime(self.ctx.loader, self.ctx.symbols)
         self.ctx.sector_rs_cache = compute_sector_rs_cache(self.ctx.loader, self.ctx.symbols)
         self.ctx.liquidity_profile = _liquidity_map(self.ctx.selected_profile)
-        self.ctx.stats["bear_early_exit"] = _is_bear_regime(self.ctx.market_regime)
+        self.ctx.stats["market_regime"] = self.ctx.market_regime.get("verdict", "UNKNOWN")
 
     @stage("detect")
     def detect(self) -> None:
-        if _is_bear_regime(self.ctx.market_regime):
-            self.ctx.raw_hits = []
-            self.ctx.stats["detect"] = "skipped_bear_regime"
-            return
-
         assert self.ctx.loader is not None
         prepared = self._load_detector_inputs(self.ctx.symbols)
         self.ctx.daily_arrays = {symbol: daily for symbol, daily, _weekly in prepared}
@@ -516,6 +512,34 @@ def _truthy(value: object) -> bool:
 
 def _is_bear_regime(regime: dict) -> bool:
     return str(regime.get("verdict", "")).upper() == "BEAR"
+
+
+def _refresh_index_today(conn) -> None:
+    """Fetch today's NIFTY 50 and sector index closes into index_daily."""
+    from engine import dhan_client, storage
+
+    today = date.today().isoformat()
+    index_names = ["NIFTY 50", *settings.SECTOR_INDICES]
+    try:
+        imaster = dhan_client.index_master()
+    except Exception:
+        return
+    for index_name in index_names:
+        try:
+            security_id = dhan_client.resolve_index_security_id(index_name, imaster)
+            if not security_id:
+                continue
+            frame = dhan_client.fetch_historical_sync(
+                security_id=security_id,
+                exchange_segment="IDX_I",
+                instrument="INDEX",
+                from_date=today,
+                to_date=today,
+            )
+            if not frame.empty:
+                storage.upsert_index_rows(conn, index_name, frame)
+        except Exception:
+            pass
 
 
 def _generate_weekly_incremental(conn) -> dict[str, int]:

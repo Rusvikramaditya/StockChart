@@ -55,10 +55,11 @@ class Phase3ContractTest(unittest.TestCase):
             "symbol_to_sector": {},
         }
         scored = score_pattern("TEST", pattern, daily, weekly, {"score": 0, "verdict": "BEAR"}, sector_cache)
-        self.assertEqual(scored["score"], 0)
-        self.assertEqual(scored["tier"], "SKIP")
-        self.assertFalse(scored["tradable"])
-        self.assertEqual(scored["skip_reason"], "BEAR_REGIME")
+        # Bear regime no longer auto-skips; regime contributes 0 points naturally.
+        # Score is based on pattern quality + filter alignment.
+        self.assertGreater(scored["score"], 0)
+        self.assertIsNone(scored["skip_reason"])
+        self.assertIn(scored["tier"], {"HIGHEST", "HIGH", "MEDIUM", "SKIP"})
 
     def test_real_db_detect_filter_score_explain_10_stocks(self):
         if not settings.DB_PATH.exists():

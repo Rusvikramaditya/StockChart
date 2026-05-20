@@ -43,6 +43,9 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
     breakout = latest_close > resistance
     if not breakout and distance_to_pivot > float(cfg["within_breakout_pct"]):
         return []
+    max_ext = float(cfg.get("max_breakout_extension_pct", 8.0))
+    if breakout and (latest_close - resistance) / resistance * 100.0 > max_ext:
+        return []  # pattern already played out
 
     base_low = float(np.min(low_values))
     target = resistance + max(resistance - base_low, 0.0)

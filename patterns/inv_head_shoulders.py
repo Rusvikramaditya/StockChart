@@ -45,6 +45,9 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
         breakout = latest_close > neckline
         if not breakout and (neckline - latest_close) / neckline * 100.0 > 5.0:
             continue
+        max_ext = float(cfg.get("max_breakout_extension_pct", 8.0))
+        if breakout and (latest_close - neckline) / neckline * 100.0 > max_ext:
+            continue  # pattern already played out, price too extended above neckline
         score = 100.0 - symmetry_pct + (right_idx - left_idx) / lookback * 10.0
         candidate = {
             "score": score,

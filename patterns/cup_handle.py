@@ -86,6 +86,9 @@ def _detect_one(data: dict, timeframe: str) -> PatternResult | None:
     breakout = latest_close > pivot
     if not breakout and (pivot - latest_close) / pivot * 100.0 > 5.0:
         return None
+    max_ext = float(cfg.get("max_breakout_extension_pct", 8.0))
+    if breakout and (latest_close - pivot) / pivot * 100.0 > max_ext:
+        return None  # pattern already played out
 
     avg_vol = float(np.mean(vol_w[-50:])) if len(vol_w) >= 50 else float(np.mean(vol_w))
     volume_ratio = float(vol_w[-1] / avg_vol) if avg_vol > 0 else 0.0

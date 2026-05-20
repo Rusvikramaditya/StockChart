@@ -29,7 +29,9 @@ def build_chart_payload(
     trade_plan = _trade_plan(pattern_result)
     geometry = _geometry(pattern_result)
 
-    visible = frame.tail(max(20, int(lookback_bars)))
+    bars_in_pattern = _int(_field(pattern_result, "bars_in_pattern"), default=lookback_bars)
+    actual_lookback = max(lookback_bars, bars_in_pattern)
+    visible = frame.tail(max(20, actual_lookback))
     visible_start = len(frame) - len(visible)
 
     return {

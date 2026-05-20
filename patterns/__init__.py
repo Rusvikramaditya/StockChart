@@ -13,9 +13,12 @@ from pathlib import Path
 
 from config import settings
 from patterns import (
+    ascending_triangle,
+    bull_flag,
     cup_handle,
     inv_head_shoulders,
     multiyear_breakout,
+    supertrend,
     vcp,
 )
 
@@ -24,18 +27,14 @@ ALL_DETECTORS = [
     vcp.detect,
     inv_head_shoulders.detect,
     multiyear_breakout.detect,
+    ascending_triangle.detect,
+    bull_flag.detect,
+    supertrend.detect,
 ]
 
 PROFILE_DETECTORS = {
-    "nifty500": [
-        vcp.detect,
-        inv_head_shoulders.detect,
-    ],
-    "small_mid_liquid": [
-        cup_handle.detect,
-        vcp.detect,
-        multiyear_breakout.detect,
-    ],
+    "nifty500": ALL_DETECTORS,
+    "small_mid_liquid": ALL_DETECTORS,
     "watchlist": ALL_DETECTORS,
 }
 

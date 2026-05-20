@@ -55,57 +55,116 @@
 
       drawPatternOverlay(ctx, inst, payload, W, H, boxStart);
 
-      // --- Upside zone (entry → target) ---
+      // --- Vertical arrow target box (analyst-post style) ---
+      // Only draw if target is above entry (valid long setup) and gap is meaningful
       var uTop = Math.min(entryY, targetY);
       var uBot = Math.max(entryY, targetY);
       var uH = uBot - uTop;
 
-      if (uH > 3) {
-        ctx.fillStyle = 'rgba(38,166,154,0.15)';
+      if (targetY < entryY && uH > 10) {
+        // Blue fill: entry → target
+        ctx.fillStyle = 'rgba(37,99,235,0.12)';
         ctx.fillRect(boxStart, uTop, boxW, uH);
-        ctx.strokeStyle = 'rgba(38,166,154,0.62)';
+        ctx.strokeStyle = '#2563eb';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(boxStart + 0.5, uTop + 0.5, boxW - 1, uH - 1);
 
-        if (tp.upside_pct != null && uH > 18) {
-          ctx.fillStyle = '#26a69a';
-          ctx.font = 'bold ' + (compact ? 15 : 18) + 'px Inter,Arial,sans-serif';
+        // Vertical arrow line centered in box
+        var arrowX = boxStart + boxW / 2;
+        var arrowTop = uTop + (compact ? 6 : 8);
+        var arrowBot = uBot - (compact ? 4 : 5);
+        if (arrowBot > arrowTop + 10) {
+          ctx.save();
+          ctx.strokeStyle = '#2563eb';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(arrowX, arrowBot);
+          ctx.lineTo(arrowX, arrowTop + (compact ? 5 : 7));
+          ctx.stroke();
+          // Arrowhead ▲
+          var ah = compact ? 5 : 7;
+          var aw = compact ? 4 : 5;
+          ctx.fillStyle = '#2563eb';
+          ctx.beginPath();
+          ctx.moveTo(arrowX, arrowTop);
+          ctx.lineTo(arrowX - aw, arrowTop + ah);
+          ctx.lineTo(arrowX + aw, arrowTop + ah);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Price + % label — pill badge above top of box
+        if (tp.target != null && tp.upside_pct != null) {
+          var labelText = _fmtPrice(tp.target) + ' (+' + tp.upside_pct.toFixed(1) + '%)';
+          ctx.save();
+          ctx.font = 'bold ' + (compact ? 10 : 12) + 'px Inter,Arial,sans-serif';
+          var lw = ctx.measureText(labelText).width;
+          var lpad = compact ? 6 : 8;
+          var lh = compact ? 16 : 20;
+          var lx = clamp(arrowX - lw / 2 - lpad, 4, W - lw - lpad * 2 - 4);
+          var ly = uTop - lh - (compact ? 3 : 4);
+          if (ly > 4) {
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(lx, ly, lw + lpad * 2, lh, 4);
+            } else {
+              ctx.rect(lx, ly, lw + lpad * 2, lh);
+            }
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(labelText, lx + lpad, ly + lh / 2);
+          }
+          ctx.restore();
+        }
+
+        // Upside % label inside the box (compact fallback when pill doesn't fit)
+        if (tp.upside_pct != null && uH > 24 && compact) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(37,99,235,0.70)';
+          ctx.font = 'bold ' + (compact ? 10 : 12) + 'px Inter,Arial,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('Upside +' + tp.upside_pct.toFixed(1) + '%', boxStart + boxW / 2, uTop + uH / 2, boxW - 10);
+          ctx.fillText('Upside +' + Number(tp.upside_pct).toFixed(1) + '%', boxStart + boxW / 2, uTop + uH / 2, boxW - 10);
+          ctx.restore();
         }
       }
 
-      // --- Downside zone (entry → stop) ---
-      var dTop = Math.min(entryY, stopY);
-      var dBot = Math.max(entryY, stopY);
-      var dH = dBot - dTop;
-
-      if (dH > 3) {
-        ctx.fillStyle = 'rgba(239,83,80,0.12)';
-        ctx.fillRect(boxStart, dTop, boxW, dH);
-        ctx.strokeStyle = 'rgba(239,83,80,0.55)';
+      // Stop: thin dashed red horizontal line with downside % label
+      if (Number.isFinite(stopY)) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(239,83,80,0.75)';
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(boxStart + 0.5, dTop + 0.5, boxW - 1, dH - 1);
-
-        if (tp.downside_pct != null && dH > 18) {
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(boxStart, stopY);
+        ctx.lineTo(boxStart + boxW, stopY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (tp.downside_pct != null) {
           ctx.fillStyle = '#ef5350';
-          ctx.font = 'bold ' + (compact ? 14 : 16) + 'px Inter,Arial,sans-serif';
+          ctx.font = 'bold ' + (compact ? 10 : 12) + 'px Inter,Arial,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('Risk -' + tp.downside_pct.toFixed(1) + '%', boxStart + boxW / 2, dTop + dH / 2, boxW - 10);
+          ctx.fillText('Risk -' + Number(tp.downside_pct).toFixed(1) + '%', boxStart + boxW / 2, stopY - (compact ? 8 : 10), boxW - 10);
         }
+        ctx.restore();
       }
 
-      // --- R:R label below both boxes ---
-      if (tp.reward_risk != null && W >= 520) {
-        var rrY = Math.max(uBot, dBot) + 14;
+      // R:R label below the box
+      if (tp.reward_risk != null && !compact) {
+        var rrY = uBot + 14;
         if (rrY < H - 28) {
-          ctx.fillStyle = 'rgba(30,30,30,0.72)';
-          ctx.font = 'bold 14px Inter,Arial,sans-serif';
+          ctx.save();
+          ctx.fillStyle = 'rgba(30,30,30,0.55)';
+          ctx.font = 'bold 12px Inter,Arial,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           ctx.fillText('R:R ' + tp.reward_risk.toFixed(1) + ':1', boxStart + boxW / 2, rrY);
+          ctx.restore();
         }
       }
     }
@@ -159,35 +218,55 @@
     var left = pointFromRelativeIndex(inst, payload, geometry.left_rim_idx, 'high');
     var trough = pointFromRelativeIndex(inst, payload, geometry.trough_idx, 'low');
     var right = pointFromRelativeIndex(inst, payload, geometry.right_rim_idx, 'high');
-    if (!left || !trough || !right) return;
+    if (!trough || !right) return;
 
     ctx.strokeStyle = 'rgba(0,0,0,0.78)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(left.x, left.y);
-    ctx.quadraticCurveTo(trough.x, trough.y + 24, right.x, right.y);
+    if (left) {
+      // Control point: bezier midpoint (t=0.5) passes through trough exactly
+      var cpX = 2 * trough.x - (left.x + right.x) / 2;
+      var cpY = 2 * trough.y - (left.y + right.y) / 2;
+      ctx.moveTo(left.x, left.y);
+      ctx.quadraticCurveTo(cpX, cpY, right.x, right.y);
+    } else {
+      // Left rim off-screen: right arc only, trough as deepest point
+      var cpXr = (trough.x + right.x) / 2;
+      var cpYr = 2 * trough.y - (trough.y + right.y) / 2;
+      ctx.moveTo(trough.x, trough.y);
+      ctx.quadraticCurveTo(cpXr, cpYr, right.x, right.y);
+    }
     ctx.stroke();
-    drawSimplePatternLabel(ctx, trough.x, trough.y + 30, 'Cup Base', '#111111');
-    drawDot(ctx, left.x, left.y, '#111111');
+
+    if (left) drawDot(ctx, left.x, left.y, '#111111');
     drawDot(ctx, trough.x, trough.y, '#111111');
     drawDot(ctx, right.x, right.y, '#111111');
 
-    var handle = pointFromRelativeIndex(inst, payload, geometry.handle_start_idx, 'high');
-    if (handle) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.68)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(handle.x, handle.y);
-      ctx.lineTo(right.x, right.y);
-      ctx.stroke();
-      drawSimplePatternLabel(ctx, handle.x, handle.y - 18, 'Handle', '#111111');
+    // Handle: shaded box from handle_start to last candle (avoids backward line)
+    // Cap depth at 50% of cup depth so large intra-handle drops don't bloat the box
+    var handleStartChartIdx = relativeChartIndex(payload, geometry.handle_start_idx);
+    var candles = payload.candles || [];
+    if (handleStartChartIdx != null && handleStartChartIdx < candles.length) {
+      var handleRange = rangePoints(inst, candles, handleStartChartIdx, candles.length - 1);
+      if (handleRange) {
+        var cupDepthPx = trough.y - right.y;
+        var handleBot = Math.min(handleRange.lowY, right.y + Math.max(20, cupDepthPx * 0.5));
+        var handleH = handleBot - handleRange.highY;
+        if (handleH > 2) {
+          ctx.fillStyle = 'rgba(107,114,128,0.06)';
+          ctx.fillRect(handleRange.x1, handleRange.highY, handleRange.x2 - handleRange.x1, handleH);
+          ctx.strokeStyle = 'rgba(107,114,128,0.25)';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(handleRange.x1 + 0.5, handleRange.highY + 0.5, handleRange.x2 - handleRange.x1 - 1, handleH - 1);
+        }
+      }
     }
 
     var entry = Number((payload.trade_plan || {}).entry);
     var pivotY = Number.isFinite(entry) ? inst.series.priceToCoordinate(entry) : null;
     if (pivotY != null) {
-      drawSegment(ctx, left.x, pivotY, latestCandleX(inst, payload), pivotY, '#2563eb', [5, 5], 2);
-      drawSimplePatternLabel(ctx, right.x + 10, pivotY - 18, 'Breakout Rim', '#1d4ed8');
+      var rimLineStartX = left ? left.x : (handleStartChartIdx != null && candles[handleStartChartIdx] ? candleX(inst, candles[handleStartChartIdx]) || right.x : right.x);
+      drawSegment(ctx, rimLineStartX, pivotY, latestCandleX(inst, payload), pivotY, '#2563eb', [5, 5], 2);
     }
   }
 
@@ -213,7 +292,6 @@
     ctx.lineTo(endX, resistanceY);
     ctx.stroke();
     ctx.setLineDash([]);
-    drawSimplePatternLabel(ctx, Math.min(endX - 130, startX + 8), resistanceY - 20, 'Flat Resistance', '#1f2937');
     touches.forEach(function (point) { drawDot(ctx, point.x, resistanceY, '#1f2937'); });
 
     if (lows.length >= 2) {
@@ -234,7 +312,6 @@
       ctx.lineTo(first.x, first.y);
       ctx.closePath();
       ctx.fill();
-      drawSimplePatternLabel(ctx, last.x + 16, last.y - 14, 'Rising Support', '#111111');
       lows.forEach(function (point) { drawDot(ctx, point.x, point.y, '#111111'); });
     }
   }
@@ -249,7 +326,6 @@
       ctx.moveTo(poleStart.x, poleStart.y);
       ctx.lineTo(poleEnd.x, poleEnd.y);
       ctx.stroke();
-      drawSimplePatternLabel(ctx, poleEnd.x + 8, poleEnd.y - 20, 'Pole', '#16a34a');
     }
     var candles = payload.candles || [];
     var flagLen = Math.max(5, Number(geometry.flag_len || 16));
@@ -261,7 +337,6 @@
       ctx.strokeStyle = 'rgba(37,99,235,0.70)';
       ctx.lineWidth = 2;
       ctx.strokeRect(flag.x1, flag.highY, flag.x2 - flag.x1, flag.lowY - flag.highY);
-      drawSimplePatternLabel(ctx, flag.x1 + 8, flag.highY - 18, 'Flag Pullback', '#1d4ed8');
     }
   }
 
@@ -288,12 +363,9 @@
       ctx.strokeStyle = 'rgba(37,99,235,0.72)';
       ctx.lineWidth = 2;
       ctx.strokeRect(box.x1, box.highY, box.x2 - box.x1, box.lowY - box.highY);
-      var suffix = values[i] != null ? ' ' + Number(values[i]).toFixed(1) + '%' : '';
-      drawSimplePatternLabel(ctx, box.x1 + 6, box.highY + 14, 'C' + (i + 1) + suffix, '#1d4ed8');
     }
 
     drawSegment(ctx, Math.max(startX, endX - 180), y, endX, y, '#1d4ed8', [6, 5], 2);
-    drawSimplePatternLabel(ctx, Math.max(startX + 8, endX - 150), y - 24, 'VCP Pivot', '#1d4ed8');
   }
 
   function drawInverseHeadShoulders(ctx, inst, payload, geometry) {
@@ -301,20 +373,39 @@
     var head = pointFromRelativeIndex(inst, payload, geometry.head_idx, 'low');
     var rs = pointFromRelativeIndex(inst, payload, geometry.right_shoulder_idx, 'low');
     if (!ls || !head || !rs) return;
+
+    // W-valley: control points at head.y create flat-bottom approach from each side
+    var gap1 = (head.x - ls.x) * 0.5;
+    var gap2 = (rs.x - head.x) * 0.5;
     ctx.strokeStyle = '#111111';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(ls.x, ls.y);
-    ctx.quadraticCurveTo((ls.x + head.x) / 2, head.y + 18, head.x, head.y);
-    ctx.quadraticCurveTo((head.x + rs.x) / 2, head.y + 18, rs.x, rs.y);
+    ctx.quadraticCurveTo(head.x - gap1, head.y, head.x, head.y);
+    ctx.quadraticCurveTo(head.x + gap2, head.y, rs.x, rs.y);
     ctx.stroke();
+
     drawDot(ctx, ls.x, ls.y, '#111111');
     drawDot(ctx, head.x, head.y, '#111111');
     drawDot(ctx, rs.x, rs.y, '#111111');
-    drawSimplePatternLabel(ctx, head.x - 28, head.y + 26, 'Head', '#111111');
 
-    var neckline = Number(geometry.neckline || (payload.trade_plan || {}).entry);
-    var necklineY = Number.isFinite(neckline) ? inst.series.priceToCoordinate(neckline) : null;
+    // Neckline: peaks between ls→head and head→rs, not entry price
+    var lsIdx = relativeChartIndex(payload, geometry.left_shoulder_idx);
+    var headIdx = relativeChartIndex(payload, geometry.head_idx);
+    var rsIdx = relativeChartIndex(payload, geometry.right_shoulder_idx);
+    var candles = payload.candles || [];
+    var necklineY = null;
+    if (lsIdx != null && headIdx != null && rsIdx != null && lsIdx < headIdx && headIdx < rsIdx) {
+      var range1 = rangePoints(inst, candles, lsIdx, headIdx);
+      var range2 = rangePoints(inst, candles, headIdx, rsIdx);
+      if (range1 && range2) {
+        necklineY = (range1.highY + range2.highY) / 2;
+      }
+    }
+    if (necklineY == null && geometry.neckline != null) {
+      var nl = Number(geometry.neckline);
+      if (Number.isFinite(nl)) necklineY = inst.series.priceToCoordinate(nl);
+    }
     if (necklineY != null) {
       drawSegment(ctx, ls.x, necklineY, latestCandleX(inst, payload), necklineY, '#2563eb', [6, 5], 2);
       drawSimplePatternLabel(ctx, rs.x + 10, necklineY - 18, 'Neckline', '#1d4ed8');
@@ -325,31 +416,28 @@
     var line = Number(geometry.supertrend || (payload.trade_plan || {}).stop);
     var y = Number.isFinite(line) ? inst.series.priceToCoordinate(line) : null;
     if (y == null) {
-      drawSimplePatternLabel(ctx, futureStartX, H * 0.82, 'Bullish Flip', '#2563eb');
       return;
     }
     var startX = Math.max(8, latestCandleX(inst, payload) - 220);
     drawSegment(ctx, startX, y, latestCandleX(inst, payload), y, '#2563eb', [8, 5], 2);
-    drawSimplePatternLabel(ctx, startX + 8, y - 20, 'Supertrend Support', '#1d4ed8');
   }
 
   function drawMultiYearBreakout(ctx, inst, payload, geometry) {
     var entry = Number((payload.trade_plan || {}).entry);
     var y = Number.isFinite(entry) ? inst.series.priceToCoordinate(entry) : null;
     if (y == null) return;
-    var firstTouch = (geometry.resistance_touch_indices || [0])[0];
-    var start = pointFromRelativeIndex(inst, payload, firstTouch, 'high');
     var endX = latestCandleX(inst, payload);
-    if (!start || endX == null) return;
+    if (endX == null) return;
+    // Touch indices are weekly bar offsets; chart candles are daily — mapping would
+    // be wrong. Resistance is horizontal so just span from left canvas edge.
     ctx.strokeStyle = '#111111';
     ctx.setLineDash([3, 5]);
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(start.x, y);
+    ctx.moveTo(8, y);
     ctx.lineTo(endX, y);
     ctx.stroke();
     ctx.setLineDash([]);
-    drawSimplePatternLabel(ctx, endX - 120, y - 24, 'Long Resistance', '#111111');
   }
 
   function pointFromRelativeIndex(inst, payload, idx, field) {
@@ -382,7 +470,6 @@
     var raw = sourceRows - patternBars + number;
     var mapped = raw - visibleStart;
     if (mapped >= 0 && mapped < candles.length) return Math.round(mapped);
-    if (number >= 0 && number < candles.length) return Math.round(number);
     return null;
   }
 
@@ -485,6 +572,13 @@
     ctx.strokeRect(boxX, boxY, width, height);
     ctx.fillStyle = color;
     ctx.fillText(text, boxX + (compact ? 5 : 6), boxY + height / 2, width - 8);
+  }
+
+  function _fmtPrice(value) {
+    var n = Number(value);
+    if (!Number.isFinite(n)) return '';
+    // Indian number format, 0-2 decimal places
+    return n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
   function clamp(value, min, max) {

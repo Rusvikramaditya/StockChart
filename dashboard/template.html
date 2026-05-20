@@ -12,6 +12,7 @@
       --panel-2: #1a1a1a;
       --line: #2a2a2a;
       --line-soft: #202020;
+      --line-strong: #3a3a3a;
       --text: #eeeeee;
       --muted: #a3a3a3;
       --faint: #707070;
@@ -20,7 +21,9 @@
       --red: #ef4444;
       --yellow: #facc15;
       --blue: #38bdf8;
+      --teal: #2dd4bf;
       --shadow: rgba(0, 0, 0, 0.42);
+      --shadow-strong: rgba(0, 0, 0, 0.62);
     }
 
     * { box-sizing: border-box; }
@@ -37,6 +40,7 @@
       margin: 0;
       background: var(--bg);
       color: var(--text);
+      min-height: 100vh;
     }
 
     button,
@@ -49,16 +53,21 @@
     .shell {
       width: min(1440px, 100%);
       margin: 0 auto;
-      padding: 24px;
+      padding: 20px 24px 32px;
     }
 
     .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 24px;
-      padding: 18px 0 22px;
+      padding: 18px 0 18px;
       border-bottom: 1px solid var(--line);
+      background: rgba(10, 10, 10, 0.94);
+      backdrop-filter: blur(16px);
     }
 
     .eyebrow {
@@ -81,16 +90,18 @@
       margin: 10px 0 0;
       color: var(--muted);
       font-size: 14px;
+      max-width: 720px;
     }
 
     .regime-badge {
       min-width: 220px;
       padding: 12px 14px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-strong);
+      border-left: 4px solid var(--accent);
       border-radius: 8px;
       background: var(--panel);
-      text-align: right;
-      box-shadow: 0 10px 28px var(--shadow);
+      text-align: left;
+      box-shadow: 0 16px 42px var(--shadow-strong);
     }
 
     .regime-badge .label {
@@ -115,15 +126,27 @@
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 10px;
-      margin: 20px 0 22px;
+      margin: 18px 0 22px;
     }
 
     .stat {
+      position: relative;
       min-width: 0;
       padding: 14px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-strong);
       border-radius: 8px;
       background: var(--panel);
+      box-shadow: 0 14px 32px var(--shadow);
+      overflow: hidden;
+    }
+
+    .stat::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0.78;
     }
 
     .stat .label {
@@ -174,10 +197,11 @@
     }
 
     .panel {
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-strong);
       border-radius: 8px;
       background: var(--panel);
       overflow: hidden;
+      box-shadow: 0 18px 44px var(--shadow);
     }
 
     .panel-head {
@@ -323,18 +347,77 @@
       font-size: 12px;
     }
 
-    .toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .results-controls {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto;
       gap: 12px;
-      margin-bottom: 12px;
+      margin: 0 0 14px;
+      padding: 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 18px 44px var(--shadow);
+    }
+
+    .search-box {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .search-box span,
+    .result-count span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .search-box input {
+      width: 100%;
+      min-height: 40px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101010;
+      color: var(--text);
+      outline: 0;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255, 72, 0, 0.16);
+    }
+
+    .control-actions {
+      display: flex;
+      align-items: end;
+      justify-content: flex-end;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .result-count {
+      display: grid;
+      align-content: center;
+      min-height: 40px;
+      min-width: 150px;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101010;
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .segments {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      margin-bottom: 14px;
     }
 
     .segments button,
@@ -358,6 +441,7 @@
       color: var(--text);
       border-color: var(--accent);
       background: #1e120d;
+      box-shadow: inset 0 0 0 1px rgba(255, 72, 0, 0.16);
     }
 
     .tier-section {
@@ -386,12 +470,30 @@
     }
 
     .result-card {
+      position: relative;
       min-width: 0;
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-strong);
       border-radius: 8px;
       background: var(--panel);
       overflow: hidden;
-      box-shadow: 0 10px 30px var(--shadow);
+      box-shadow: 0 18px 44px var(--shadow-strong);
+    }
+
+    .result-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: var(--faint);
+    }
+
+    .result-card.tier-highest::before { background: var(--green); }
+    .result-card.tier-high::before { background: var(--teal); }
+    .result-card.tier-medium::before { background: var(--yellow); }
+    .result-card.tier-skip::before { background: var(--red); }
+
+    .result-card:hover {
+      border-color: #4a4a4a;
     }
 
     .result-main {
@@ -482,6 +584,7 @@
       gap: 8px;
       padding: 12px 16px;
       border-bottom: 1px solid var(--line-soft);
+      background: #0f0f0f;
     }
 
     .filter {
@@ -506,6 +609,14 @@
     }
 
     .filter.pass::before { background: var(--green); }
+    .filter.pass {
+      color: #d9fbe7;
+      border-color: rgba(34, 197, 94, 0.34);
+    }
+    .filter.fail {
+      color: #ffd8d8;
+      border-color: rgba(239, 68, 68, 0.32);
+    }
 
     details {
       border: 0;
@@ -691,11 +802,25 @@
 
     .empty-state,
     .errors {
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-strong);
       border-radius: 8px;
       background: var(--panel);
       padding: 16px;
       color: var(--muted);
+      box-shadow: 0 18px 44px var(--shadow);
+    }
+
+    .empty-state strong {
+      display: block;
+      color: var(--text);
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .empty-state p {
+      margin: 0;
+      max-width: 860px;
+      font-size: 14px;
     }
 
     .errors table {
@@ -729,6 +854,8 @@
       .cards { grid-template-columns: 1fr; }
       .pattern-guide-grid { grid-template-columns: 1fr; }
       .setup-summary { grid-template-columns: 1fr; }
+      .results-controls { grid-template-columns: 1fr; }
+      .control-actions { justify-content: space-between; }
     }
 
     @media (max-width: 760px) {
@@ -738,7 +865,8 @@
       h1 { font-size: 24px; }
       .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .toolbar { align-items: stretch; flex-direction: column; }
+      .control-actions { align-items: stretch; flex-direction: column; }
+      .result-count { min-width: 0; }
       .result-main { grid-template-columns: 1fr; }
       .score-block { text-align: left; }
       .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -847,15 +975,31 @@
           <h2>Result Cards by Conviction Tier</h2>
           <span class="hint">Sorted by tier and conviction score.</span>
         </div>
-        <div class="toolbar">
-          <div class="segments" role="tablist" aria-label="Tier filter">
-            <button type="button" class="active" data-tier-filter="ALL">All</button>
-            {% for group in tier_groups %}
-            <button type="button" data-tier-filter="{{ group.name }}">{{ group.name }} ({{ group.count }})</button>
-            {% endfor %}
+      </div>
+
+      <div class="results-controls" aria-label="Dashboard controls">
+        <label class="search-box" for="resultSearch">
+          <span>Search setups</span>
+          <input id="resultSearch" type="search" placeholder="Symbol, pattern, status, tier">
+        </label>
+        <div class="control-actions">
+          <div class="result-count" id="resultCount" aria-live="polite">
+            <span>Visible</span>
+            {{ summary.hit_count }} setups shown
           </div>
           <button type="button" class="compact-button" id="toggleDetails">Open details</button>
         </div>
+      </div>
+
+      <div class="segments" role="tablist" aria-label="Tier filter">
+        <button type="button" class="active" data-tier-filter="ALL">All</button>
+        {% for group in tier_groups %}
+        <button type="button" data-tier-filter="{{ group.name }}">{{ group.name }} ({{ group.count }})</button>
+        {% endfor %}
+      </div>
+      <div class="empty-state hidden" data-search-empty>
+        <strong>No setups match the current filters.</strong>
+        <p>Clear the search box or switch back to All tiers.</p>
       </div>
 
       {% if results %}
@@ -868,7 +1012,7 @@
           {% if group.results %}
           <div class="cards">
             {% for result in group.results %}
-            <article class="result-card" data-tier-card="{{ result.tier }}">
+            <article class="result-card tier-{{ result.tier_class }}" data-tier-card="{{ result.tier }}" data-search-text="{{ result.symbol }} {{ result.pattern }} {{ result.status }} {{ result.tier }} {{ result.timeframe }} {{ result.all_patterns|join(' ') }}">
               <div class="result-main">
                 <div>
                   <div class="symbol-line">
@@ -906,7 +1050,7 @@
 
               <details>
                 <summary>
-                  <span>View analysis</span>
+                  <span>Open thesis</span>
                   <span class="chevron">v</span>
                 </summary>
                 <div class="detail-content">
@@ -987,13 +1131,20 @@
             </article>
             {% endfor %}
           </div>
+          <div class="empty-state hidden" data-filter-empty>
+            <strong>No matching setups in this tier.</strong>
+            <p>Try clearing the search box or selecting a different conviction tier.</p>
+          </div>
           {% else %}
           <div class="empty-state">No {{ group.name }} results in this scan.</div>
           {% endif %}
         </section>
         {% endfor %}
       {% else %}
-      <div class="empty-state">No pattern results were produced for this scan.</div>
+      <div class="empty-state">
+        <strong>No setups passed this scan.</strong>
+        <p>The dashboard rendered correctly, but the scanner did not produce tradable pattern cards for this universe and filter set. Use the Pattern Guide above to understand what will be plotted when real detector hits pass the scanner gates.</p>
+      </div>
       {% endif %}
     </section>
 
@@ -1030,23 +1181,67 @@
     const buttons = Array.from(document.querySelectorAll("[data-tier-filter]"));
     const sections = Array.from(document.querySelectorAll("[data-tier-section]"));
     const detailsButton = document.getElementById("toggleDetails");
+    const searchInput = document.getElementById("resultSearch");
+    const resultCount = document.getElementById("resultCount");
+    const searchEmpty = document.querySelector("[data-search-empty]");
+    const totalCards = document.querySelectorAll("[data-tier-card]").length;
+    let activeTier = "ALL";
+
+    function updateResultFilters() {
+      const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
+      let visibleCards = 0;
+
+      sections.forEach((section) => {
+        const tierMatches = activeTier === "ALL" || section.dataset.tierSection === activeTier;
+        const cards = Array.from(section.querySelectorAll("[data-tier-card]"));
+        let visibleInSection = 0;
+
+        cards.forEach((card) => {
+          const searchText = (card.dataset.searchText || "").toLowerCase();
+          const matchesSearch = !query || searchText.includes(query);
+          const shouldShow = tierMatches && matchesSearch;
+          card.classList.toggle("hidden", !shouldShow);
+          if (shouldShow) {
+            visibleCards += 1;
+            visibleInSection += 1;
+          }
+        });
+
+        const filterEmpty = section.querySelector("[data-filter-empty]");
+        if (filterEmpty) {
+          filterEmpty.classList.toggle("hidden", !tierMatches || visibleInSection > 0 || cards.length === 0);
+        }
+        section.classList.toggle("hidden", !tierMatches || (cards.length > 0 && visibleInSection === 0 && query));
+      });
+
+      if (resultCount) {
+        resultCount.innerHTML = `<span>Visible</span>${visibleCards} ${visibleCards === 1 ? "setup" : "setups"} shown`;
+      }
+      if (searchEmpty) {
+        searchEmpty.classList.toggle("hidden", totalCards === 0 || visibleCards > 0);
+      }
+    }
 
     buttons.forEach((button) => {
       button.addEventListener("click", () => {
-        const tier = button.dataset.tierFilter;
+        activeTier = button.dataset.tierFilter;
         buttons.forEach((item) => item.classList.toggle("active", item === button));
-        sections.forEach((section) => {
-          section.classList.toggle("hidden", tier !== "ALL" && section.dataset.tierSection !== tier);
-        });
+        updateResultFilters();
       });
     });
 
-    detailsButton.addEventListener("click", () => {
+    if (searchInput) {
+      searchInput.addEventListener("input", updateResultFilters);
+    }
+
+    if (detailsButton) detailsButton.addEventListener("click", () => {
       const cards = Array.from(document.querySelectorAll(".result-card details"));
       const shouldOpen = cards.some((item) => !item.open);
       cards.forEach((item) => { item.open = shouldOpen; });
       detailsButton.textContent = shouldOpen ? "Close details" : "Open details";
     });
+
+    updateResultFilters();
 
     // Analysis-chart toggle button
     document.querySelectorAll("[data-toggle-analysis]").forEach((btn) => {
@@ -1076,13 +1271,17 @@
           const payloadEl = wrap.querySelector(".tc-payload");
           const chartContainer = wrap.querySelector(".tc-container");
           if (!payloadEl || !chartContainer) return;
-          try {
-            const payload = JSON.parse(payloadEl.textContent);
-            ThesisChart.init(chartContainer, payload);
-            wrap.dataset.chartInit = "1";
-          } catch (e) {
-            console.error("Thesis chart error:", e);
-          }
+          // Wait for layout to settle so chartContainer has a non-zero size
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (wrap.dataset.chartInit) return;
+            try {
+              const payload = JSON.parse(payloadEl.textContent);
+              ThesisChart.init(chartContainer, payload);
+              wrap.dataset.chartInit = "1";
+            } catch (e) {
+              console.error("Thesis chart error:", e);
+            }
+          }));
         });
       });
     }

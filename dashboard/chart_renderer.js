@@ -40,7 +40,7 @@
         rightPriceScale: {
           visible: true,
           borderColor: '#e0e0e0',
-          scaleMargins: { top: compact ? 0.08 : 0.12, bottom: 0.08 },
+          scaleMargins: { top: compact ? 0.18 : 0.22, bottom: compact ? 0.12 : 0.10 },
         },
         leftPriceScale: { visible: false },
         timeScale: {
@@ -135,42 +135,103 @@
       }
 
       chart.timeScale().fitContent();
+      // Clip viewport so candles are never narrower than ~2 px on small screens.
+      // All bars remain in memory so off-screen geometry indices still resolve.
+      var numBars = (payload.candles || []).length;
+      var maxReadableBars = Math.max(60, Math.floor(container.clientWidth / 2));
+      if (numBars > maxReadableBars) {
+        chart.timeScale().setVisibleLogicalRange({
+          from: numBars - maxReadableBars,
+          to: numBars - 1,
+        });
+      }
       chart.timeScale().applyOptions({ rightOffset: 18 });
 
-      // Compact thesis label. Keep it small so it does not hide candles.
+      // Centered analyst-post style title overlay — no background, no border.
       var titleEl = document.createElement('div');
-      var titleRightPad = compact ? 86 : 96;
       titleEl.style.cssText = [
         'position:absolute',
-        'top:12px',
-        'left:' + (compact ? '10px' : '16px'),
-        'right:' + titleRightPad + 'px',
-        'max-width:' + (compact ? '70%' : '520px'),
-        'padding:' + (compact ? '7px 8px' : '9px 11px'),
-        'text-align:left',
+        'top:14px',
+        'left:0',
+        'right:0',
+        'padding:10px 16px',
+        'text-align:center',
         'pointer-events:none',
         'z-index:4',
         'user-select:none',
-        'background:rgba(255,255,255,0.82)',
-        'border:1px solid rgba(20,20,20,0.08)',
-        'border-radius:6px',
-        'box-shadow:0 8px 18px rgba(255,255,255,0.48)',
       ].join(';');
+
+      var statusColor = (function () {
+        var s = (pattern.status || '').toUpperCase();
+        if (s === 'BREAKING OUT') return '#16a34a';
+        if (s === 'PIVOT READY')  return '#2563eb';
+        return 'rgba(0,0,0,0.55)';
+      }());
+
       titleEl.innerHTML =
-        '<div style="font-size:' + (compact ? '16px' : '24px') + ';font-weight:900;' +
-        'color:rgba(0,0,0,0.72);font-family:Inter,Segoe UI,Arial,sans-serif;' +
-        'line-height:1.05;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+        '<div style="font-size:' + (compact ? '18px' : '30px') + ';font-weight:700;' +
+        'color:rgba(0,0,0,0.85);font-family:Inter,Segoe UI,Arial,sans-serif;' +
+        'line-height:1.1;">' +
         _esc(payload.company_name || payload.symbol) +
         '</div>' +
-        '<div style="font-size:' + (compact ? '11px' : '13px') + ';font-weight:800;' +
-        'color:rgba(0,0,0,0.58);font-family:Inter,Segoe UI,Arial,sans-serif;' +
-        'margin-top:4px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+        '<div style="font-size:' + (compact ? '11px' : '14px') + ';font-weight:600;' +
+        'color:rgba(0,0,0,0.55);font-family:Inter,Segoe UI,Arial,sans-serif;' +
+        'margin-top:3px;">' +
         _esc((payload.timeframe || 'Daily') + ' Time Frame') +
-        ' | ' +
+        '</div>' +
+        '<div style="font-size:' + (compact ? '10px' : '13px') + ';font-weight:700;' +
+        'color:' + statusColor + ';font-family:Inter,Segoe UI,Arial,sans-serif;' +
+        'margin-top:2px;">' +
         _esc(pattern.type || 'Pattern') +
         (pattern.status ? ' | ' + _esc(pattern.status) : '') +
         '</div>';
       container.appendChild(titleEl);
+
+      // Ticker badge — top-right corner, text only.
+      var tickerEl = document.createElement('div');
+      tickerEl.style.cssText = [
+        'position:absolute',
+        'top:14px',
+        'right:90px',
+        'pointer-events:none',
+        'z-index:4',
+        'user-select:none',
+        'font-size:14px',
+        'font-weight:700',
+        'color:#1d4ed8',
+        'font-family:Inter,Segoe UI,Arial,sans-serif',
+      ].join(';');
+      tickerEl.textContent = payload.symbol || '';
+      container.appendChild(tickerEl);
+
+      // Bottom insight text — upside % and R:R centered above attribution
+      var insightParts = [];
+      if (tp.upside_pct != null) {
+        insightParts.push('Upside +' + Number(tp.upside_pct).toFixed(1) + '%');
+      }
+      if (tp.reward_risk != null) {
+        insightParts.push('R:R  ' + Number(tp.reward_risk).toFixed(1) + ':1');
+      }
+      if (insightParts.length) {
+        var insightEl = document.createElement('div');
+        insightEl.style.cssText = [
+          'position:absolute',
+          'bottom:28px',
+          'left:0',
+          'right:90px',
+          'text-align:center',
+          'pointer-events:none',
+          'z-index:4',
+          'user-select:none',
+          'font-size:' + (compact ? '11px' : '14px'),
+          'font-weight:700',
+          'color:rgba(0,0,0,0.60)',
+          'font-family:Inter,Segoe UI,Arial,sans-serif',
+          'letter-spacing:0.03em',
+        ].join(';');
+        insightEl.textContent = insightParts.join('   ·   ');
+        container.appendChild(insightEl);
+      }
 
       // Resize
       if (typeof ResizeObserver !== 'undefined') {

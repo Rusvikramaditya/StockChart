@@ -198,10 +198,12 @@ def _vcp(_source_rows: int, _stop: float) -> tuple[str, int, dict]:
 
 
 def _inverse_head_shoulders(_source_rows: int, _stop: float) -> tuple[str, int, dict]:
-    return "Inverse Head & Shoulders", 70, {
-        "left_shoulder_idx": 32,
-        "head_idx": 48,
-        "right_shoulder_idx": 62,
+    # SBIN last-100-bar minima: ls=59(1036.10), head=68(975.80), rs=74(1038.30)
+    # head is the deepest — W-valley curves downward correctly
+    return "Inverse Head & Shoulders", 100, {
+        "left_shoulder_idx": 59,
+        "head_idx": 68,
+        "right_shoulder_idx": 74,
     }
 
 

@@ -41,11 +41,7 @@ def score_pattern(
         + rsi_adjustment
     )
     skip_reason = None
-    if _bear_regime(market_regime_result):
-        final_score = 0
-        tier = "SKIP"
-        skip_reason = "BEAR_REGIME"
-    elif pattern_quality < float(settings.MIN_TRADABLE_QUALITY_SCORE):
+    if pattern_quality < float(settings.MIN_TRADABLE_QUALITY_SCORE):
         final_score = 0
         tier = "SKIP"
         skip_reason = "LOW_PATTERN_QUALITY"
