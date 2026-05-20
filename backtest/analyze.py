@@ -284,6 +284,8 @@ def _analyze_quality_score(reports: list[dict], rules: AnalysisRules) -> dict:
         if high and low and high["trades"] >= rules.min_bucket_trades and low["trades"] >= rules.min_bucket_trades:
             margin = round(high["win_rate"] - low["win_rate"], 2)
             status = "PASS" if margin >= rules.meaningful_win_margin else "FAIL"
+        elif high and high["trades"] >= rules.min_bucket_trades and not low:
+            status = "GATED"
         row = {
             "universe": report["universe"],
             "status": status,
@@ -295,7 +297,7 @@ def _analyze_quality_score(reports: list[dict], rules: AnalysisRules) -> dict:
             "margin": margin,
         }
         rows.append(row)
-        if is_core and status != "PASS":
+        if is_core and status not in {"PASS", "GATED"}:
             failing_core.append(row)
         if is_core and status == "PASS" and low and low.get("profit_factor", 0) < 1.0:
             gate_candidates.append(row)
@@ -305,6 +307,8 @@ def _analyze_quality_score(reports: list[dict], rules: AnalysisRules) -> dict:
         recommendation = "retune quality score traits"
     elif gate_candidates:
         recommendation = "raise minimum tradable quality score to 80"
+    elif any(row["status"] == "GATED" for row in rows):
+        recommendation = "keep minimum tradable quality score"
     else:
         recommendation = "keep quality score buckets"
     return {"by_universe": rows, "recommendation": recommendation}

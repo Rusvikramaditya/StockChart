@@ -17,6 +17,7 @@ from backtest.analyze import analyze_reports, parse_report, render_markdown
 from backtest.engine import run_backtest, track_trade_forward
 from backtest.metrics import BacktestResult
 from backtest.report import render_report, write_report
+from engine.explainer import attach_explanation
 from engine import storage
 from engine import data_loader as data_loader_module
 from engine.data_loader import DataLoader
@@ -253,6 +254,21 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         self.assertEqual(row["low_bucket"], "65-79")
         self.assertEqual(analysis["quality_score"]["recommendation"], "raise minimum tradable quality score to 80")
 
+    def test_quality_analysis_accepts_active_quality_gate(self):
+        trades = []
+        for idx in range(40):
+            trades.append(_analysis_trade(idx, "High Quality", 90, 1, "WIN" if idx < 32 else "LOSS"))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "nifty.html"
+            write_report(BacktestResult(trades, universe="nifty500"), path)
+
+            analysis = analyze_reports([path])
+
+        row = analysis["quality_score"]["by_universe"][0]
+        self.assertEqual(row["status"], "GATED")
+        self.assertEqual(analysis["quality_score"]["recommendation"], "keep minimum tradable quality score")
+
     def test_large_sample_loser_detectors_are_removed_from_live_registry(self):
         detector_modules = {detector.__module__ for detector in ALL_DETECTORS}
 
@@ -307,7 +323,10 @@ class QualityScorePhase8bTest(unittest.TestCase):
             patch("engine.scorer.stage2.evaluate", return_value={"passed": False, "status": "NO_STAGE2"}),
             patch("engine.scorer.volume.evaluate", return_value={"passed": False, "status": "NO_VOLUME", "details": {}}),
             patch("engine.scorer.sector_rs.evaluate", return_value={"status": "LAGGING"}),
-            patch("engine.scorer.rsi.evaluate", return_value={"penalty": 0, "value": 55, "status": "HEALTHY"}),
+            patch(
+                "engine.scorer.rsi.evaluate",
+                return_value={"penalty": 0, "value": 55, "status": "HEALTHY", "bearish_divergence": False},
+            ),
         ):
             scored = score_pattern(
                 "TEST",
@@ -351,7 +370,10 @@ class QualityScorePhase8bTest(unittest.TestCase):
             patch("engine.scorer.stage2.evaluate", return_value={"passed": False, "status": "NO_STAGE2"}),
             patch("engine.scorer.volume.evaluate", return_value={"passed": False, "status": "NO_VOLUME", "details": {}}),
             patch("engine.scorer.sector_rs.evaluate", return_value={"status": "LAGGING"}),
-            patch("engine.scorer.rsi.evaluate", return_value={"penalty": 0, "value": 55, "status": "HEALTHY"}),
+            patch(
+                "engine.scorer.rsi.evaluate",
+                return_value={"penalty": 0, "value": 55, "status": "HEALTHY", "bearish_divergence": False},
+            ),
         ):
             scored = score_pattern(
                 "TEST",
@@ -363,8 +385,53 @@ class QualityScorePhase8bTest(unittest.TestCase):
             )
 
         self.assertEqual(scored["breakdown"]["pattern"], 25)
-        self.assertEqual(scored["score"], 35)
+        self.assertEqual(scored["score"], 25)
         self.assertEqual(scored["skip_reason"], None)
+
+    def test_explanation_marks_zero_weight_factors_disabled(self):
+        pattern = PatternResult(
+            pattern="VCP",
+            status="PIVOT READY",
+            pivot=100.0,
+            target=120.0,
+            stop_loss=94.0,
+            confidence=70.0,
+            explanation="Quality score fixture.",
+            timeframe="daily",
+            bars_in_pattern=90,
+            quality_score=80.0,
+        )
+        daily = {
+            "open": [100.0],
+            "high": [101.0],
+            "low": [99.0],
+            "close": [100.0],
+            "volume": [1000.0],
+        }
+        weekly = dict(daily)
+
+        with (
+            patch("engine.scorer.stage2.evaluate", return_value={"passed": False, "status": "NO_STAGE2"}),
+            patch("engine.scorer.volume.evaluate", return_value={"passed": False, "status": "NO_VOLUME", "details": {}}),
+            patch("engine.scorer.sector_rs.evaluate", return_value={"status": "LAGGING"}),
+            patch(
+                "engine.scorer.rsi.evaluate",
+                return_value={"penalty": 0, "value": 55, "status": "HEALTHY", "bearish_divergence": False},
+            ),
+        ):
+            scored = score_pattern(
+                "TEST",
+                pattern,
+                daily,
+                weekly,
+                {"score": 4, "verdict": "CONFIRMED UPTREND"},
+                {},
+            )
+
+        explanation = attach_explanation(scored)["explanation"]
+        self.assertIn("Volume: disabled (NO_VOLUME)", explanation)
+        self.assertIn("Market regime: disabled (CONFIRMED UPTREND)", explanation)
+        self.assertNotIn("/0", explanation)
 
     def test_detector_results_include_quality_score_field(self):
         detector_paths = [

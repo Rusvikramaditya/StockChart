@@ -230,18 +230,18 @@ RSI = {
     "period": 14,
     "healthy_low": 55,
     "healthy_high": 78,
-    "penalty_weak": {"threshold": 45, "penalty": -10},
-    "penalty_overbought": {"threshold": 80, "penalty": -15},
-    "penalty_divergence": -20,
+    "penalty_weak": {"threshold": 45, "penalty": 0},
+    "penalty_overbought": {"threshold": 80, "penalty": 0},
+    "penalty_divergence": 0,
 }
 
 CONVICTION_WEIGHTS = {
     "pattern": 25,
-    "stage2": 20,
-    "volume": 20,
-    "sector_rs": 15,
-    "market_regime": 10,
-    "multi_tf": 10,
+    "stage2": 15,
+    "volume": 0,
+    "sector_rs": 20,
+    "market_regime": 0,
+    "multi_tf": 40,
 }
 
 QUALITY_SCORE_POINTS = (

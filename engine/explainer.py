@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from config import settings
 from patterns.base import PatternResult
 
 
@@ -98,14 +99,20 @@ def _risk_note(pattern: PatternResult, filters: dict) -> str:
 
 
 def _breakdown(scored: dict, breakdown: dict, filters: dict) -> str:
+    def line(label: str, key: str, status: str) -> str:
+        weight = settings.CONVICTION_WEIGHTS[key]
+        if weight <= 0:
+            return f"{label}: disabled ({status})"
+        return f"{label}: {breakdown[key]}/{weight} ({status})"
+
     return (
         f"Conviction: {scored['score']}/100 {scored['tier']}\n"
-        f"Pattern quality: {breakdown['pattern']}/25\n"
-        f"Stage 2 uptrend: {breakdown['stage2']}/20 ({filters['stage2']['status']})\n"
-        f"Volume: {breakdown['volume']}/20 ({filters['volume']['status']})\n"
-        f"Sector RS: {breakdown['sector_rs']}/15 ({filters['sector_rs']['status']})\n"
-        f"Market regime: {breakdown['market_regime']}/10 ({filters['market_regime']['verdict']})\n"
-        f"Multi-timeframe: {breakdown['multi_tf']}/10 ({filters['multi_tf']['status']})\n"
+        f"{line('Pattern quality', 'pattern', 'quality gate')}\n"
+        f"{line('Stage 2 uptrend', 'stage2', filters['stage2']['status'])}\n"
+        f"{line('Volume', 'volume', filters['volume']['status'])}\n"
+        f"{line('Sector RS', 'sector_rs', filters['sector_rs']['status'])}\n"
+        f"{line('Market regime', 'market_regime', filters['market_regime']['verdict'])}\n"
+        f"{line('Multi-timeframe', 'multi_tf', filters['multi_tf']['status'])}\n"
         f"RSI adjustment: {breakdown['rsi_adjustment']}"
     )
 
