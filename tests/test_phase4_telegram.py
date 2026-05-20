@@ -88,6 +88,17 @@ class TelegramPhase4Test(unittest.TestCase):
         self.assertIn("Stage2 \u2705", message)
         self.assertIn("Regime CONFIRMED UPTREND", message)
 
+    def test_format_alert_lists_stacked_pattern_names(self):
+        scored = sample_scored()
+        scored["stacked_count"] = 3
+        scored["all_patterns"] = ["Ascending Triangle", "Bull Flag", "VCP"]
+
+        message = telegram.format_alert(scored)
+        caption = telegram.format_chart_caption(scored)
+
+        self.assertIn("Stacked patterns: 3 (Ascending Triangle, Bull Flag, VCP)", message)
+        self.assertIn("Stacked: 3 (Ascending Triangle, Bull Flag, VCP)", caption)
+
     def test_should_send_alert_enforces_threshold_and_tradable(self):
         self.assertTrue(telegram.should_send_alert(sample_scored(70)))
         self.assertFalse(telegram.should_send_alert(sample_scored(69)))

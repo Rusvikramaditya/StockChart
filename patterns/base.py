@@ -17,6 +17,7 @@ class PatternResult:
     explanation: str
     timeframe: str
     bars_in_pattern: int
+    quality_score: float | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
@@ -30,6 +31,6 @@ class PatternResult:
             "explanation": self.explanation,
             "timeframe": self.timeframe,
             "bars_in_pattern": self.bars_in_pattern,
+            "quality_score": self.quality_score,
             "extra": self.extra,
         }
-

@@ -15,6 +15,8 @@ from engine.explainer import PATTERN_101
 
 
 TEMPLATE_PATH = settings.BASE_DIR / "dashboard" / "template.html"
+_DASHBOARD_DIR = settings.BASE_DIR / "dashboard"
+_VENDOR_DIR = _DASHBOARD_DIR / "vendor"
 TIER_ORDER = ("HIGHEST", "HIGH", "MEDIUM", "SKIP")
 TIER_LABELS = {
     "HIGHEST": "Highest conviction",
@@ -57,7 +59,12 @@ def render_dashboard(context: dict[str, Any], *, template_path: str | Path | Non
         lstrip_blocks=True,
     )
     template = env.get_template(path.name)
-    return template.render(**build_dashboard_context(context))
+    return template.render(
+        **build_dashboard_context(context),
+        lw_charts_js=_read_js(_VENDOR_DIR / "lightweight-charts.standalone.production.js"),
+        tc_renderer_js=_read_js(_DASHBOARD_DIR / "chart_renderer.js"),
+        tc_annotations_js=_read_js(_DASHBOARD_DIR / "chart_annotations.js"),
+    )
 
 
 def write_dashboard(
@@ -68,7 +75,7 @@ def write_dashboard(
 ) -> Path:
     """Render the dashboard and write it to disk."""
     if output_path is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         output_path = settings.OUTPUT_DIR / f"dashboard_{timestamp}.html"
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -162,6 +169,7 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
     breakdown = _normalize_breakdown(item.get("breakdown") or {})
     all_patterns = _pattern_names(item.get("all_patterns") or item.get("patterns") or [])
     chart_src = _chart_data_uri(item.get("chart_data_uri") or item.get("chart_path"))
+    chart_payload_json = _get_chart_payload_json(item)
 
     return {
         "symbol": str(item.get("symbol") or "UNKNOWN").upper(),
@@ -189,6 +197,8 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "sections": sections,
         "chart_src": chart_src,
         "chart_available": bool(chart_src),
+        "chart_payload_json": chart_payload_json,
+        "has_thesis_chart": bool(chart_payload_json),
     }
 
 
@@ -303,6 +313,43 @@ def _parse_explanation_sections(explanation: str) -> dict[int, str]:
         body = explanation[start:end].strip()
         sections[number] = body or title
     return sections
+
+
+def _get_chart_payload_json(item: dict[str, Any]) -> str | None:
+    """Build or retrieve a thesis chart payload JSON string from a scored result."""
+    # Pre-built payload dict (scanner supplied it directly)
+    pre = item.get("chart_payload")
+    if isinstance(pre, dict):
+        try:
+            from engine.chart_payload import payload_to_json
+            return payload_to_json(pre)
+        except Exception:
+            pass
+
+    # OHLCV DataFrame provided alongside the result
+    df = item.get("df") or item.get("ohlcv") or item.get("ohlcv_df")
+    if df is not None:
+        try:
+            from engine.chart_payload import build_chart_payload, payload_to_json
+            symbol = str(item.get("symbol") or "UNKNOWN")
+            pattern_result = item.get("pattern_result")
+            company_name = item.get("company_name") or item.get("name")
+            tf = str(item.get("timeframe") or "Daily").capitalize()
+            payload = build_chart_payload(df, symbol, pattern_result,
+                                          company_name=company_name, timeframe=tf)
+            return payload_to_json(payload)
+        except Exception:
+            pass
+
+    return None
+
+
+def _read_js(path: Path) -> str:
+    """Read a local JS file for inline embedding; returns empty string on error."""
+    try:
+        return path.read_text(encoding="utf-8")
+    except Exception:
+        return ""
 
 
 def _chart_data_uri(value: Any) -> str | None:

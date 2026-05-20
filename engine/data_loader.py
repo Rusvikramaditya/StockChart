@@ -45,6 +45,95 @@ class DataLoader:
             (symbol.upper(),),
         )
 
+    def get_daily_up_to(self, symbol: str, as_of_date: str | date) -> pd.DataFrame:
+        return storage.query_frame(
+            self.conn,
+            """
+            SELECT date, open, high, low, close, volume
+            FROM ohlcv_daily
+            WHERE symbol = ? AND date <= ?
+            ORDER BY date
+            """,
+            (symbol.upper(), _date_text(as_of_date)),
+        )
+
+    def get_weekly_up_to(self, symbol: str, as_of_date: str | date) -> pd.DataFrame:
+        return storage.query_frame(
+            self.conn,
+            """
+            SELECT week, open, high, low, close, volume
+            FROM ohlcv_weekly
+            WHERE symbol = ? AND week <= ?
+            ORDER BY week
+            """,
+            (symbol.upper(), _date_text(as_of_date)),
+        )
+
+    def get_index_up_to(self, index_name: str, as_of_date: str | date) -> pd.DataFrame:
+        return storage.query_frame(
+            self.conn,
+            """
+            SELECT date, open, high, low, close, volume
+            FROM index_daily
+            WHERE index_name = ? AND date <= ?
+            ORDER BY date
+            """,
+            (index_name.upper(), _date_text(as_of_date)),
+        )
+
+    def get_stock_daily_after(
+        self,
+        symbol: str,
+        after_date: str | date,
+        *,
+        limit: int,
+    ) -> pd.DataFrame:
+        return storage.query_frame(
+            self.conn,
+            """
+            SELECT date, open, high, low, close, volume
+            FROM ohlcv_daily
+            WHERE symbol = ? AND date > ?
+            ORDER BY date
+            LIMIT ?
+            """,
+            (symbol.upper(), _date_text(after_date), int(limit)),
+        )
+
+    def get_trading_days(
+        self,
+        symbols: list[str],
+        *,
+        start_date: str | date | None = None,
+        end_date: str | date | None = None,
+    ) -> list[str]:
+        if not symbols:
+            return []
+        days: set[str] = set()
+        for chunk in _chunks([{"symbol": symbol.upper()} for symbol in symbols], 800):
+            chunk_symbols = [row["symbol"] for row in chunk]
+            params: list[object] = list(chunk_symbols)
+            placeholders = ",".join("?" for _ in chunk_symbols)
+            where = [f"symbol IN ({placeholders})"]
+            if start_date is not None:
+                where.append("date >= ?")
+                params.append(_date_text(start_date))
+            if end_date is not None:
+                where.append("date <= ?")
+                params.append(_date_text(end_date))
+            frame = storage.query_frame(
+                self.conn,
+                f"""
+                SELECT DISTINCT date
+                FROM ohlcv_daily
+                WHERE {' AND '.join(where)}
+                ORDER BY date
+                """,
+                params,
+            )
+            days.update(frame["date"].astype(str).tolist())
+        return sorted(days)
+
     def get_index(self, index_name: str) -> pd.DataFrame:
         return storage.query_frame(
             self.conn,
@@ -176,3 +265,9 @@ def _float(value) -> float:
         return float(value or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _date_text(value: str | date) -> str:
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)

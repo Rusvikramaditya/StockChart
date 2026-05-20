@@ -22,7 +22,8 @@ def score_pattern(
     rsi_result = rsi.evaluate(daily)
     multi_tf_result = _multi_timeframe_alignment(pattern, weekly)
 
-    pattern_points = round(pattern.confidence / 100.0 * settings.CONVICTION_WEIGHTS["pattern"], 2)
+    pattern_quality = _pattern_quality_score(pattern)
+    pattern_points = _pattern_quality_points(pattern_quality)
     stage2_points = settings.CONVICTION_WEIGHTS["stage2"] if stage2_result["passed"] else 0
     volume_points = _volume_points(volume_result)
     sector_points = _sector_points(sector_result)
@@ -44,6 +45,10 @@ def score_pattern(
         final_score = 0
         tier = "SKIP"
         skip_reason = "BEAR_REGIME"
+    elif pattern_quality < float(settings.MIN_TRADABLE_QUALITY_SCORE):
+        final_score = 0
+        tier = "SKIP"
+        skip_reason = "LOW_PATTERN_QUALITY"
     else:
         final_score = int(round(max(0.0, min(100.0, raw_score))))
         tier = conviction_tier(final_score)
@@ -62,6 +67,8 @@ def score_pattern(
         "skip_reason": skip_reason,
         "breakdown": {
             "pattern": pattern_points,
+            "pattern_quality_score": pattern_quality,
+            "pattern_confidence": pattern.confidence,
             "stage2": stage2_points,
             "volume": volume_points,
             "sector_rs": sector_points,
@@ -89,6 +96,18 @@ def conviction_tier(score: int | float) -> str:
     if score >= settings.CONVICTION_TIERS["MEDIUM"]:
         return "MEDIUM"
     return "SKIP"
+
+
+def _pattern_quality_score(pattern: PatternResult) -> float:
+    quality = pattern.quality_score if pattern.quality_score is not None else pattern.confidence
+    return round(max(0.0, min(100.0, float(quality))), 2)
+
+
+def _pattern_quality_points(quality_score: float) -> int:
+    for threshold, points in settings.QUALITY_SCORE_POINTS:
+        if quality_score >= float(threshold):
+            return int(points)
+    return 0
 
 
 def _volume_points(result: dict) -> int:

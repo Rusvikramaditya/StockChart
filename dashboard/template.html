@@ -534,6 +534,49 @@
       margin-bottom: 16px;
     }
 
+    /* Thesis chart — Phase 5R */
+    .tc-wrap {
+      position: relative;
+      margin-bottom: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .tc-container {
+      position: relative;
+      height: 460px;
+      background: #fff;
+    }
+
+    .tc-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 10px;
+      border-top: 1px solid #f0f0f0;
+      background: #fafafa;
+    }
+
+    .tc-attribution {
+      font-size: 11px;
+      color: #b0b0b0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    .tc-toggle-btn {
+      font-size: 11px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+
+    .tc-toggle-btn:hover { color: var(--text); border-color: var(--accent); }
+
     .detail-block {
       padding: 13px 0;
       border-top: 1px solid var(--line-soft);
@@ -781,7 +824,24 @@
                 </summary>
                 <div class="detail-content">
                   <h3 class="pattern-title">{{ result.sections.pattern_header }}</h3>
+
+                  {% if result.has_thesis_chart %}
+                  <div class="tc-wrap">
+                    <script type="application/json" class="tc-payload">{{ result.chart_payload_json | safe }}</script>
+                    <div class="tc-container"></div>
+                    <div class="tc-footer">
+                      <span class="tc-attribution">Powered by TradingView</span>
+                      {% if result.chart_available %}
+                      <button type="button" class="tc-toggle-btn" data-toggle-analysis>Analysis chart</button>
+                      {% endif %}
+                    </div>
+                  </div>
                   {% if result.chart_available %}
+                  <figure class="chart-frame hidden tc-analysis-chart">
+                    <img src="{{ result.chart_src }}" alt="{{ result.symbol }} {{ result.pattern }} annotated chart" loading="lazy">
+                  </figure>
+                  {% endif %}
+                  {% elif result.chart_available %}
                   <figure class="chart-frame">
                     <img src="{{ result.chart_src }}" alt="{{ result.symbol }} {{ result.pattern }} annotated chart" loading="lazy">
                   </figure>
@@ -885,6 +945,46 @@
       cards.forEach((item) => { item.open = shouldOpen; });
       detailsButton.textContent = shouldOpen ? "Close details" : "Open details";
     });
+
+    // Analysis-chart toggle button
+    document.querySelectorAll("[data-toggle-analysis]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dc = btn.closest(".detail-content");
+        if (!dc) return;
+        const fig = dc.querySelector(".tc-analysis-chart");
+        if (!fig) return;
+        fig.classList.toggle("hidden");
+        btn.textContent = fig.classList.contains("hidden") ? "Analysis chart" : "Hide analysis";
+      });
+    });
   </script>
+
+  {% if lw_charts_js %}
+  <script>{{ lw_charts_js | safe }}</script>
+  <script>{{ tc_renderer_js | safe }}</script>
+  <script>{{ tc_annotations_js | safe }}</script>
+  <script>
+    // Lazy-init thesis charts when their details panel is first opened
+    if (typeof ThesisChart !== "undefined") {
+      document.querySelectorAll(".result-card details").forEach((det) => {
+        det.addEventListener("toggle", () => {
+          if (!det.open) return;
+          const wrap = det.querySelector(".tc-wrap");
+          if (!wrap || wrap.dataset.chartInit) return;
+          const payloadEl = wrap.querySelector(".tc-payload");
+          const chartContainer = wrap.querySelector(".tc-container");
+          if (!payloadEl || !chartContainer) return;
+          try {
+            const payload = JSON.parse(payloadEl.textContent);
+            ThesisChart.init(chartContainer, payload);
+            wrap.dataset.chartInit = "1";
+          } catch (e) {
+            console.error("Thesis chart error:", e);
+          }
+        });
+      });
+    }
+  </script>
+  {% endif %}
 </body>
 </html>

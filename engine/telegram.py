@@ -118,7 +118,7 @@ def format_alert(scored: dict[str, Any]) -> str:
         ),
     ]
     if stack_count > 1:
-        lines.append(f"Stacked patterns: {stack_count}")
+        lines.append("Stacked patterns: " + _stacked_pattern_text(scored, stack_count))
     if scored.get("skip_reason"):
         lines.append(f"Skip reason: {_esc(scored['skip_reason'])}")
     return "\n".join(lines)
@@ -140,6 +140,9 @@ def format_chart_caption(scored: dict[str, Any]) -> str:
             f"Conviction: <b>{int(scored.get('score', 0))}/100</b> {_esc(scored.get('tier', ''))}",
         ]
     )
+    stack_count = int(scored.get("stacked_count") or scored.get("stack_count") or 1)
+    if stack_count > 1:
+        caption += "\nStacked: " + _stacked_pattern_text(scored, stack_count)
     return _trim_caption(caption)
 
 
@@ -311,3 +314,14 @@ def _trim_caption(caption: str) -> str:
     if len(caption) <= CAPTION_LIMIT:
         return caption
     return caption[: CAPTION_LIMIT - 3].rstrip() + "..."
+
+
+def _stacked_pattern_text(scored: dict[str, Any], stack_count: int) -> str:
+    names = []
+    for value in scored.get("all_patterns") or []:
+        text = str(value or "").strip()
+        if text and text not in names:
+            names.append(text)
+    if not names:
+        names.append(str(scored.get("pattern") or "Pattern"))
+    return f"{stack_count} (" + ", ".join(_esc(name) for name in names) + ")"

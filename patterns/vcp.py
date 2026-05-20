@@ -59,6 +59,7 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
         confidence += 10.0
     if breakout:
         confidence += 8.0
+    quality_score = clip_confidence(confidence)
 
     return [
         PatternResult(
@@ -67,7 +68,7 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             pivot=round(pivot, 2),
             target=round(target, 2),
             stop_loss=round(stop_loss, 2),
-            confidence=clip_confidence(confidence),
+            confidence=quality_score,
             explanation=(
                 "Contractions tightened from "
                 + " -> ".join(f"{item:.1f}%" for item in contractions)
@@ -75,6 +76,7 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             ),
             timeframe="daily",
             bars_in_pattern=lookback,
+            quality_score=quality_score,
             extra={
                 "contractions_pct": [round(item, 2) for item in contractions],
                 "volume_declining": volume_declining,

@@ -98,6 +98,7 @@ def _detect_one(data: dict, timeframe: str) -> PatternResult | None:
         confidence += 10.0
     if volume_ratio >= 1.2:
         confidence += 8.0
+    quality_score = clip_confidence(confidence)
 
     return PatternResult(
         pattern="Cup & Handle",
@@ -105,13 +106,14 @@ def _detect_one(data: dict, timeframe: str) -> PatternResult | None:
         pivot=round(pivot, 2),
         target=round(target, 2),
         stop_loss=round(stop_loss, 2),
-        confidence=clip_confidence(confidence),
+        confidence=quality_score,
         explanation=(
             f"{timeframe} cup depth {depth_pct:.1f}% with rim distance {rim_distance:.1f}% "
             f"and handle retrace {handle_retrace_pct:.1f}%."
         ),
         timeframe=timeframe,
         bars_in_pattern=window_len,
+        quality_score=quality_score,
         extra={
             "left_rim_idx": left_idx,
             "right_rim_idx": right_idx,
@@ -122,4 +124,3 @@ def _detect_one(data: dict, timeframe: str) -> PatternResult | None:
             "volume_ratio": round(volume_ratio, 2),
         },
     )
-

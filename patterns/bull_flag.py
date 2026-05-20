@@ -76,6 +76,7 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
     confidence = 55.0 + min(20.0, best["pole_pct"]) + max(0.0, (0.9 - best["vol_ratio"]) * 25.0)
     if breakout:
         confidence += 8.0
+    quality_score = clip_confidence(confidence)
 
     return [
         PatternResult(
@@ -84,13 +85,14 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             pivot=round(pivot, 2),
             target=round(target, 2),
             stop_loss=round(stop_loss, 2),
-            confidence=clip_confidence(confidence),
+            confidence=quality_score,
             explanation=(
                 f"Pole gained {best['pole_pct']:.1f}% in {best['pole_len']} bars; "
                 f"flag pulled back {best['pullback_pct']:.1f}% with volume ratio {best['vol_ratio']:.2f}."
             ),
             timeframe="daily",
             bars_in_pattern=int(best["pole_len"] + best["flag_len"]),
+            quality_score=quality_score,
             extra={
                 "pole_start_idx": best["pole_start"],
                 "pole_end_idx": best["pole_end"],
@@ -101,4 +103,3 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             },
         )
     ]
-

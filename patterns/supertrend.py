@@ -45,6 +45,7 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
         return []
     target = latest_close + 2.0 * latest_atr
     confidence = 62.0 + min(18.0, (latest_close - stop_loss) / latest_close * 100.0 * 2.0)
+    quality_score = clip_confidence(confidence)
 
     return [
         PatternResult(
@@ -53,13 +54,14 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             pivot=round(latest_close, 2),
             target=round(target, 2),
             stop_loss=round(stop_loss, 2),
-            confidence=clip_confidence(confidence),
+            confidence=quality_score,
             explanation=(
                 f"Supertrend flipped bullish {len(close) - 1 - flip_idx} bars ago; "
                 f"ATR({period}) is {latest_atr:.2f}."
             ),
             timeframe="daily",
             bars_in_pattern=period + lookback,
+            quality_score=quality_score,
             extra={
                 "flip_idx": int(flip_idx),
                 "atr": round(latest_atr, 2),
@@ -126,4 +128,3 @@ def _supertrend(
 
     line[0] = final_lower[0]
     return line, direction
-

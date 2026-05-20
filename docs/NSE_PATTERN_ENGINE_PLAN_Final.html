@@ -25,7 +25,7 @@
 <div class="header">
   <div class="header-badge">Bodhiworks · Project Spec · v3.0 Final</div>
   <h1>NSE Pattern Intelligence Engine</h1>
-  <div class="header-sub">7 patterns · 4 filters · pattern dedup · conviction scoring · async I/O · multiprocess detection · backtesting · Carbon Ember dashboard · Telegram alerts</div>
+  <div class="header-sub">7-pattern research library · data-pruned live registry · 4 filters · conviction scoring · backtesting · Carbon Ember dashboard · Telegram alerts</div>
   <div class="pbc"><div class="pbf" id="pb" style="width:0%"></div></div>
   <div class="pl" id="plb">0 / 0 tasks</div>
 </div>
@@ -39,7 +39,7 @@
 <!-- OVERVIEW -->
 <div id="overview" style="margin-bottom:40px">
   <h2 class="s2">Project Overview</h2>
-  <p class="d">Python scanner runs daily on Windows. Stores broad NSE tradable equity data first, then scans a selected universe. Nifty 500 remains the stable default, but small/mid/liquid/recent-listing/watchlist universes must be supported. Detects 7 patterns. Stacks 4 institutional filters. Scores conviction 0–100. Outputs Carbon Ember HTML + Telegram alerts. <strong>No server. No React. No framework.</strong></p>
+  <p class="d">Python scanner runs daily on Windows. Stores broad NSE tradable equity data first, then scans a selected universe. Nifty 500 remains the stable default, but small/mid/liquid/recent-listing/watchlist universes must be supported. Maintains a 7-pattern research library, but the live detector registry is pruned by backtest evidence. Stacks 4 institutional filters. Scores conviction 0–100. Outputs Carbon Ember HTML + Telegram alerts. <strong>No server. No React. No framework.</strong></p>
   <table class="st">
     <tr><th>Attribute</th><th>Value</th></tr>
     <tr><td>Universe</td><td class="mono accent">Broad NSE equity DB; scanner default = Nifty 500; selectable profiles = all_nse_equity, small_mid_liquid, recent_listings, watchlist</td></tr>
@@ -56,10 +56,11 @@
     <tr><td>Language</td><td class="mono">Python 3.11+</td><td>Existing setup</td></tr>
     <tr><td>Data</td><td class="mono">Dhan API (dhanhq)</td><td>Single source — stocks + indices</td></tr>
     <tr><td>Async fetch</td><td class="mono">aiohttp + asyncio</td><td>Broad NSE historical download with rate-limited semaphore and resumable progress</td></tr>
-    <tr><td>Parallel detect</td><td class="mono">ProcessPoolExecutor</td><td>7 detectors across the selected universe on 8 CPU cores</td></tr>
+    <tr><td>Parallel detect</td><td class="mono">ProcessPoolExecutor</td><td>Backtest-approved detector registry across the selected universe on 8 CPU cores</td></tr>
     <tr><td>Math</td><td class="mono">NumPy + SciPy</td><td>argrelextrema, polyfit, rolling stats</td></tr>
     <tr><td>Store</td><td class="mono">SQLite</td><td>Zero setup, portable, fast</td></tr>
     <tr><td>Dashboard</td><td class="mono">Jinja2 → HTML</td><td>Self-contained, no server</td></tr>
+    <tr><td>Chart UX</td><td class="mono">Baseline: mplfinance PNG · Target: TradingView Lightweight Charts + custom overlays</td><td>Interactive thesis charts in dashboard; browser screenshot export for Telegram after proof</td></tr>
     <tr><td>Alerts</td><td class="mono">Telegram Bot API</td><td>Instant mobile push</td></tr>
     <tr><td>Fallback</td><td class="mono">yfinance</td><td>Only if sector index missing from Dhan IDX_I</td></tr>
   </table>
@@ -105,11 +106,16 @@
 │   ├── scorer.py · explainer.py · telegram.py
 │   ├── dedup.py                       ← pattern consolidation per stock
 │   └── chart_gen.py                   ← annotated candlestick charts (mplfinance)
+├── dashboard/
+│   ├── template.html                  ← Jinja2 dashboard
+│   ├── thesis_chart.html              ← Phase 5R Lightweight Charts render target
+│   ├── chart_renderer.js              ← Phase 5R OHLCV JSON → chart
+│   ├── chart_annotations.js           ← Phase 5R pattern/risk overlays
+│   └── vendor/lightweight-charts.js   ← pinned standalone bundle, inlined into output
 ├── backtest/
 │   ├── engine.py                      ← walkforward loop, zero leakage
 │   ├── metrics.py                     ← win rate, PF, Sharpe, per-tier
 │   └── report.py                      ← Carbon Ember backtest HTML
-├── dashboard/template.html            ← Jinja2 Carbon Ember
 ├── scanner.py                         ← Pipeline orchestrator
 └── output/
     ├── scan_YYYYMMDD.html
@@ -133,7 +139,7 @@ STAGE 3: PRE-COMPUTE          [sync, ~3s]
     │   └── If regime.score ≤ 1 → BEAR → Telegram warn → exit
     │
 STAGE 4: DETECT               [ProcessPoolExecutor(8), ~12s]
-    │   selected universe × 7 detectors each
+    │   selected universe × backtest-approved detector registry
     │   Pass NumPy arrays (not DataFrames) — lower pickle cost
     │   per-detector try/except — 1 crash ≠ stock lost
     │   per-stock 30s timeout — 1 hang ≠ scan stuck
@@ -416,7 +422,7 @@ Universe/profile files:
 <div class="phase" id="p2"><div class="phase-header" onclick="tp(this)"><div class="pn">2</div><div class="pt">7 Pattern Detectors</div><div class="ps pending" id="p2s">PENDING</div><div class="pa">▼</div></div><div class="phase-body">
   <p class="d">Separate files. Return PatternResult. Accept NumPy arrays. Thresholds from settings.py.</p>
   <div class="task"><input type="checkbox" data-task="2-1"><div class="tc"><div class="tl"><code>base.py</code> — PatternResult: pattern, status, pivot, target, stop_loss, confidence, explanation, timeframe, bars_in_pattern, extra</div><div class="tf">patterns/base.py</div></div></div>
-  <div class="task"><input type="checkbox" data-task="2-2"><div class="tc"><div class="tl"><code>__init__.py</code> — ALL_DETECTORS = [7 detector functions]</div><div class="tf">patterns/__init__.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="2-2"><div class="tc"><div class="tl"><code>__init__.py</code> — ALL_DETECTORS registry. Phase 2 built 7 detector functions; Phase 8b prunes live registry by backtest evidence.</div><div class="tf">patterns/__init__.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="2-3"><div class="tc"><div class="tl"><strong>Cup &amp; Handle</strong> — 50–455 bars. Depth 12–55%. Rim ±8%. Handle ≤50% depth in upper 1/3. Weekly too.</div><div class="tf">patterns/cup_handle.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="2-4"><div class="tc"><div class="tl"><strong>Ascending Triangle</strong> — 60-bar. ≥2 touches 1.5%. Rising lows argrelextrema(4). Within 4%.</div><div class="tf">patterns/ascending_triangle.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="2-5"><div class="tc"><div class="tl"><strong>Bull Flag</strong> — pole ≥12% in 3–15 bars. Flag 2–12% pullback. Vol decline &lt;90%.</div><div class="tf">patterns/bull_flag.py</div></div></div>
@@ -704,6 +710,114 @@ Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
   <div class="task"><input type="checkbox" data-task="5-6"><div class="tc"><div class="tl">Errors Panel (bottom) — failed stocks/stages for transparency</div></div></div>
   <div class="task"><input type="checkbox" data-task="5-7"><div class="tc"><div class="tl">Styling: #0a0a0a, #141414, #ff4800, Syne, JetBrains Mono. CSS+JS inline. Charts base64-embedded so HTML is fully self-contained.</div><div class="tf">dashboard/template.html</div></div></div>
   <div class="task"><input type="checkbox" data-task="5-8"><div class="tc"><div class="tl">Render sample. Test mobile + desktop. Verify charts display inline and are readable.</div></div></div>
+
+  <h2 class="s2" style="margin-top:18px">Phase 5R — TradingView-Style Thesis Chart Upgrade (PENDING)</h2>
+  <p class="d"><strong>Reality check:</strong> the current mplfinance PNG path proves chart generation technically, but it is not the final visual standard. The product needs a clean TradingView-style thesis chart: white background, readable candles, one dominant pattern story, clear target/risk zones, and enough blank space to understand the setup in 3 seconds. Do not call charts final until real-stock visual samples are reviewed and approved.</p>
+
+  <div class="sb open"><div class="sbh">Target chart standard — what the user should see <span>▼</span></div><div class="sbb">Primary chart mode: THESIS CHART, not indicator debug chart.
+
+Visual rules:
+  - White TradingView-style canvas with light grid, right-side price scale, bottom time scale.
+  - Large readable stock name watermark/title inside chart area.
+  - Timeframe label: "Daily Time Frame" or "Weekly Time Frame".
+  - Candles are the main object. No cramped title bar, no dark clutter, no tiny labels.
+  - Show only story-critical overlays: pattern curve/lines, breakout zone, target/risk boxes, current price line.
+  - Avoid always-on RSI, volume, MA50/150/200 in the thesis chart. Those belong in an Analysis tab.
+  - Labels must be large enough to read on mobile screenshots.
+  - No chart passes if text overlaps candles, axes, or other labels.
+
+Two chart modes:
+  1. Thesis chart: clean visual trade idea for dashboard preview + Telegram.
+  2. Analysis chart: optional detail view with volume, RSI, MAs, filters, and debug values.</div></div>
+
+  <div class="sb"><div class="sbh">Renderer architecture — Lightweight Charts without React/server <span>▼</span></div><div class="sbb">Keep the app local/static:
+  - Dashboard remains Jinja2-generated static HTML.
+  - Vendor a pinned TradingView Lightweight Charts standalone bundle under dashboard/vendor/.
+  - Inline or embed the pinned bundle into output HTML so the dashboard works offline.
+  - Keep TradingView attribution/link requirement visible per Lightweight Charts license/NOTICE.
+  - Feed chart data as compact JSON: candles + pattern geometry + trade zones + labels.
+  - Use Lightweight Charts for candles, price scale, time scale, crosshair, zoom, pan.
+  - Use a custom overlay layer for drawings that Lightweight Charts does not provide out of the box.
+
+Planned files:
+  dashboard/thesis_chart.html
+  dashboard/chart_renderer.js
+  dashboard/chart_annotations.js
+  dashboard/vendor/lightweight-charts.js
+  engine/chart_payload.py
+  scripts/export_chart_screenshot.py
+  tests/test_phase5r_chart_payload.py</div></div>
+
+  <div class="sb"><div class="sbh">Data contract — Python scanner to browser chart <span>▼</span></div><div class="sbb">Python should not draw final thesis charts. It should emit a precise chart payload:
+
+{
+  "symbol": "QPOWER",
+  "company_name": "Quality Power Electrical Equipments Ltd.",
+  "timeframe": "1D",
+  "exchange": "NSE",
+  "candles": [
+    {"time":"2026-05-18","open":1052.90,"high":1052.90,"low":1000.30,"close":1017.60,"volume":123456}
+  ],
+  "pattern": {
+    "type": "cup_handle",
+    "status": "watch",
+    "geometry": {"curve_points":[...], "neckline":[...], "breakout_zone":[...]}
+  },
+  "trade_plan": {
+    "entry": 1017.60,
+    "target": 1450.00,
+    "stop": 1000.00,
+    "upside_pct": 29.63,
+    "downside_pct": 3.35
+  },
+  "annotations": [
+    {"type":"text","text":"Upside Range 180 To 190","anchor":"right-middle"},
+    {"type":"risk_reward_box","from_time":"2026-05-20","to_time":"2026-06-05","low":146.55,"high":190.00}
+  ]
+}
+
+Rules:
+  - Use real OHLCV rows from SQLite for approval samples.
+  - Pattern geometry must come from detector output, not hand-drawn guesses.
+  - If detector geometry is insufficient, chart payload generation must fail clearly or mark the drawing as unavailable.
+  - The generated payload should be deterministic and testable without opening a browser.</div></div>
+
+  <div class="sb"><div class="sbh">Screenshot export — Telegram-quality PNG from the same chart <span>▼</span></div><div class="sbb">Goal: dashboard and Telegram use the same chart design.
+
+Flow:
+  1. Scanner writes chart payload JSON for each scored result.
+  2. Static thesis_chart.html renders the payload with Lightweight Charts.
+  3. Playwright/headless browser opens the local render target.
+  4. Wait for "chart-ready" marker and nonblank canvas.
+  5. Export 1600x1000 or 1800x1200 PNG to output/charts/.
+  6. Telegram sends that PNG.
+  7. Keep mplfinance PNG as fallback until this screenshot path is proven on real outputs.
+
+Quality gates:
+  - Screenshot file exists and is not blank.
+  - Canvas has non-white/non-empty candle pixels.
+  - Main labels are visible in desktop and mobile crop.
+  - No overlapping title/price labels/target boxes.
+  - Sample approval set includes at least: cup/handle, ascending triangle, bull flag, VCP, inverse H&amp;S, supertrend flip, multi-year breakout.</div></div>
+
+  <div class="task"><input type="checkbox" data-task="5r-1"><div class="tc"><div class="tl">Define thesis-chart visual spec from the shared TradingView-like references: white canvas, clean candles, large stock title, timeframe label, minimal overlays, no debug clutter.</div><div class="tf">docs/NSE_PATTERN_ENGINE_PLAN_Final.html</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-2"><div class="tc"><div class="tl">Vendor a pinned <code>lightweight-charts</code> standalone bundle locally and document version + license/attribution requirement. Do not depend on CDN at runtime.</div><div class="tf">dashboard/vendor/lightweight-charts.js</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-3"><div class="tc"><div class="tl">Build <code>engine/chart_payload.py</code>: convert OHLCV + scored pattern result into deterministic chart JSON. No browser dependency in this layer.</div><div class="tf">engine/chart_payload.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-4"><div class="tc"><div class="tl">Add payload validation: required candles, symbol/company/timeframe, pattern type, pattern geometry, trade plan, annotation list. Fail clearly when geometry is unavailable.</div><div class="tf">engine/chart_payload.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-5"><div class="tc"><div class="tl">Build <code>dashboard/thesis_chart.html</code>: standalone render target that accepts embedded JSON or a local payload path and renders one full-screen chart.</div><div class="tf">dashboard/thesis_chart.html</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-6"><div class="tc"><div class="tl">Build <code>dashboard/chart_renderer.js</code>: create Lightweight Chart, candlestick series, price scale, time scale, crosshair, resize handling, and chart-ready marker.</div><div class="tf">dashboard/chart_renderer.js</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-7"><div class="tc"><div class="tl">Build <code>dashboard/chart_annotations.js</code>: canvas/SVG overlay anchored to Lightweight Charts coordinate transforms for text, lines, curves, zones, arrows, and risk/reward boxes.</div><div class="tf">dashboard/chart_annotations.js</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-8"><div class="tc"><div class="tl">Implement cup/handle thesis drawing: smooth U-curve, neckline/breakout zone, upside range box, big readable label placement.</div><div class="tf">dashboard/chart_annotations.js</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-9"><div class="tc"><div class="tl">Implement ascending triangle thesis drawing: resistance zone, rising support, breakout/target box, optional retest zone.</div><div class="tf">dashboard/chart_annotations.js</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-10"><div class="tc"><div class="tl">Implement bull flag, VCP, inverse H&amp;S, supertrend flip, and multi-year breakout thesis overlays with clean per-pattern label rules.</div><div class="tf">dashboard/chart_annotations.js</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-11"><div class="tc"><div class="tl">Add chart mode switch in dashboard: Thesis chart as default; Analysis chart optional for RSI/volume/MAs/filter diagnostics.</div><div class="tf">dashboard/template.html</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-12"><div class="tc"><div class="tl">Generate real-stock sample payloads from local DB for at least three symbols before visual review. Synthetic samples are not acceptable for final approval.</div><div class="tf">scripts/export_chart_sample.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-13"><div class="tc"><div class="tl">Build browser screenshot export for Telegram PNGs using the same thesis chart renderer. Keep old mplfinance path as fallback until screenshot export is proven.</div><div class="tf">scripts/export_chart_screenshot.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-14"><div class="tc"><div class="tl">Add nonblank screenshot verification: wait for chart-ready, assert candle pixels exist, assert output dimensions, assert target/zone overlays render.</div><div class="tf">tests/test_phase5r_chart_screenshot.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-15"><div class="tc"><div class="tl">Update Telegram chart alert path to prefer thesis-chart screenshot PNG and fall back to mplfinance PNG only on screenshot failure.</div><div class="tf">engine/telegram.py + scanner.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-16"><div class="tc"><div class="tl">Update dashboard cards to embed interactive Lightweight Charts for expanded details, not static base64 PNGs, while preserving a fully local/offline HTML output.</div><div class="tf">dashboard/template.html</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-17"><div class="tc"><div class="tl">Visual QA across desktop and mobile: no overlapping labels, readable price axis, readable title, clean target/risk boxes, chart understandable in 3 seconds.</div><div class="tf">output/charts/sample_*.png</div></div></div>
+  <div class="task"><input type="checkbox" data-task="5r-18"><div class="tc"><div class="tl"><strong>Approval gate:</strong> do not mark Phase 5R done until user approves real-stock samples matching the shared TradingView-style references.</div></div></div>
 </div></div>
 
 <!-- PHASE 6 -->
@@ -800,9 +914,9 @@ Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
             "all_patterns": ["Asc.Triangle", "Inv H&S", "Bull Flag"],
             "stacked_count": 3,
             "base_score": 82,           # highest individual
-            "stack_bonus": 10,          # +5 per extra pattern (capped +15)
-            "final_score": 92,          # base + bonus
-            "tier": "HIGHEST",
+            "stack_bonus": 0,           # Phase 8 evidence removed bonus
+            "final_score": 82,          # base score only
+            "tier": "HIGH",
             "pivot": 1898,              # from primary pattern
             "target": 2516,
             "stop_loss": 1750,
@@ -825,8 +939,8 @@ Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
     1. Group scored_results by symbol
     2. Sort patterns within group by score desc
     3. Primary = highest-scoring pattern → its pivot/target/stop used
-    4. Stack bonus: +5 per additional pattern, capped at +15
-    5. Final score = min(base_score + stack_bonus, 100)
+    4. Stack bonus: disabled after Phase 8 evidence; stacked patterns remain visible but do not add conviction.
+    5. Final score = base_score unless settings explicitly re-enable a data-proven bonus.
     6. Explanation updated: "3 stacked patterns detected: ..."
     7. Re-sort final list by final_score desc
     8. Re-assign tiers based on final_score
@@ -836,7 +950,7 @@ Added to pipeline: detect → filter → dedup → CHARTS → output</div></div>
   <div class="task"><input type="checkbox" data-task="7-2"><div class="tc"><div class="tl">Auto-trigger weekly increment in scanner.py: if today is Friday, run incremental after fetch.</div><div class="tf">scanner.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-3"><div class="tc"><div class="tl">Build <code>07_rebalance_check.py</code> — refresh all_nse_equity from Dhan master, diff old vs new Nifty 500 profile, add/remove/inactivate symbols, regenerate liquidity-derived profiles, update config files.</div><div class="tf">setup/07_rebalance_check.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-4"><div class="tc"><div class="tl">Add <code>--check-rebalance</code> and <code>--refresh-universe</code> flags to scanner.py. Auto-prompt Nifty 500 profile refresh if current month is Mar/Jun/Sep/Dec.</div><div class="tf">scanner.py</div></div></div>
-  <div class="task"><input type="checkbox" data-task="7-5"><div class="tc"><div class="tl">Build <code>engine/dedup.py</code> — group by symbol, pick primary, stack bonus (+5/pattern, cap +15), merge explanation.</div><div class="tf">engine/dedup.py</div></div></div>
+  <div class="task"><input type="checkbox" data-task="7-5"><div class="tc"><div class="tl">Build <code>engine/dedup.py</code> — group by symbol, pick primary, keep stacked-pattern visibility, and keep score bonus configurable. Phase 8 evidence currently sets stack bonus to 0.</div><div class="tf">engine/dedup.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-6"><div class="tc"><div class="tl">Update dashboard template: show stacked count badge on cards ("3 patterns"), expandable lists all patterns.</div><div class="tf">dashboard/template.html</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-7"><div class="tc"><div class="tl">Update Telegram alert: show stacked count and all pattern names in alert message.</div><div class="tf">engine/telegram.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="7-8"><div class="tc"><div class="tl">Test: stock with 3 patterns → single card, score = base + 10 bonus. Stock with 1 pattern → no change.</div></div></div>
@@ -853,7 +967,7 @@ would have detected at each point in time.
 
 For each trading day T in the lookback period:
   1. Slice data up to day T (no future data leakage)
-  2. Run all 7 detectors on this slice
+  2. Run the current backtest-approved detector registry on this slice
   3. Apply 4 stacking filters
   4. Score conviction
   5. For each pattern hit with conviction ≥ threshold:
@@ -1022,6 +1136,8 @@ def track_trade_forward(symbol, entry_date, entry, target, stop, max_days):
   <div class="task"><input type="checkbox" data-task="8-9"><div class="tc"><div class="tl">CLI: <code>python -m backtest --years 3 --min-conviction 50 --entry next_open</code></div></div></div>
   <div class="task"><input type="checkbox" data-task="8-10"><div class="tc"><div class="tl">Output: <code>output/backtest_YYYYMMDD.html</code> — full backtest report.</div></div></div>
 
+  <div class="co"><strong>Phase 8 run evidence — 20 May 2026:</strong> Separate 3-year backtests were generated for <code>nifty500</code>, <code>small_mid_liquid</code>, and <code>watchlist</code> under <code>output/backtest_phase8_20260520_*.html</code>. <code>recent_listings</code> failed honestly because <code>config/recent_listings.csv</code> is not generated from reliable listing-date data. Follow-up analysis in <code>output/backtest_phase8_20260520_analysis.md</code> showed Nifty 500 90+ conviction below 50-69 and stacked setups below 1-pattern setups. Phase 8b therefore removed the stack score bonus and pruned clear large-sample loser detectors from the live registry while keeping their implementation files for research/chart support.</div>
+
   <h2 class="s2" style="margin-top:20px">Phase 8b: Retrofit — Data-Driven Tuning (After Backtest)</h2>
   <p class="d">Use backtest results to kill noise. Don't guess — let 3 years of data tell you what works on Indian markets.</p>
   <div class="task"><input type="checkbox" data-task="8-11"><div class="tc"><div class="tl"><strong>Kill or keep patterns:</strong> If any pattern has win rate &lt;50% or profit factor &lt;1.0 across 3yr backtest → remove from ALL_DETECTORS. Don't keep losers out of attachment.</div></div></div>
@@ -1030,6 +1146,7 @@ def track_trade_forward(symbol, entry_date, entry, target, stop, max_days):
   <div class="task"><input type="checkbox" data-task="8-14"><div class="tc"><div class="tl"><strong>Retune conviction weights:</strong> If backtest shows Stage 2 adds +17% win rate but volume only adds +3% → Stage 2 deserves 25pts, volume maybe 10pts. Redistribute based on measured impact.</div><div class="tf">config/settings.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="8-15"><div class="tc"><div class="tl"><strong>Validate stack bonus:</strong> If 3-stacked ≈ 1-pattern in win rate → remove bonus. If 3-stacked genuinely outperforms → keep. Adjust +5/pattern cap based on data.</div><div class="tf">engine/dedup.py</div></div></div>
   <div class="task"><input type="checkbox" data-task="8-16"><div class="tc"><div class="tl"><strong>Re-run backtest</strong> with tuned thresholds + quality_score. Compare v1 vs v2 metrics. If no improvement → revert. Ship what works.</div></div></div>
+  <div class="co"><strong>Phase 8b partial note — 20 May 2026:</strong> <code>quality_score</code> plumbing now exists in <code>PatternResult</code>, all detector outputs, bucketed scorer logic, and backtest quality-score validation reports. This is not marked complete yet because detector quality still follows the pre-existing structural confidence formulas; the backtest-proven trait retune and v2/v3 validation remain open.</div>
 </div></div>
 
 <!-- DAILY WORKFLOW -->
@@ -1056,7 +1173,10 @@ const DEFAULT_DONE=new Set([
   '3-1','3-2','3-3','3-4','3-4b','3-5','3-6','3-7',
   '4-1','4-1b','4-2','4-3','4-4',
   '5-0','5-0b','5-0c','5-0d','5-1','5-2','5-3','5-4','5-5','5-6','5-7','5-8',
-  '6-0','6-0b','6-0c','6-0d'
+  '5r-1','5r-2','5r-3','5r-4','5r-5','5r-6','5r-7','5r-8','5r-9','5r-10','5r-11','5r-12','5r-13','5r-14','5r-15','5r-16',
+  '6-0','6-0b','6-0c','6-0d','6-0e','6-1','6-2','6-3','6-4','6-5','6-6','6-7','6-7b','6-8','6-9','6-11',
+  '7-1','7-2','7-3','7-4','7-5','7-6','7-7','7-8',
+  '8-1','8-2','8-3','8-4','8-5','8-6','8-7','8-8','8-9','8-10','8-15'
 ]);
 function lp(){try{return JSON.parse(localStorage.getItem(K)||'{}')}catch{return{}}}
 function sp(d){localStorage.setItem(K,JSON.stringify(d))}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import tempfile
 import unittest
 from html.parser import HTMLParser
@@ -53,12 +54,16 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("Market Regime Panel", html)
         self.assertIn("Sector Heatmap", html)
         self.assertIn("Result Cards by Conviction Tier", html)
+        self.assertIn("2 patterns", html)
+        self.assertIn("Also detected: Ascending Triangle, Bull Flag", html)
         self.assertIn("Errors Panel", html)
         self.assertIn("data:image/png;base64,", html)
         self.assertNotIn("{{", html)
         self.assertNotIn("{%", html)
-        self.assertNotIn("https://", html)
-        self.assertNotIn("http://", html)
+        # No CDN or external resource references in src/href attributes.
+        # (URL strings in inlined JS code/comments are allowed.)
+        ext_srcs = re.findall(r'(?:src|href)\s*=\s*["\']https?://', html, re.IGNORECASE)
+        self.assertEqual([], ext_srcs, "No external CDN or API resource attributes allowed")
 
         order = [
             "Pattern 101",
@@ -91,6 +96,22 @@ class DashboardPhase5BTest(unittest.TestCase):
             self.assertIn("TESTSTOCK", html)
             self.assertIn("NIFTY IT", html)
             self.assertNotIn("chart.png", html)
+
+    def test_default_dashboard_paths_do_not_collide(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            chart_path = Path(tmp) / "chart.png"
+            chart_path.write_bytes(PNG_1X1)
+
+            first = write_dashboard(self._context(chart_path))
+            second = write_dashboard(self._context(chart_path))
+
+        try:
+            self.assertNotEqual(first, second)
+            self.assertTrue(first.name.startswith("dashboard_"))
+            self.assertTrue(second.name.startswith("dashboard_"))
+        finally:
+            first.unlink(missing_ok=True)
+            second.unlink(missing_ok=True)
 
     def test_zero_score_is_preserved(self):
         with tempfile.TemporaryDirectory() as tmp:

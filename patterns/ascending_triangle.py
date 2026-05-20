@@ -54,6 +54,7 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
         confidence += 10.0
     if volume_ratio >= 1.2:
         confidence += 5.0
+    quality_score = clip_confidence(confidence)
 
     return [
         PatternResult(
@@ -62,13 +63,14 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             pivot=round(resistance, 2),
             target=round(target, 2),
             stop_loss=round(stop_loss, 2),
-            confidence=clip_confidence(confidence),
+            confidence=quality_score,
             explanation=(
                 f"{len(touch_idx)} resistance touches near {resistance:.2f}; "
                 f"{rising_pairs + 1} rising-low points found."
             ),
             timeframe="daily",
             bars_in_pattern=lookback,
+            quality_score=quality_score,
             extra={
                 "touch_indices": touch_idx.tolist(),
                 "low_indices": recent_lows.tolist(),
@@ -77,4 +79,3 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             },
         )
     ]
-

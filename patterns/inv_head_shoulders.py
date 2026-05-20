@@ -72,6 +72,7 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
     confidence = 58.0 + max(0.0, 20.0 - best["symmetry_pct"])
     if best["breakout"]:
         confidence += 10.0
+    quality_score = clip_confidence(confidence)
 
     return [
         PatternResult(
@@ -80,13 +81,14 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             pivot=round(pivot, 2),
             target=round(target, 2),
             stop_loss=round(stop_loss, 2),
-            confidence=clip_confidence(confidence),
+            confidence=quality_score,
             explanation=(
                 f"Three troughs detected with head deepest and shoulder symmetry "
                 f"{best['symmetry_pct']:.1f}%."
             ),
             timeframe="daily",
             bars_in_pattern=lookback,
+            quality_score=quality_score,
             extra={
                 "left_shoulder_idx": best["left_idx"],
                 "head_idx": best["head_idx"],
@@ -96,4 +98,3 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             },
         )
     ]
-

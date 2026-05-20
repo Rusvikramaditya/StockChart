@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thesis Chart</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: #ffffff; overflow: hidden; }
+    #tc-root {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+    }
+    #tc-error {
+      display: none;
+      padding: 40px;
+      color: #666;
+      font-family: Inter, Arial, sans-serif;
+      font-size: 15px;
+    }
+    .tc-attribution {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 11px;
+      color: #b0b0b0;
+      z-index: 10;
+      pointer-events: auto;
+      font-family: Inter, Arial, sans-serif;
+      text-decoration: none;
+    }
+    .tc-attribution:hover { color: #888; }
+  </style>
+</head>
+<body>
+  <div id="tc-root">
+    <!--
+      Attribution required by TradingView Lightweight Charts documentation.
+      See dashboard/vendor/VENDOR_NOTES.md for license details.
+    -->
+    <a class="tc-attribution"
+       href="https://www.tradingview.com"
+       target="_blank"
+       rel="noopener noreferrer">Powered by TradingView</a>
+  </div>
+  <div id="tc-error">No chart payload found. Pass <code>window.CHART_PAYLOAD</code> before loading this page, or embed a <code>&lt;script id="tc-payload" type="application/json"&gt;</code> element.</div>
+
+  <!-- Vendored Lightweight Charts — pinned v4.2.0, Apache 2.0 -->
+  <script src="./vendor/lightweight-charts.standalone.production.js"></script>
+  <script src="./chart_renderer.js"></script>
+  <script src="./chart_annotations.js"></script>
+  <script>
+    (function () {
+      var payload = null;
+
+      // Priority 1: window.CHART_PAYLOAD (set by generating script before load)
+      if (window.CHART_PAYLOAD && typeof window.CHART_PAYLOAD === 'object') {
+        payload = window.CHART_PAYLOAD;
+      }
+
+      // Priority 2: inline <script id="tc-payload" type="application/json">
+      if (!payload) {
+        var el = document.getElementById('tc-payload');
+        if (el) {
+          try { payload = JSON.parse(el.textContent); } catch (e) { /* ignore */ }
+        }
+      }
+
+      // Priority 3: ?payload=<url> query param (local file server only)
+      if (!payload && location.search) {
+        var params = new URLSearchParams(location.search);
+        var payloadUrl = params.get('payload');
+        if (payloadUrl) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', payloadUrl, false); // sync for simplicity
+          try {
+            xhr.send();
+            if (xhr.status === 200) payload = JSON.parse(xhr.responseText);
+          } catch (e) { /* ignore */ }
+        }
+      }
+
+      var root = document.getElementById('tc-root');
+      var errEl = document.getElementById('tc-error');
+
+      if (payload) {
+        // Update page title
+        document.title = (payload.symbol || 'Chart') + ' — Thesis Chart';
+        try {
+          ThesisChart.init(root, payload);
+        } catch (e) {
+          root.style.display = 'none';
+          errEl.style.display = 'block';
+          errEl.textContent = 'Chart render error: ' + e.message;
+        }
+      } else {
+        root.style.display = 'none';
+        errEl.style.display = 'block';
+      }
+    })();
+  </script>
+</body>
+</html>
