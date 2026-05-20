@@ -2,31 +2,27 @@
 
 Date: 2026-05-20
 
-Status: Reopened on 2026-05-20 after visual review feedback. The prior samples were too renderer-QA oriented and did not explain the pattern thesis clearly enough. The chart title, pattern overlays, dashboard pattern guide, and approval screenshots have been refreshed; plan item `5r-18` stays open until the new samples are explicitly approved.
+Status: Reopened on 2026-05-20 after visual review feedback. The prior gallery used forced renderer-QA overlays, including an INFY "Cup and Handle" that was not a real detector hit. That approval path has been removed. The current gallery contains only actual detector hits from the local OHLCV database; plan item `5r-18` stays open until those real-detector samples are explicitly approved.
 
 ## Approval Pack
 
-Generated with real local OHLCV rows:
+Generated from actual detector hits, not forced labels:
 
 ```powershell
-python scripts\gen_sample_thesis_chart.py --sample-pack
+python scripts\gen_detected_chart_gallery.py --max-per-pattern 1
 ```
 
 The browser screenshot exporter validated nonblank canvases for each desktop and mobile PNG.
-The approval screenshots are copied into `docs/chart_approval_samples/` so the pushed repo contains the review evidence; the same files also remain in ignored local `output/charts/` after regeneration.
-Open `docs/CHART_APPROVAL_GALLERY.html` for a single-page visual review of every desktop/mobile sample.
+The approval screenshots are copied into `docs/chart_approval_samples/` so the pushed repo contains the review evidence.
+Open `docs/CHART_APPROVAL_GALLERY.html` for a single-page visual review of every detector-hit desktop/mobile sample.
 
-Latest refresh: chart titles are smaller, desktop/mobile overlays draw visible pattern structure, VCP draws contraction boxes plus a pivot line, and the dashboard now includes a top-level pattern guide plus per-stock chart-reading notes. Compact mobile charts still shorten price-line labels to `Target`, `Entry`, and `Stop`, hide the default last-price marker, and clamp the risk/reward box before the right price scale to reduce label collisions.
+Latest refresh: fake one-per-pattern renderer samples were deleted from the approval path. Current local detector search found real examples for Cup & Handle, Inverse H&S, and Multi-Year Breakout. VCP was searched but no current local-DB detector hit was found, so it is intentionally absent. Ascending Triangle, Bull Flag, and Supertrend were not included because the active detector registry does not currently emit them for this approval search.
 
-| Overlay family | Symbol | Desktop QA file | Mobile QA file |
+| Detector pattern | Symbol | Desktop file | Mobile file |
 |---|---|---|---|
-| Ascending triangle | ADANIENT | `docs/chart_approval_samples/ADANIENT_thesis_chart_20260520_desktop_qa.png` | `docs/chart_approval_samples/ADANIENT_thesis_chart_20260520_mobile_qa.png` |
-| Cup and handle | INFY | `docs/chart_approval_samples/INFY_thesis_chart_cup_handle_20260520_desktop_qa.png` | `docs/chart_approval_samples/INFY_thesis_chart_cup_handle_20260520_mobile_qa.png` |
-| Bull flag | RELIANCE | `docs/chart_approval_samples/RELIANCE_thesis_chart_bull_flag_20260520_desktop_qa.png` | `docs/chart_approval_samples/RELIANCE_thesis_chart_bull_flag_20260520_mobile_qa.png` |
-| VCP | TCS | `docs/chart_approval_samples/TCS_thesis_chart_vcp_20260520_desktop_qa.png` | `docs/chart_approval_samples/TCS_thesis_chart_vcp_20260520_mobile_qa.png` |
-| Inverse H&S | SBIN | `docs/chart_approval_samples/SBIN_thesis_chart_inverse_head_shoulders_20260520_desktop_qa.png` | `docs/chart_approval_samples/SBIN_thesis_chart_inverse_head_shoulders_20260520_mobile_qa.png` |
-| Supertrend flip | WIPRO | `docs/chart_approval_samples/WIPRO_thesis_chart_supertrend_20260520_desktop_qa.png` | `docs/chart_approval_samples/WIPRO_thesis_chart_supertrend_20260520_mobile_qa.png` |
-| Multi-year breakout | HDFCBANK | `docs/chart_approval_samples/HDFCBANK_thesis_chart_multi_year_breakout_20260520_desktop_qa.png` | `docs/chart_approval_samples/HDFCBANK_thesis_chart_multi_year_breakout_20260520_mobile_qa.png` |
+| Cup & Handle | AETHER | `docs/chart_approval_samples/REAL_AETHER_cup_handle_20260520_desktop.png` | `docs/chart_approval_samples/REAL_AETHER_cup_handle_20260520_mobile.png` |
+| Inverse H&S | ADFFOODS | `docs/chart_approval_samples/REAL_ADFFOODS_inverse_head_shoulders_20260520_desktop.png` | `docs/chart_approval_samples/REAL_ADFFOODS_inverse_head_shoulders_20260520_mobile.png` |
+| Multi-Year Breakout | ARVIND | `docs/chart_approval_samples/REAL_ARVIND_multi_year_breakout_20260520_desktop.png` | `docs/chart_approval_samples/REAL_ARVIND_multi_year_breakout_20260520_mobile.png` |
 
 ## Approval Criteria
 
@@ -38,4 +34,4 @@ Latest refresh: chart titles are smaller, desktop/mobile overlays draw visible p
 
 ## Important Caveat
 
-These samples use manual trade levels for renderer QA only. Scanner-integrated chart export is verified separately through pipeline tests and dry-run proof outputs. Do not treat these renderer QA samples as trading recommendations.
+These samples are actual detector outputs, not manually forced renderer QA labels. They are still not trading recommendations. The correct review question is whether the detector label is visually credible enough to trust; if not, tighten the detector or downgrade the label.

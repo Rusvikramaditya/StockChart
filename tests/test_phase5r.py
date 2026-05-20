@@ -21,6 +21,7 @@ from engine.chart_payload import (
 from engine.thesis_chart import export_thesis_chart_png
 from patterns.base import PatternResult
 from scripts.export_chart_screenshot import find_chrome_executable
+from scripts.gen_detected_chart_gallery import parse_args as parse_detected_gallery_args
 from scripts.gen_sample_thesis_chart import PATTERN_BUILDERS, SYMBOL_DEFAULT, parse_args as parse_sample_args
 
 
@@ -294,6 +295,17 @@ class ScreenshotExportTest(unittest.TestCase):
             },
             set(PATTERN_BUILDERS),
         )
+
+    def test_detected_gallery_generator_is_detector_hit_only_path(self):
+        args = parse_detected_gallery_args([])
+        self.assertEqual(args.universe, "all_nse_equity")
+        self.assertEqual(args.max_per_pattern, 1)
+
+        gallery = (BASE_DIR / "docs" / "CHART_APPROVAL_GALLERY.html").read_text(encoding="utf-8")
+        self.assertIn("Real Detector Chart Gallery", gallery)
+        self.assertIn("No pattern label is forced", gallery)
+        self.assertNotIn("INFY_thesis_chart_cup_handle", gallery)
+        self.assertNotIn("Manual trade levels", gallery)
 
     def test_local_browser_is_available_for_chart_screenshots(self):
         self.assertIsNotNone(find_chrome_executable())
