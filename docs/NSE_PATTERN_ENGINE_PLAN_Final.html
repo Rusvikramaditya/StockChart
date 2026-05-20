@@ -845,6 +845,7 @@ Quality gates:
   <div class="task"><input type="checkbox" data-task="6-9"><div class="tc"><div class="tl">argparse: --universe, --skip-fetch, --stage, --dry-run, --workers, --fetch-all-data, --min-liquidity</div></div></div>
   <div class="task"><input type="checkbox" data-task="6-10"><div class="tc"><div class="tl">First proven runs: (1) broad all_nse_equity data build/verify, (2) Nifty 500 default scan, (3) small_mid_liquid dry run, (4) watchlist run with MRPL/MAZDOCK/GRSE/ADANIPOWER/AEROFLEX sample coverage. HTML + Telegram verified.</div></div></div>
   <div class="task"><input type="checkbox" data-task="6-11"><div class="tc"><div class="tl">Windows Task Scheduler: daily selected-universe scan at 3:45 PM IST. Default profile remains Nifty 500 until broad universe and liquidity alerts are proven.</div></div></div>
+  <div class="co"><strong>Phase 6-10 proof note — 20 May 2026:</strong> <code>python setup/06_verify_data.py</code> passed 12/12 checks: 2,918 active broad NSE symbols, 2,910/2,918 daily coverage, 2,910/2,910 weekly coverage for downloaded broad symbols, watchlist 7/7 daily+weekly coverage, and small_mid_liquid 859/859 daily coverage. Scanner dry-runs completed without Dhan fetch or live Telegram sends and wrote <code>output/proof_run_20260520_nifty500.html</code> (500 scanned, 0 errors), <code>output/proof_run_20260520_small_mid_liquid.html</code> (859 scanned, 0 errors), and <code>output/proof_run_20260520_watchlist.html</code> (7 scanned, 0 errors). Telegram formatting/transport/chart fallback paths were verified by focused automated tests; no live Telegram message was sent in this proof run.</div>
 </div></div>
 
 <!-- PHASE 7 -->
@@ -1175,7 +1176,7 @@ const DEFAULT_DONE=new Set([
   '4-1','4-1b','4-2','4-3','4-4',
   '5-0','5-0b','5-0c','5-0d','5-1','5-2','5-3','5-4','5-5','5-6','5-7','5-8',
   '5r-1','5r-2','5r-3','5r-4','5r-5','5r-6','5r-7','5r-8','5r-9','5r-10','5r-11','5r-12','5r-13','5r-14','5r-15','5r-16','5r-17',
-  '6-0','6-0b','6-0c','6-0d','6-0e','6-1','6-2','6-3','6-4','6-5','6-6','6-7','6-7b','6-8','6-9','6-11',
+  '6-0','6-0b','6-0c','6-0d','6-0e','6-1','6-2','6-3','6-4','6-5','6-6','6-7','6-7b','6-8','6-9','6-10','6-11',
   '7-1','7-2','7-3','7-4','7-5','7-6','7-7','7-8',
   '8-1','8-2','8-3','8-4','8-5','8-6','8-7','8-8','8-9','8-10','8-11','8-12','8-13','8-14','8-15','8-16'
 ]);
