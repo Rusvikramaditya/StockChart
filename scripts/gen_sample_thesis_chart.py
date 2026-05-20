@@ -7,8 +7,8 @@ Outputs:
     output/charts/<SYMBOL>_thesis_chart_<date>.html   — self-contained chart
     output/charts/<SYMBOL>_thesis_payload_<date>.json — raw payload (debug)
 
-Trade levels are manually supplied (no scanner output yet) and clearly marked
-in the payload. Detector-integrated proof remains pending until Phase 6.
+Trade levels are manually supplied for renderer QA and clearly marked in the
+payload. Scanner-integrated chart export is verified separately by the pipeline.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def load_ohlcv(symbol: str) -> pd.DataFrame:
 
 
 class _ManualResult:
-    """Manually supplied trade levels — not from detector. Proof-of-renderer only."""
+    """Manually supplied trade levels — renderer QA only."""
 
     def __init__(self, entry: float, target: float, stop: float, pattern: str = "Ascending Triangle"):
         self.pattern = pattern
@@ -105,10 +105,10 @@ def main(symbol: str = SYMBOL_DEFAULT) -> None:
         lookback_bars=120,
     )
 
-    # Flag that trade levels are manually supplied, not from detector
+    # Flag that trade levels are manually supplied for renderer QA.
     payload["_proof_note"] = (
-        "Trade levels manually supplied for renderer proof. "
-        "Detector-integrated proof pending Phase 6 scanner."
+        "Trade levels manually supplied for renderer QA. "
+        "Scanner-integrated chart export is verified separately by the pipeline."
     )
 
     validate_payload(payload)
@@ -130,7 +130,7 @@ def main(symbol: str = SYMBOL_DEFAULT) -> None:
         "PNG export: python scripts/export_chart_screenshot.py "
         f"{html_path.relative_to(settings.BASE_DIR)}"
     )
-    print("Pending: detector-integrated proof (Phase 6 scanner required).")
+    print("Scanner-integrated chart export is verified separately by the pipeline.")
 
 
 def _build_standalone_html(payload: dict) -> str:
@@ -172,7 +172,7 @@ def _build_standalone_html(payload: dict) -> str:
        target="_blank"
        rel="noopener noreferrer">Powered by TradingView</a>
     <div class="tc-proof-note">
-      Manual trade levels — renderer proof only.<br>Detector proof pending Phase 6.
+      Manual trade levels — renderer QA only.<br>Scanner chart export verified separately.
     </div>
   </div>
   <script>{lw_js}</script>
