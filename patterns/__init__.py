@@ -19,4 +19,29 @@ ALL_DETECTORS = [
     multiyear_breakout.detect,
 ]
 
-__all__ = ["ALL_DETECTORS"]
+PROFILE_DETECTORS = {
+    "nifty500": [
+        vcp.detect,
+        inv_head_shoulders.detect,
+    ],
+    "small_mid_liquid": [
+        cup_handle.detect,
+        vcp.detect,
+        multiyear_breakout.detect,
+    ],
+    "watchlist": ALL_DETECTORS,
+}
+
+
+def get_detectors_for_universe(universe_name: str | None) -> list:
+    """Return live detectors allowed for a universe profile."""
+
+    key = _normalise_profile_name(universe_name)
+    return list(PROFILE_DETECTORS.get(key, ALL_DETECTORS))
+
+
+def _normalise_profile_name(value: str | None) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+__all__ = ["ALL_DETECTORS", "PROFILE_DETECTORS", "get_detectors_for_universe"]

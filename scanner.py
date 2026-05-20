@@ -173,7 +173,10 @@ class Pipeline:
             return
 
         if int(self.ctx.workers) <= 1:
-            results = [_detect_symbol(symbol, daily, weekly) for symbol, daily, weekly in prepared]
+            results = [
+                _detect_symbol(symbol, daily, weekly, self.ctx.universe_name)
+                for symbol, daily, weekly in prepared
+            ]
         else:
             results = self._detect_parallel(prepared)
 
@@ -302,7 +305,7 @@ class Pipeline:
         results: list[dict] = []
         with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
             future_to_symbol = {
-                executor.submit(_detect_symbol, symbol, daily, weekly): symbol
+                executor.submit(_detect_symbol, symbol, daily, weekly, self.ctx.universe_name): symbol
                 for symbol, daily, weekly in prepared
             }
             processed: set[concurrent.futures.Future] = set()
@@ -422,12 +425,12 @@ class Pipeline:
         )
 
 
-def _detect_symbol(symbol: str, daily: dict, weekly: dict | None = None) -> dict:
-    from patterns import ALL_DETECTORS
+def _detect_symbol(symbol: str, daily: dict, weekly: dict | None = None, universe_name: str = "nifty500") -> dict:
+    from patterns import get_detectors_for_universe
 
     hits: list[PatternResult] = []
     errors: list[str] = []
-    for detector in ALL_DETECTORS:
+    for detector in get_detectors_for_universe(universe_name):
         try:
             found = detector(daily, weekly or {})
             if found:

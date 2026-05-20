@@ -15,7 +15,7 @@ from engine.explainer import attach_explanation
 from engine.scorer import score_pattern
 from filters.market_regime import compute_market_regime
 from filters.sector_rs import compute_sector_rs_cache
-from patterns import ALL_DETECTORS
+from patterns import get_detectors_for_universe
 from patterns.base import PatternResult
 
 from backtest.metrics import BacktestResult
@@ -109,6 +109,7 @@ def run_backtest(
                     weekly_arrays,
                     market_regime,
                     sector_rs_cache,
+                    universe,
                 )
                 for scored in deduplicate_results(scored_hits):
                     if int(scored.get("score", 0)) < min_conviction:
@@ -213,9 +214,10 @@ def _score_hits(
     weekly: dict,
     market_regime: dict,
     sector_rs_cache: dict,
+    universe: str = "nifty500",
 ) -> list[dict]:
     scored = []
-    for detector in ALL_DETECTORS:
+    for detector in get_detectors_for_universe(universe):
         for hit in detector(daily, weekly):
             try:
                 scored.append(

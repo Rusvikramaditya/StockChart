@@ -22,8 +22,9 @@ from engine import storage
 from engine import data_loader as data_loader_module
 from engine.data_loader import DataLoader
 from engine.scorer import score_pattern
-from patterns import ALL_DETECTORS
+from patterns import ALL_DETECTORS, get_detectors_for_universe
 from patterns.base import PatternResult
+from scanner import _detect_symbol
 
 
 class DataLoaderBacktestSliceTest(unittest.TestCase):
@@ -279,6 +280,31 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         self.assertIn("patterns.inv_head_shoulders", detector_modules)
         self.assertIn("patterns.multiyear_breakout", detector_modules)
 
+    def test_profile_detector_policy_uses_backtest_evidence(self):
+        def modules(profile: str) -> set[str]:
+            return {detector.__module__ for detector in get_detectors_for_universe(profile)}
+
+        self.assertEqual(modules("nifty500"), {"patterns.vcp", "patterns.inv_head_shoulders"})
+        self.assertEqual(
+            modules("small_mid_liquid"),
+            {"patterns.cup_handle", "patterns.vcp", "patterns.multiyear_breakout"},
+        )
+        self.assertEqual(modules("watchlist"), {detector.__module__ for detector in ALL_DETECTORS})
+
+    def test_scanner_detector_worker_uses_universe_policy(self):
+        called = []
+
+        def detector(_daily, _weekly):
+            called.append("ran")
+            return []
+
+        with patch("patterns.get_detectors_for_universe", return_value=[detector]) as resolver:
+            result = _detect_symbol("TEST", {"close": [1.0]}, {}, "small_mid_liquid")
+
+        resolver.assert_called_once_with("small_mid_liquid")
+        self.assertEqual(called, ["ran"])
+        self.assertEqual(result["errors"], [])
+
 
 class QualityScorePhase8bTest(unittest.TestCase):
     def test_pattern_result_serializes_quality_score(self):
@@ -489,7 +515,8 @@ class WalkforwardLoopPhase8Test(unittest.TestCase):
         fake_loader = _FakeBacktestLoader()
         scored_daily_max_dates: list[str] = []
 
-        def tracking_score_hits(symbol, daily, weekly, regime, sector):
+        def tracking_score_hits(symbol, daily, weekly, regime, sector, universe):
+            self.assertEqual(universe, "test")
             scored_daily_max_dates.append(str(pd.Timestamp(daily["date"][-1]).date()))
             return _fake_score_hits(symbol, daily, weekly, regime, sector)
 
