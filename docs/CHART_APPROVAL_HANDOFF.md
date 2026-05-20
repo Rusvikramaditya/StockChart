@@ -13,16 +13,17 @@ python scripts\gen_sample_thesis_chart.py --sample-pack
 ```
 
 The browser screenshot exporter validated nonblank canvases for each desktop and mobile PNG.
+The approval screenshots are copied into `docs/chart_approval_samples/` so the pushed repo contains the review evidence; the same files also remain in ignored local `output/charts/` after regeneration.
 
 | Overlay family | Symbol | Desktop QA file | Mobile QA file |
 |---|---|---|---|
-| Ascending triangle | ADANIENT | `output/charts/ADANIENT_thesis_chart_20260520_desktop_qa.png` | `output/charts/ADANIENT_thesis_chart_20260520_mobile_qa.png` |
-| Cup and handle | INFY | `output/charts/INFY_thesis_chart_cup_handle_20260520_desktop_qa.png` | `output/charts/INFY_thesis_chart_cup_handle_20260520_mobile_qa.png` |
-| Bull flag | RELIANCE | `output/charts/RELIANCE_thesis_chart_bull_flag_20260520_desktop_qa.png` | `output/charts/RELIANCE_thesis_chart_bull_flag_20260520_mobile_qa.png` |
-| VCP | TCS | `output/charts/TCS_thesis_chart_vcp_20260520_desktop_qa.png` | `output/charts/TCS_thesis_chart_vcp_20260520_mobile_qa.png` |
-| Inverse H&S | SBIN | `output/charts/SBIN_thesis_chart_inverse_head_shoulders_20260520_desktop_qa.png` | `output/charts/SBIN_thesis_chart_inverse_head_shoulders_20260520_mobile_qa.png` |
-| Supertrend flip | WIPRO | `output/charts/WIPRO_thesis_chart_supertrend_20260520_desktop_qa.png` | `output/charts/WIPRO_thesis_chart_supertrend_20260520_mobile_qa.png` |
-| Multi-year breakout | HDFCBANK | `output/charts/HDFCBANK_thesis_chart_multi_year_breakout_20260520_desktop_qa.png` | `output/charts/HDFCBANK_thesis_chart_multi_year_breakout_20260520_mobile_qa.png` |
+| Ascending triangle | ADANIENT | `docs/chart_approval_samples/ADANIENT_thesis_chart_20260520_desktop_qa.png` | `docs/chart_approval_samples/ADANIENT_thesis_chart_20260520_mobile_qa.png` |
+| Cup and handle | INFY | `docs/chart_approval_samples/INFY_thesis_chart_cup_handle_20260520_desktop_qa.png` | `docs/chart_approval_samples/INFY_thesis_chart_cup_handle_20260520_mobile_qa.png` |
+| Bull flag | RELIANCE | `docs/chart_approval_samples/RELIANCE_thesis_chart_bull_flag_20260520_desktop_qa.png` | `docs/chart_approval_samples/RELIANCE_thesis_chart_bull_flag_20260520_mobile_qa.png` |
+| VCP | TCS | `docs/chart_approval_samples/TCS_thesis_chart_vcp_20260520_desktop_qa.png` | `docs/chart_approval_samples/TCS_thesis_chart_vcp_20260520_mobile_qa.png` |
+| Inverse H&S | SBIN | `docs/chart_approval_samples/SBIN_thesis_chart_inverse_head_shoulders_20260520_desktop_qa.png` | `docs/chart_approval_samples/SBIN_thesis_chart_inverse_head_shoulders_20260520_mobile_qa.png` |
+| Supertrend flip | WIPRO | `docs/chart_approval_samples/WIPRO_thesis_chart_supertrend_20260520_desktop_qa.png` | `docs/chart_approval_samples/WIPRO_thesis_chart_supertrend_20260520_mobile_qa.png` |
+| Multi-year breakout | HDFCBANK | `docs/chart_approval_samples/HDFCBANK_thesis_chart_multi_year_breakout_20260520_desktop_qa.png` | `docs/chart_approval_samples/HDFCBANK_thesis_chart_multi_year_breakout_20260520_mobile_qa.png` |
 
 ## Approval Criteria
 
@@ -35,4 +36,3 @@ The browser screenshot exporter validated nonblank canvases for each desktop and
 ## Important Caveat
 
 These samples use manual trade levels for renderer QA only. Scanner-integrated chart export is verified separately through pipeline tests and dry-run proof outputs. Do not treat these renderer QA samples as trading recommendations.
-
