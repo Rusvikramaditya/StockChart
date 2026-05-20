@@ -18,6 +18,7 @@
      */
     init: function (container, payload) {
       var tp = payload.trade_plan || {};
+      var pattern = payload.pattern || {};
       var compact = container.clientWidth < 520;
 
       var tradePrices = [tp.entry, tp.target, tp.stop]
@@ -39,7 +40,7 @@
         rightPriceScale: {
           visible: true,
           borderColor: '#e0e0e0',
-          scaleMargins: { top: 0.05, bottom: 0.08 },
+          scaleMargins: { top: compact ? 0.08 : 0.12, bottom: 0.08 },
         },
         leftPriceScale: { visible: false },
         timeScale: {
@@ -136,32 +137,38 @@
       chart.timeScale().fitContent();
       chart.timeScale().applyOptions({ rightOffset: 18 });
 
-      // Title / watermark overlay (HTML layer, pointer-events off)
+      // Compact thesis label. Keep it small so it does not hide candles.
       var titleEl = document.createElement('div');
-      var titleRightPad = compact ? 150 : 68;
+      var titleRightPad = compact ? 86 : 96;
       titleEl.style.cssText = [
         'position:absolute',
-        'top:8%',
-        'left:0',
+        'top:12px',
+        'left:' + (compact ? '10px' : '16px'),
         'right:' + titleRightPad + 'px',
-        'padding:0 8px',
-        'text-align:center',
+        'max-width:' + (compact ? '70%' : '520px'),
+        'padding:' + (compact ? '7px 8px' : '9px 11px'),
+        'text-align:left',
         'pointer-events:none',
         'z-index:4',
         'user-select:none',
+        'background:rgba(255,255,255,0.82)',
+        'border:1px solid rgba(20,20,20,0.08)',
+        'border-radius:6px',
+        'box-shadow:0 8px 18px rgba(255,255,255,0.48)',
       ].join(';');
       titleEl.innerHTML =
-        '<div style="font-size:clamp(16px,4vw,62px);font-weight:900;' +
+        '<div style="font-size:' + (compact ? '16px' : '24px') + ';font-weight:900;' +
         'color:rgba(0,0,0,0.72);font-family:Inter,Segoe UI,Arial,sans-serif;' +
-        'text-shadow:0 0 10px rgba(255,255,255,0.98),0 0 3px #fff;' +
-        'line-height:1.08;letter-spacing:0;overflow-wrap:anywhere;">' +
+        'line-height:1.05;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
         _esc(payload.company_name || payload.symbol) +
         '</div>' +
-        '<div style="font-size:clamp(12px,2vw,30px);font-weight:800;' +
+        '<div style="font-size:' + (compact ? '11px' : '13px') + ';font-weight:800;' +
         'color:rgba(0,0,0,0.58);font-family:Inter,Segoe UI,Arial,sans-serif;' +
-        'text-shadow:0 0 8px rgba(255,255,255,0.95),0 0 3px #fff;' +
-        'margin-top:10px;letter-spacing:0;">' +
+        'margin-top:4px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
         _esc((payload.timeframe || 'Daily') + ' Time Frame') +
+        ' | ' +
+        _esc(pattern.type || 'Pattern') +
+        (pattern.status ? ' | ' + _esc(pattern.status) : '') +
         '</div>';
       container.appendChild(titleEl);
 

@@ -147,7 +147,7 @@
     } else if (type.indexOf('head') >= 0 && type.indexOf('shoulder') >= 0) {
       drawInverseHeadShoulders(ctx, inst, payload, geometry);
     } else if (type.indexOf('supertrend') >= 0) {
-      drawSimplePatternLabel(ctx, futureStartX, H * 0.82, 'Bullish Flip', '#2563eb');
+      drawSupertrend(ctx, inst, payload, geometry, futureStartX, H);
     } else if (type.indexOf('multi-year') >= 0 || type.indexOf('multiyear') >= 0) {
       drawMultiYearBreakout(ctx, inst, payload, geometry);
     }
@@ -168,6 +168,9 @@
     ctx.quadraticCurveTo(trough.x, trough.y + 24, right.x, right.y);
     ctx.stroke();
     drawSimplePatternLabel(ctx, trough.x, trough.y + 30, 'Cup Base', '#111111');
+    drawDot(ctx, left.x, left.y, '#111111');
+    drawDot(ctx, trough.x, trough.y, '#111111');
+    drawDot(ctx, right.x, right.y, '#111111');
 
     var handle = pointFromRelativeIndex(inst, payload, geometry.handle_start_idx, 'high');
     if (handle) {
@@ -178,6 +181,13 @@
       ctx.lineTo(right.x, right.y);
       ctx.stroke();
       drawSimplePatternLabel(ctx, handle.x, handle.y - 18, 'Handle', '#111111');
+    }
+
+    var entry = Number((payload.trade_plan || {}).entry);
+    var pivotY = Number.isFinite(entry) ? inst.series.priceToCoordinate(entry) : null;
+    if (pivotY != null) {
+      drawSegment(ctx, left.x, pivotY, latestCandleX(inst, payload), pivotY, '#2563eb', [5, 5], 2);
+      drawSimplePatternLabel(ctx, right.x + 10, pivotY - 18, 'Breakout Rim', '#1d4ed8');
     }
   }
 
@@ -203,6 +213,8 @@
     ctx.lineTo(endX, resistanceY);
     ctx.stroke();
     ctx.setLineDash([]);
+    drawSimplePatternLabel(ctx, Math.min(endX - 130, startX + 8), resistanceY - 20, 'Flat Resistance', '#1f2937');
+    touches.forEach(function (point) { drawDot(ctx, point.x, resistanceY, '#1f2937'); });
 
     if (lows.length >= 2) {
       var first = lows[0];
@@ -223,6 +235,7 @@
       ctx.closePath();
       ctx.fill();
       drawSimplePatternLabel(ctx, last.x + 16, last.y - 14, 'Rising Support', '#111111');
+      lows.forEach(function (point) { drawDot(ctx, point.x, point.y, '#111111'); });
     }
   }
 
@@ -238,7 +251,18 @@
       ctx.stroke();
       drawSimplePatternLabel(ctx, poleEnd.x + 8, poleEnd.y - 20, 'Pole', '#16a34a');
     }
-    drawSimplePatternLabel(ctx, latestCandleX(inst, payload) - 90, HSafe(inst) * 0.72, 'Flag Pullback', '#111111');
+    var candles = payload.candles || [];
+    var flagLen = Math.max(5, Number(geometry.flag_len || 16));
+    var start = Math.max(0, candles.length - flagLen);
+    var flag = rangePoints(inst, candles, start, candles.length - 1);
+    if (flag) {
+      ctx.fillStyle = 'rgba(37,99,235,0.10)';
+      ctx.fillRect(flag.x1, flag.highY, flag.x2 - flag.x1, flag.lowY - flag.highY);
+      ctx.strokeStyle = 'rgba(37,99,235,0.70)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(flag.x1, flag.highY, flag.x2 - flag.x1, flag.lowY - flag.highY);
+      drawSimplePatternLabel(ctx, flag.x1 + 8, flag.highY - 18, 'Flag Pullback', '#1d4ed8');
+    }
   }
 
   function drawVcp(ctx, inst, payload, geometry) {
@@ -250,12 +274,26 @@
     var entry = Number((payload.trade_plan || {}).entry);
     var y = Number.isFinite(entry) ? inst.series.priceToCoordinate(entry) : null;
     if (startX == null || endX == null || y == null) return;
-    ctx.fillStyle = 'rgba(59,130,246,0.10)';
-    ctx.fillRect(startX, y - 18, endX - startX, 36);
-    ctx.strokeStyle = 'rgba(37,99,235,0.68)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(startX, y - 18, endX - startX, 36);
-    drawSimplePatternLabel(ctx, endX - 80, y - 28, 'VCP Pivot Zone', '#1d4ed8');
+
+    var values = geometry.contractions_pct || geometry.contractions || [];
+    var count = 3;
+    for (var i = 0; i < count; i += 1) {
+      var partStart = Math.round(start + ((end - start + 1) / count) * i);
+      var partEnd = Math.min(end, Math.round(start + ((end - start + 1) / count) * (i + 1)) - 1);
+      var box = rangePoints(inst, candles, partStart, partEnd);
+      if (!box) continue;
+      var alpha = 0.08 + i * 0.04;
+      ctx.fillStyle = 'rgba(37,99,235,' + alpha.toFixed(2) + ')';
+      ctx.fillRect(box.x1, box.highY, box.x2 - box.x1, box.lowY - box.highY);
+      ctx.strokeStyle = 'rgba(37,99,235,0.72)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(box.x1, box.highY, box.x2 - box.x1, box.lowY - box.highY);
+      var suffix = values[i] != null ? ' ' + Number(values[i]).toFixed(1) + '%' : '';
+      drawSimplePatternLabel(ctx, box.x1 + 6, box.highY + 14, 'C' + (i + 1) + suffix, '#1d4ed8');
+    }
+
+    drawSegment(ctx, Math.max(startX, endX - 180), y, endX, y, '#1d4ed8', [6, 5], 2);
+    drawSimplePatternLabel(ctx, Math.max(startX + 8, endX - 150), y - 24, 'VCP Pivot', '#1d4ed8');
   }
 
   function drawInverseHeadShoulders(ctx, inst, payload, geometry) {
@@ -270,7 +308,29 @@
     ctx.quadraticCurveTo((ls.x + head.x) / 2, head.y + 18, head.x, head.y);
     ctx.quadraticCurveTo((head.x + rs.x) / 2, head.y + 18, rs.x, rs.y);
     ctx.stroke();
+    drawDot(ctx, ls.x, ls.y, '#111111');
+    drawDot(ctx, head.x, head.y, '#111111');
+    drawDot(ctx, rs.x, rs.y, '#111111');
     drawSimplePatternLabel(ctx, head.x - 28, head.y + 26, 'Head', '#111111');
+
+    var neckline = Number(geometry.neckline || (payload.trade_plan || {}).entry);
+    var necklineY = Number.isFinite(neckline) ? inst.series.priceToCoordinate(neckline) : null;
+    if (necklineY != null) {
+      drawSegment(ctx, ls.x, necklineY, latestCandleX(inst, payload), necklineY, '#2563eb', [6, 5], 2);
+      drawSimplePatternLabel(ctx, rs.x + 10, necklineY - 18, 'Neckline', '#1d4ed8');
+    }
+  }
+
+  function drawSupertrend(ctx, inst, payload, geometry, futureStartX, H) {
+    var line = Number(geometry.supertrend || (payload.trade_plan || {}).stop);
+    var y = Number.isFinite(line) ? inst.series.priceToCoordinate(line) : null;
+    if (y == null) {
+      drawSimplePatternLabel(ctx, futureStartX, H * 0.82, 'Bullish Flip', '#2563eb');
+      return;
+    }
+    var startX = Math.max(8, latestCandleX(inst, payload) - 220);
+    drawSegment(ctx, startX, y, latestCandleX(inst, payload), y, '#2563eb', [8, 5], 2);
+    drawSimplePatternLabel(ctx, startX + 8, y - 20, 'Supertrend Support', '#1d4ed8');
   }
 
   function drawMultiYearBreakout(ctx, inst, payload, geometry) {
@@ -348,6 +408,55 @@
     return candleX(inst, candles[candles.length - 1]) || 0;
   }
 
+  function rangePoints(inst, candles, start, end) {
+    if (!candles.length || start > end) return null;
+    start = clamp(Math.round(start), 0, candles.length - 1);
+    end = clamp(Math.round(end), 0, candles.length - 1);
+    var high = -Infinity;
+    var low = Infinity;
+    for (var i = start; i <= end; i += 1) {
+      high = Math.max(high, Number(candles[i].high));
+      low = Math.min(low, Number(candles[i].low));
+    }
+    var x1 = candleX(inst, candles[start]);
+    var x2 = candleX(inst, candles[end]);
+    var highY = inst.series.priceToCoordinate(high);
+    var lowY = inst.series.priceToCoordinate(low);
+    if (x1 == null || x2 == null || highY == null || lowY == null) return null;
+    return {
+      x1: Math.min(x1, x2),
+      x2: Math.max(x1, x2),
+      highY: Math.min(highY, lowY),
+      lowY: Math.max(highY, lowY),
+    };
+  }
+
+  function drawSegment(ctx, x1, y1, x2, y2, color, dash, width) {
+    if (![x1, y1, x2, y2].every(Number.isFinite)) return;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width || 2;
+    if (dash) ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDot(ctx, x, y, color) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function toNumber(value) {
     var number = Number(value);
     return Number.isFinite(number) ? number : null;
@@ -359,23 +468,23 @@
 
   function drawSimplePatternLabel(ctx, x, y, text, color) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    if (ctx.canvas.width < 520) return;
-    var fontSize = 15;
+    var compact = ctx.canvas.width < 520;
+    var fontSize = compact ? 10 : 13;
     ctx.font = 'bold ' + fontSize + 'px Inter,Arial,sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    var width = Math.ceil(ctx.measureText(text).width) + 14;
-    var height = fontSize + 13;
+    var width = Math.ceil(ctx.measureText(text).width) + (compact ? 10 : 14);
+    var height = fontSize + (compact ? 9 : 12);
     var priceScaleWidth = Math.max(64, Math.min(86, ctx.canvas.width * 0.18));
     var plotRight = ctx.canvas.width - priceScaleWidth - 8;
     var boxX = clamp(x - 6, 8, Math.max(8, plotRight - width));
     var boxY = clamp(y - height / 2, 8, Math.max(8, ctx.canvas.height - height - 8));
-    ctx.fillStyle = 'rgba(255,255,255,0.86)';
+    ctx.fillStyle = 'rgba(255,255,255,0.90)';
     ctx.fillRect(boxX, boxY, width, height);
     ctx.strokeStyle = 'rgba(0,0,0,0.12)';
     ctx.strokeRect(boxX, boxY, width, height);
     ctx.fillStyle = color;
-    ctx.fillText(text, boxX + 6, boxY + height / 2);
+    ctx.fillText(text, boxX + (compact ? 5 : 6), boxY + height / 2, width - 8);
   }
 
   function clamp(value, min, max) {

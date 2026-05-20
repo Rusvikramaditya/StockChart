@@ -47,6 +47,15 @@ FILTER_LABELS = {
     "rsi": "RSI",
     "multi_tf": "Multi-TF",
 }
+PATTERN_CHART_GUIDE = {
+    "Ascending Triangle": "Flat resistance should be marked above price while rising lows form the support line. A valid setup needs price to hold the rising support and break the resistance area.",
+    "Cup & Handle": "The cup base should show a rounded recovery back near the old high. The handle is the final smaller pullback before the breakout rim.",
+    "Bull Flag": "The pole should be the sharp advance. The flag is the controlled pullback or pause after that advance; heavy selling inside the flag weakens the setup.",
+    "VCP": "The chart should show volatility boxes shrinking from left to right. The final box should be tight near the pivot, with entry only after price clears that area.",
+    "Inverse Head & Shoulders": "The left shoulder, deeper head, and right shoulder should be visible below the neckline. The setup only confirms when price clears the neckline.",
+    "Supertrend Bullish Flip": "The chart should show price reclaiming the supertrend support line. The support line is the invalidation reference if the flip fails.",
+    "Multi-Year Breakout": "The chart should show a long resistance level that has been tested before. A real breakout needs price and volume to clear that ceiling.",
+}
 
 
 def render_dashboard(context: dict[str, Any], *, template_path: str | Path | None = None) -> str:
@@ -121,6 +130,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "tier_groups": tier_groups,
         "sectors": sectors,
         "errors": errors,
+        "pattern_guide": _supported_pattern_guide(),
         "summary": {
             "hit_count": len(results),
             "alert_count": alerts_sent,
@@ -195,6 +205,7 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "filters": filters,
         "breakdown": breakdown,
         "sections": sections,
+        "chart_guide": PATTERN_CHART_GUIDE.get(pattern, "Read the chart from pattern structure first, then entry, target, stop, and invalidation."),
         "chart_src": chart_src,
         "chart_available": bool(chart_src),
         "chart_payload_json": chart_payload_json,
@@ -225,6 +236,17 @@ def _normalize_filters(filters: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return normalized
+
+
+def _supported_pattern_guide() -> list[dict[str, str]]:
+    return [
+        {
+            "name": name,
+            "meaning": PATTERN_101.get(name, "Pattern education is not available yet."),
+            "chart_marks": PATTERN_CHART_GUIDE.get(name, ""),
+        }
+        for name in PATTERN_CHART_GUIDE
+    ]
 
 
 def _normalize_breakdown(breakdown: dict[str, Any]) -> list[dict[str, Any]]:

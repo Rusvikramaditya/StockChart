@@ -2,7 +2,7 @@
 
 Date: 2026-05-20
 
-Status: Approved on 2026-05-20. Phase 5R implementation, QA evidence, and the real-stock approval samples are complete; plan item `5r-18` is now closed.
+Status: Reopened on 2026-05-20 after visual review feedback. The prior samples were too renderer-QA oriented and did not explain the pattern thesis clearly enough. The chart title, pattern overlays, dashboard pattern guide, and approval screenshots have been refreshed; plan item `5r-18` stays open until the new samples are explicitly approved.
 
 ## Approval Pack
 
@@ -16,7 +16,7 @@ The browser screenshot exporter validated nonblank canvases for each desktop and
 The approval screenshots are copied into `docs/chart_approval_samples/` so the pushed repo contains the review evidence; the same files also remain in ignored local `output/charts/` after regeneration.
 Open `docs/CHART_APPROVAL_GALLERY.html` for a single-page visual review of every desktop/mobile sample.
 
-Latest refresh: compact mobile charts shorten price-line labels to `Target`, `Entry`, and `Stop`, hide the default last-price marker, and clamp the risk/reward box before the right price scale to reduce label collisions.
+Latest refresh: chart titles are smaller, desktop/mobile overlays draw visible pattern structure, VCP draws contraction boxes plus a pivot line, and the dashboard now includes a top-level pattern guide plus per-stock chart-reading notes. Compact mobile charts still shorten price-line labels to `Target`, `Entry`, and `Stop`, hide the default last-price marker, and clamp the risk/reward box before the right price scale to reduce label collisions.
 
 | Overlay family | Symbol | Desktop QA file | Mobile QA file |
 |---|---|---|---|

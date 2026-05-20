@@ -286,6 +286,43 @@
     .sector.lagging .metric { color: var(--red); }
     .sector.unknown .metric { color: var(--muted); }
 
+    .pattern-guide {
+      margin: 0 0 24px;
+    }
+
+    .pattern-guide-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line-soft);
+    }
+
+    .pattern-guide-item {
+      min-width: 0;
+      padding: 13px 14px;
+      background: #101010;
+    }
+
+    .pattern-guide-item strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .pattern-guide-item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pattern-guide-item .marks {
+      display: block;
+      margin-top: 8px;
+      color: #d6d6d6;
+      font-size: 12px;
+    }
+
     .toolbar {
       display: flex;
       align-items: center;
@@ -508,6 +545,38 @@
       font-weight: 900;
     }
 
+    .setup-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--line-soft);
+    }
+
+    .setup-summary div {
+      min-width: 0;
+      padding: 12px;
+      background: #101010;
+    }
+
+    .setup-summary span {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .setup-summary p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     .chart-frame {
       margin: 0 0 16px;
       border: 1px solid var(--line);
@@ -658,6 +727,8 @@
       .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .market-grid { grid-template-columns: 1fr; }
       .cards { grid-template-columns: 1fr; }
+      .pattern-guide-grid { grid-template-columns: 1fr; }
+      .setup-summary { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 760px) {
@@ -710,6 +781,22 @@
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
       <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
       <div class="stat"><span class="label">Errors</span><span class="value">{{ summary.error_count }}</span></div>
+    </section>
+
+    <section class="panel pattern-guide" aria-label="Pattern guide">
+      <div class="panel-head">
+        <h3>Pattern Guide</h3>
+        <span class="score-pill">{{ pattern_guide|length }} setup types</span>
+      </div>
+      <div class="pattern-guide-grid">
+        {% for item in pattern_guide %}
+        <div class="pattern-guide-item">
+          <strong>{{ item.name }}</strong>
+          <p>{{ item.meaning }}</p>
+          <span class="marks">{{ item.chart_marks }}</span>
+        </div>
+        {% endfor %}
+      </div>
     </section>
 
     <section class="market-grid" aria-label="Market context">
@@ -824,6 +911,21 @@
                 </summary>
                 <div class="detail-content">
                   <h3 class="pattern-title">{{ result.sections.pattern_header }}</h3>
+
+                  <div class="setup-summary">
+                    <div>
+                      <span>Setup thesis</span>
+                      <p>{{ result.sections.stock_specific }}</p>
+                    </div>
+                    <div>
+                      <span>How to read this chart</span>
+                      <p>{{ result.chart_guide }}</p>
+                    </div>
+                    <div>
+                      <span>Invalidation</span>
+                      <p>{{ result.sections.risk }}</p>
+                    </div>
+                  </div>
 
                   {% if result.has_thesis_chart %}
                   <div class="tc-wrap">
