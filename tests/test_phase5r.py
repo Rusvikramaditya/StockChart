@@ -229,6 +229,22 @@ class ThesisChartHtmlTest(unittest.TestCase):
         self.assertIn("Risk -", js)
         self.assertIn("Upside +", js)
 
+    def test_mobile_chart_labels_avoid_right_axis_collision(self):
+        renderer_js = (DASHBOARD_DIR / "chart_renderer.js").read_text(encoding="utf-8")
+        annotations_js = (DASHBOARD_DIR / "chart_annotations.js").read_text(encoding="utf-8")
+
+        self.assertIn("var compact = container.clientWidth < 520", renderer_js)
+        self.assertIn("compact ? 'Target' : 'Target ' + _fmt(tp.target)", renderer_js)
+        self.assertIn("compact ? 'Entry' : 'Entry ' + _fmt(tp.entry)", renderer_js)
+        self.assertIn("compact ? 'Stop' : 'Stop ' + _fmt(tp.stop)", renderer_js)
+        self.assertIn("priceLineVisible: !compact", renderer_js)
+        self.assertIn("lastValueVisible: !compact", renderer_js)
+
+        self.assertIn("var compact = W < 520", annotations_js)
+        self.assertIn("boxEnd = W - psW - (compact ? 8 : 10)", annotations_js)
+        self.assertIn("var boxW = Math.max(48, boxEnd - boxStart)", annotations_js)
+        self.assertIn("boxW - 10", annotations_js)
+
 
 class VendorBundleTest(unittest.TestCase):
 

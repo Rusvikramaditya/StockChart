@@ -18,6 +18,7 @@
      */
     init: function (container, payload) {
       var tp = payload.trade_plan || {};
+      var compact = container.clientWidth < 520;
 
       var tradePrices = [tp.entry, tp.target, tp.stop]
         .map(function (value) { return Number(value); })
@@ -75,6 +76,8 @@
         wickUpColor: '#26a69a',
         wickDownColor: '#ef5350',
         priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+        priceLineVisible: !compact,
+        lastValueVisible: !compact,
         autoscaleInfoProvider: function (baseImplementation) {
           var info = baseImplementation();
           if (!info || !info.priceRange || !tradePrices.length) return info;
@@ -106,7 +109,7 @@
           lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
-          title: 'Entry ' + _fmt(tp.entry),
+          title: compact ? 'Entry' : 'Entry ' + _fmt(tp.entry),
         });
       }
       if (tp.target != null) {
@@ -116,7 +119,7 @@
           lineWidth: 2,
           lineStyle: 0,
           axisLabelVisible: true,
-          title: 'Target ' + _fmt(tp.target),
+          title: compact ? 'Target' : 'Target ' + _fmt(tp.target),
         });
       }
       if (tp.stop != null) {
@@ -126,7 +129,7 @@
           lineWidth: 2,
           lineStyle: 0,
           axisLabelVisible: true,
-          title: 'Stop ' + _fmt(tp.stop),
+          title: compact ? 'Stop' : 'Stop ' + _fmt(tp.stop),
         });
       }
 
@@ -135,7 +138,7 @@
 
       // Title / watermark overlay (HTML layer, pointer-events off)
       var titleEl = document.createElement('div');
-      var titleRightPad = container.clientWidth < 520 ? 150 : 68;
+      var titleRightPad = compact ? 150 : 68;
       titleEl.style.cssText = [
         'position:absolute',
         'top:8%',

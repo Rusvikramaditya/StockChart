@@ -16,6 +16,8 @@ The browser screenshot exporter validated nonblank canvases for each desktop and
 The approval screenshots are copied into `docs/chart_approval_samples/` so the pushed repo contains the review evidence; the same files also remain in ignored local `output/charts/` after regeneration.
 Open `docs/CHART_APPROVAL_GALLERY.html` for a single-page visual review of every desktop/mobile sample.
 
+Latest refresh: compact mobile charts shorten price-line labels to `Target`, `Entry`, and `Stop`, hide the default last-price marker, and clamp the risk/reward box before the right price scale to reduce label collisions.
+
 | Overlay family | Symbol | Desktop QA file | Mobile QA file |
 |---|---|---|---|
 | Ascending triangle | ADANIENT | `docs/chart_approval_samples/ADANIENT_thesis_chart_20260520_desktop_qa.png` | `docs/chart_approval_samples/ADANIENT_thesis_chart_20260520_mobile_qa.png` |

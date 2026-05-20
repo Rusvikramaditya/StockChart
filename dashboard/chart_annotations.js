@@ -41,13 +41,17 @@
       if (entryY == null || targetY == null || stopY == null) return;
 
       // Box region: future space just after the latest candle, before price scale.
-      var psW = Math.min(86, W * 0.13);      // estimated price-scale width
-      var boxEnd = W - psW - 10;
+      var compact = W < 520;
+      var psW = compact ? Math.max(54, Math.min(70, W * 0.18)) : Math.min(86, W * 0.13);
+      var boxEnd = W - psW - (compact ? 8 : 10);
       var lastCandle = (payload.candles || [])[payload.candles.length - 1];
       var lastX = lastCandle ? inst.chart.timeScale().timeToCoordinate(lastCandle.time) : null;
-      var boxStart = Number.isFinite(lastX) ? lastX + 18 : W * 0.68;
-      boxStart = Math.max(W * 0.58, Math.min(boxStart, boxEnd - 180));
-      var boxW = Math.max(150, boxEnd - boxStart);
+      var preferredStart = Number.isFinite(lastX) ? lastX + (compact ? 10 : 18) : W * (compact ? 0.55 : 0.68);
+      var minBoxW = compact ? Math.max(84, Math.min(112, W * 0.26)) : 150;
+      var minStart = compact ? W * 0.42 : W * 0.58;
+      var maxStart = Math.max(8, boxEnd - minBoxW);
+      var boxStart = minStart > maxStart ? maxStart : clamp(preferredStart, minStart, maxStart);
+      var boxW = Math.max(48, boxEnd - boxStart);
 
       drawPatternOverlay(ctx, inst, payload, W, H, boxStart);
 
@@ -65,10 +69,10 @@
 
         if (tp.upside_pct != null && uH > 18) {
           ctx.fillStyle = '#26a69a';
-          ctx.font = 'bold 18px Inter,Arial,sans-serif';
+          ctx.font = 'bold ' + (compact ? 15 : 18) + 'px Inter,Arial,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('Upside +' + tp.upside_pct.toFixed(1) + '%', boxStart + boxW / 2, uTop + uH / 2);
+          ctx.fillText('Upside +' + tp.upside_pct.toFixed(1) + '%', boxStart + boxW / 2, uTop + uH / 2, boxW - 10);
         }
       }
 
@@ -86,10 +90,10 @@
 
         if (tp.downside_pct != null && dH > 18) {
           ctx.fillStyle = '#ef5350';
-          ctx.font = 'bold 16px Inter,Arial,sans-serif';
+          ctx.font = 'bold ' + (compact ? 14 : 16) + 'px Inter,Arial,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('Risk -' + tp.downside_pct.toFixed(1) + '%', boxStart + boxW / 2, dTop + dH / 2);
+          ctx.fillText('Risk -' + tp.downside_pct.toFixed(1) + '%', boxStart + boxW / 2, dTop + dH / 2, boxW - 10);
         }
       }
 
