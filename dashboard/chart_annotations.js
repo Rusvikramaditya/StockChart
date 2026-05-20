@@ -355,7 +355,8 @@
 
   function drawSimplePatternLabel(ctx, x, y, text, color) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    var fontSize = ctx.canvas.width < 520 ? 13 : 15;
+    if (ctx.canvas.width < 520) return;
+    var fontSize = 15;
     ctx.font = 'bold ' + fontSize + 'px Inter,Arial,sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
