@@ -23,6 +23,8 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
         return []
 
     best = None
+    rs_max_age = int(cfg.get("right_shoulder_max_age_bars", 25))
+    invalid_tol = float(cfg.get("invalidation_tolerance_pct", 1.0))
     for idx in range(len(troughs) - 2):
         left_idx, head_idx, right_idx = map(int, troughs[idx : idx + 3])
         left = float(low[left_idx])
@@ -38,6 +40,15 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
             continue
         if right_idx <= head_idx or head_idx <= left_idx:
             continue
+        # Recency: right shoulder must be within last N bars (else pattern is stale)
+        if (lookback - 1 - right_idx) > rs_max_age:
+            continue
+        # Invalidation: no candle after right shoulder may drop materially below it
+        if right_idx + 1 < lookback:
+            after = low[right_idx + 1:]
+            min_after = float(np.min(after))
+            if min_after < right * (1.0 - invalid_tol / 100.0):
+                continue  # pattern invalidated by lower low after right shoulder
         left_neck = float(np.max(high[left_idx:head_idx + 1]))
         right_neck = float(np.max(high[head_idx:right_idx + 1]))
         neckline = max(left_neck, right_neck)

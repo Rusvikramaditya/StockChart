@@ -187,6 +187,8 @@ INV_HEAD_SHOULDERS = {
     "shoulder_symmetry_pct": 10.0,
     "argrelextrema_order": 5,
     "max_breakout_extension_pct": 8.0,  # skip if price already >8% past neckline (stale)
+    "right_shoulder_max_age_bars": 25,  # right shoulder must be recent (within last N bars)
+    "invalidation_tolerance_pct": 1.0,  # after right shoulder, low can dip <=1% below it
 }
 
 SUPERTREND = {
