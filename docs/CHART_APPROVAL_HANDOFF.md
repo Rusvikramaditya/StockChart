@@ -2,7 +2,7 @@
 
 Date: 2026-05-20
 
-Status: Phase 5R implementation and QA evidence are ready for user approval. The remaining plan item is `5r-18`, which must stay open until the real-stock samples are approved against the TradingView-style reference.
+Status: Approved on 2026-05-20. Phase 5R implementation, QA evidence, and the real-stock approval samples are complete; plan item `5r-18` is now closed.
 
 ## Approval Pack
 
