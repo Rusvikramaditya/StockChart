@@ -135,24 +135,26 @@
 
       // Title / watermark overlay (HTML layer, pointer-events off)
       var titleEl = document.createElement('div');
+      var titleRightPad = container.clientWidth < 520 ? 88 : 68;
       titleEl.style.cssText = [
         'position:absolute',
         'top:8%',
         'left:0',
-        'right:68px',
+        'right:' + titleRightPad + 'px',
+        'padding:0 8px',
         'text-align:center',
         'pointer-events:none',
         'z-index:2',
         'user-select:none',
       ].join(';');
       titleEl.innerHTML =
-        '<div style="font-size:clamp(28px,4vw,62px);font-weight:900;' +
+        '<div style="font-size:clamp(20px,4vw,62px);font-weight:900;' +
         'color:rgba(0,0,0,0.72);font-family:Inter,Segoe UI,Arial,sans-serif;' +
         'text-shadow:0 0 10px rgba(255,255,255,0.98),0 0 3px #fff;' +
-        'line-height:1.08;letter-spacing:0;">' +
+        'line-height:1.08;letter-spacing:0;overflow-wrap:anywhere;">' +
         _esc(payload.company_name || payload.symbol) +
         '</div>' +
-        '<div style="font-size:clamp(16px,2vw,30px);font-weight:800;' +
+        '<div style="font-size:clamp(13px,2vw,30px);font-weight:800;' +
         'color:rgba(0,0,0,0.58);font-family:Inter,Segoe UI,Arial,sans-serif;' +
         'text-shadow:0 0 8px rgba(255,255,255,0.95),0 0 3px #fff;' +
         'margin-top:10px;letter-spacing:0;">' +

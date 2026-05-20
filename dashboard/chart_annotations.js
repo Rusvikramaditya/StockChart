@@ -94,7 +94,7 @@
       }
 
       // --- R:R label below both boxes ---
-      if (tp.reward_risk != null) {
+      if (tp.reward_risk != null && W >= 520) {
         var rrY = Math.max(uBot, dBot) + 14;
         if (rrY < H - 28) {
           ctx.fillStyle = 'rgba(30,30,30,0.72)';
@@ -355,15 +355,25 @@
 
   function drawSimplePatternLabel(ctx, x, y, text, color) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    ctx.font = 'bold 15px Inter,Arial,sans-serif';
+    var fontSize = ctx.canvas.width < 520 ? 13 : 15;
+    ctx.font = 'bold ' + fontSize + 'px Inter,Arial,sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    var width = ctx.measureText(text).width + 14;
+    var width = Math.ceil(ctx.measureText(text).width) + 14;
+    var height = fontSize + 13;
+    var priceScaleWidth = Math.max(64, Math.min(86, ctx.canvas.width * 0.18));
+    var plotRight = ctx.canvas.width - priceScaleWidth - 8;
+    var boxX = clamp(x - 6, 8, Math.max(8, plotRight - width));
+    var boxY = clamp(y - height / 2, 8, Math.max(8, ctx.canvas.height - height - 8));
     ctx.fillStyle = 'rgba(255,255,255,0.86)';
-    ctx.fillRect(x - 6, y - 14, width, 28);
+    ctx.fillRect(boxX, boxY, width, height);
     ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-    ctx.strokeRect(x - 6, y - 14, width, 28);
+    ctx.strokeRect(boxX, boxY, width, height);
     ctx.fillStyle = color;
-    ctx.fillText(text, x, y);
+    ctx.fillText(text, boxX + 6, boxY + height / 2);
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(value, max));
   }
 })();
