@@ -464,6 +464,61 @@
     .sector-pill.sector-tier-lagging { color: var(--red); border-color: rgba(239, 83, 80, 0.4); background: rgba(239, 83, 80, 0.10); }
     .sector-pill.sector-tier-unknown { color: var(--muted); }
 
+    /* Filter chip glossary panel */
+    .filter-glossary {
+      margin: 0 0 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #0c0c0c;
+    }
+    .filter-glossary > summary {
+      cursor: pointer;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      list-style: none;
+    }
+    .filter-glossary > summary::-webkit-details-marker { display: none; }
+    .filter-glossary > summary::before {
+      content: "?";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: #101010;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .filter-glossary[open] > summary { color: var(--text); }
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 18px;
+      padding: 4px 16px 14px;
+    }
+    .glossary-grid > div {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    .glossary-grid strong {
+      display: block;
+      color: var(--text);
+      font-size: 11.5px;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    @media (max-width: 760px) {
+      .glossary-grid { grid-template-columns: 1fr; }
+    }
+
     .pattern-guide {
       margin: 0 0 24px;
     }
@@ -1244,16 +1299,38 @@
             <span>Visible</span>
             {{ summary.hit_count }} setups shown
           </div>
+          <button type="button" class="compact-button" id="clearFilters" title="Reset search, pattern, sector, and tier filters">Clear filters</button>
           <button type="button" class="compact-button" id="toggleDetails">Open details</button>
         </div>
       </div>
 
       <div class="segments" role="tablist" aria-label="Tier filter">
-        <button type="button" class="active" data-tier-filter="ALL">All</button>
+        <button type="button" class="active" data-tier-filter="ALL">All (<span data-tier-count="ALL">{{ summary.hit_count }}</span>)</button>
         {% for group in tier_groups %}
-        <button type="button" data-tier-filter="{{ group.name }}">{{ group.name }} ({{ group.count }})</button>
+        <button type="button" data-tier-filter="{{ group.name }}">{{ group.name }} (<span data-tier-count="{{ group.name }}">{{ group.count }}</span>)</button>
         {% endfor %}
       </div>
+
+      <details class="filter-glossary">
+        <summary>Filter chip glossary &mdash; what PASS / DRY_UP / FAIL etc. mean</summary>
+        <div class="glossary-grid">
+          <div><strong>Stage 2: PASS</strong><span>Price above rising 50 &amp; 200 MAs (Weinstein Stage 2 uptrend).</span></div>
+          <div><strong>Stage 2: FAIL</strong><span>Stock is not in a confirmed uptrend; do not buy breakouts.</span></div>
+          <div><strong>Volume: PASS</strong><span>Today's volume &ge; 1.4x its 50-day average. Breakout volume confirmed.</span></div>
+          <div><strong>Volume: DRY_UP</strong><span>No breakout volume yet, but last 9 days' avg volume is &le; 80% of the 50-day. Constructive base &mdash; sellers exhausted, watch for breakout.</span></div>
+          <div><strong>Volume: FAIL</strong><span>Neither breakout nor dry-up. Noisy / unconvincing base.</span></div>
+          <div><strong>Sector RS: LEADING</strong><span>Both stock and its sector outperforming Nifty 50 over 63 days.</span></div>
+          <div><strong>Sector RS: NEUTRAL</strong><span>Only one of stock or sector is outperforming Nifty.</span></div>
+          <div><strong>Sector RS: LAGGING</strong><span>Both stock and sector underperforming Nifty. Strong tailwind absent.</span></div>
+          <div><strong>Regime: CONFIRMED UPTREND</strong><span>Market regime score 3&ndash;4 / 4 (Nifty MAs aligned + breadth confirmed).</span></div>
+          <div><strong>Regime: BEAR / NEUTRAL</strong><span>Market score &lt; 3. Be selective; tighten size; expect more failed breakouts.</span></div>
+          <div><strong>RSI: HEALTHY</strong><span>Stock RSI(14) in the 55&ndash;78 zone &mdash; sustained momentum without exhaustion.</span></div>
+          <div><strong>RSI: OVERBOUGHT</strong><span>RSI &ge; 80. Setup may need to cool off before a clean entry.</span></div>
+          <div><strong>RSI: DIVERGENCE</strong><span>Price made higher high but RSI did not. Hidden weakness.</span></div>
+          <div><strong>Multi-TF: ALIGNED</strong><span>Daily and weekly timeframes both confirm the setup.</span></div>
+          <div><strong>Multi-TF: DIVERGENT</strong><span>Weekly trend does not confirm the daily setup; lower conviction.</span></div>
+        </div>
+      </details>
       <div class="empty-state hidden" data-search-empty>
         <strong>No setups match the current filters.</strong>
         <p>Clear the search box or switch back to All tiers.</p>
@@ -1439,12 +1516,15 @@
     const buttons = Array.from(document.querySelectorAll("[data-tier-filter]"));
     const sections = Array.from(document.querySelectorAll("[data-tier-section]"));
     const detailsButton = document.getElementById("toggleDetails");
+    const clearButton = document.getElementById("clearFilters");
     const searchInput = document.getElementById("resultSearch");
     const patternFilter = document.getElementById("patternFilter");
     const sectorFilter = document.getElementById("sectorFilter");
     const resultCount = document.getElementById("resultCount");
     const searchEmpty = document.querySelector("[data-search-empty]");
-    const totalCards = document.querySelectorAll("[data-tier-card]").length;
+    const allCards = Array.from(document.querySelectorAll("[data-tier-card]"));
+    const totalCards = allCards.length;
+    const tierCountSpans = Array.from(document.querySelectorAll("[data-tier-count]"));
     let activeTier = "ALL";
     let activePattern = "";
     let activeSector = "";
@@ -1515,6 +1595,7 @@
     function updateResultFilters() {
       const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
       let visibleCards = 0;
+      const tierCounts = { ALL: 0 };
 
       sections.forEach((section) => {
         const tierMatches = activeTier === "ALL" || section.dataset.tierSection === activeTier;
@@ -1525,10 +1606,19 @@
           const searchText = (card.dataset.searchText || "").toLowerCase();
           const cardPattern = card.dataset.pattern || "";
           const cardSector = card.dataset.sector || "";
+          const cardTier = card.dataset.tierCard || "";
           const matchesSearch = !query || searchText.includes(query);
           const matchesPattern = !activePattern || cardPattern === activePattern;
           const matchesSector = sectorMatches(cardSector);
-          const shouldShow = tierMatches && matchesSearch && matchesPattern && matchesSector;
+          // Tier counts ignore the active tier selection so the segment buttons
+          // always show how many cards EACH tier would yield given the other
+          // active filters (search + pattern + sector).
+          const matchesNonTier = matchesSearch && matchesPattern && matchesSector;
+          if (matchesNonTier) {
+            tierCounts.ALL += 1;
+            tierCounts[cardTier] = (tierCounts[cardTier] || 0) + 1;
+          }
+          const shouldShow = tierMatches && matchesNonTier;
           card.classList.toggle("hidden", !shouldShow);
           if (shouldShow) {
             visibleCards += 1;
@@ -1546,6 +1636,12 @@
       if (resultCount) {
         resultCount.innerHTML = `<span>Visible</span>${visibleCards} ${visibleCards === 1 ? "setup" : "setups"} shown`;
       }
+      // Refresh tier-button counts so user sees how many cards each tier
+      // would yield under the current non-tier filters.
+      tierCountSpans.forEach((span) => {
+        const key = span.dataset.tierCount;
+        span.textContent = tierCounts[key] || 0;
+      });
       if (searchEmpty) {
         searchEmpty.classList.toggle("hidden", totalCards === 0 || visibleCards > 0);
       }
@@ -1561,6 +1657,19 @@
 
     if (searchInput) {
       searchInput.addEventListener("input", updateResultFilters);
+    }
+
+    if (clearButton) {
+      clearButton.addEventListener("click", () => {
+        if (searchInput) searchInput.value = "";
+        if (patternFilter) patternFilter.value = "";
+        if (sectorFilter) sectorFilter.value = "";
+        activePattern = "";
+        activeSector = "";
+        activeTier = "ALL";
+        buttons.forEach((item) => item.classList.toggle("active", item.dataset.tierFilter === "ALL"));
+        updateResultFilters();
+      });
     }
 
     if (detailsButton) detailsButton.addEventListener("click", () => {

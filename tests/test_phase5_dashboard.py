@@ -175,6 +175,21 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("Sector Leaderboard", html)
         self.assertIn("lb-leading", html)
 
+    def test_clear_filters_button_and_glossary_present(self):
+        """Controls must include a Clear filters button + filter glossary."""
+        with tempfile.TemporaryDirectory() as tmp:
+            chart_path = Path(tmp) / "chart.png"
+            chart_path.write_bytes(PNG_1X1)
+            html = render_dashboard(self._context(chart_path))
+        self.assertIn('id="clearFilters"', html)
+        self.assertIn("filter-glossary", html)
+        # Tier-count spans must be present so JS can update them live
+        self.assertIn('data-tier-count="ALL"', html)
+        self.assertIn('data-tier-count="HIGHEST"', html)
+        # Glossary explains the chip statuses
+        self.assertIn("DRY_UP", html)
+        self.assertIn("Constructive base", html)
+
     def test_normalized_result_carries_sector_metadata(self):
         ctx = self._context(Path("missing.png"))
         ctx["sector_rs"] = {
