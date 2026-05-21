@@ -94,29 +94,72 @@
           ctx.restore();
         }
 
-        // Price + % label — pill badge above top of box
+        // Price + % label — two-row card above box
         if (tp.target != null && tp.upside_pct != null) {
-          var labelText = _fmtPrice(tp.target) + ' (+' + tp.upside_pct.toFixed(1) + '%)';
           ctx.save();
-          ctx.font = 'bold ' + (compact ? 10 : 12) + 'px Inter,Arial,sans-serif';
-          var lw = ctx.measureText(labelText).width;
-          var lpad = compact ? 6 : 8;
-          var lh = compact ? 16 : 20;
-          var lx = clamp(arrowX - lw / 2 - lpad, 4, W - lw - lpad * 2 - 4);
-          var ly = uTop - lh - (compact ? 3 : 4);
+          var labelFontSz = compact ? 11 : 13;
+          var tagFontSz = compact ? 8 : 9;
+          var lpad = compact ? 7 : 10;
+          var vpad = compact ? 3 : 4;
+          var rowGap = compact ? 2 : 3;
+
+          var priceText = _fmtPrice(tp.target);
+          var pctText = '+' + tp.upside_pct.toFixed(1) + '%';
+          var tagText = 'TARGET';
+
+          ctx.font = 'bold ' + labelFontSz + 'px Inter,Arial,sans-serif';
+          var priceW = ctx.measureText(priceText).width;
+          ctx.font = 'bold ' + labelFontSz + 'px Inter,Arial,sans-serif';
+          var pctW = ctx.measureText(' ' + pctText).width;
+          var row2W = priceW + pctW;
+
+          ctx.font = '600 ' + tagFontSz + 'px Inter,Arial,sans-serif';
+          var tagW = ctx.measureText(tagText).width;
+
+          var cardW = Math.max(row2W, tagW) + lpad * 2;
+          var row1H = tagFontSz + vpad * 2;
+          var row2H = labelFontSz + vpad * 2;
+          var cardH = row1H + rowGap + row2H;
+
+          var lx = clamp(arrowX - cardW / 2, 4, W - cardW - 4);
+          var ly = uTop - cardH - (compact ? 4 : 6);
+
           if (ly > 4) {
-            ctx.fillStyle = '#2563eb';
-            ctx.beginPath();
+            // Card background
+            ctx.fillStyle = '#1e3a8a';
             if (ctx.roundRect) {
-              ctx.roundRect(lx, ly, lw + lpad * 2, lh, 4);
+              ctx.beginPath();
+              ctx.roundRect(lx, ly, cardW, cardH, 6);
+              ctx.fill();
             } else {
-              ctx.rect(lx, ly, lw + lpad * 2, lh);
+              ctx.fillRect(lx, ly, cardW, cardH);
             }
-            ctx.fill();
+
+            // Row 1: "TARGET" label in lighter shade
+            ctx.fillStyle = 'rgba(147,197,253,0.90)';
+            ctx.font = '600 ' + tagFontSz + 'px Inter,Arial,sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tagText, lx + lpad, ly + vpad + tagFontSz / 2);
+
+            // Divider
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(lx + lpad, ly + row1H + rowGap / 2);
+            ctx.lineTo(lx + cardW - lpad, ly + row1H + rowGap / 2);
+            ctx.stroke();
+
+            // Row 2: price (white bold) + pct (green)
+            var row2Y = ly + row1H + rowGap + vpad + row2H / 2;
+            ctx.font = 'bold ' + labelFontSz + 'px Inter,Arial,sans-serif';
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            ctx.fillText(labelText, lx + lpad, ly + lh / 2);
+            ctx.fillText(priceText, lx + lpad, row2Y);
+
+            ctx.fillStyle = '#86efac';
+            ctx.fillText(' ' + pctText, lx + lpad + priceW, row2Y);
           }
           ctx.restore();
         }
@@ -389,7 +432,19 @@
     drawDot(ctx, head.x, head.y, '#111111');
     drawDot(ctx, rs.x, rs.y, '#111111');
 
-    // Neckline: peaks between ls→head and head→rs, not entry price
+    // Sloped neckline from explicit anchors if detector provided them.
+    var latestX = latestCandleX(inst, payload);
+    var leftNeck = pointFromRelativeIndex(inst, payload, geometry.left_neck_idx, 'high');
+    var rightNeck = pointFromRelativeIndex(inst, payload, geometry.right_neck_idx, 'high');
+    if (leftNeck && rightNeck && Number.isFinite(latestX) && rightNeck.x > leftNeck.x) {
+      var slope = (rightNeck.y - leftNeck.y) / (rightNeck.x - leftNeck.x);
+      var endY = rightNeck.y + slope * (latestX - rightNeck.x);
+      drawSegment(ctx, leftNeck.x, leftNeck.y, latestX, endY, '#2563eb', [6, 5], 2);
+      drawSimplePatternLabel(ctx, rs.x + 10, endY - 18, 'Neckline', '#1d4ed8');
+      return;
+    }
+
+    // Fallback: horizontal neckline from peak ranges or scalar.
     var lsIdx = relativeChartIndex(payload, geometry.left_shoulder_idx);
     var headIdx = relativeChartIndex(payload, geometry.head_idx);
     var rsIdx = relativeChartIndex(payload, geometry.right_shoulder_idx);
@@ -407,7 +462,7 @@
       if (Number.isFinite(nl)) necklineY = inst.series.priceToCoordinate(nl);
     }
     if (necklineY != null) {
-      drawSegment(ctx, ls.x, necklineY, latestCandleX(inst, payload), necklineY, '#2563eb', [6, 5], 2);
+      drawSegment(ctx, ls.x, necklineY, latestX, necklineY, '#2563eb', [6, 5], 2);
       drawSimplePatternLabel(ctx, rs.x + 10, necklineY - 18, 'Neckline', '#1d4ed8');
     }
   }

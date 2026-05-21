@@ -200,19 +200,66 @@ BULL_FLAG = {
 }
 
 VCP = {
-    "min_contractions": 2,
+    "lookback_bars": 90,
+    # Textbook Minervini VCP: 3-6 successively tighter contractions.
+    "min_contractions": 3,
+    "max_contractions": 6,
+    # Final pullback is the pivot test (typically 3-8%); prior leg can be wider.
     "max_final_tightness_pct": 6.0,
-    "max_prior_tightness_pct": 8.0,
+    "max_prior_tightness_pct": 10.0,
+    # First leg is the deepest correction. Hard reject if base too deep
+    # (no longer a contraction pattern, more like a new downtrend).
+    "max_first_contraction_pct": 35.0,
+    # Each contraction must be <= this fraction of the prior contraction.
+    # 0.80 is permissive enough to admit real cases; grading rewards <=0.65.
+    "tightening_ratio_max": 0.80,
+    # Swing highs must cluster near the pivot (consolidation, not downtrend).
+    "max_high_dispersion_pct": 8.0,
+    # Minimum bars from first swing high to final swing low (5 trading weeks).
+    "min_pattern_bars": 25,
+    # argrelextrema order for swing detection.
+    "swing_order": 3,
     "volume_declining": True,
+    # PIVOT READY zone: within N% below pivot.
+    "within_breakout_pct": 4.0,
+    # Stale guard: skip if price already extended >N% past pivot.
+    "max_breakout_extension_pct": 8.0,
 }
 
 INV_HEAD_SHOULDERS = {
     "lookback_bars": 120,
-    "shoulder_symmetry_pct": 10.0,
+    # Shoulder symmetry: textbook IHS shoulders match within ~5-7%.
+    # Was 10 (admitted lopsided "shoulders"). Tightened to 7.
+    "shoulder_symmetry_pct": 7.0,
+    # Head must sit meaningfully below shoulder average. <3% = flat triple-
+    # bottom, not IHS. Hard reject.
+    "min_head_depth_vs_shoulder_pct": 3.0,
+    # Time symmetry: max(left_span, right_span) / min(...). 1.0 = perfectly
+    # symmetric; 2.5x is the loosest still-credible IHS. Beyond that, the
+    # right shoulder is forming on a different leg than the left.
+    "max_time_asymmetry_ratio": 2.5,
+    # Min duration left-shoulder -> right-shoulder. Real reversals take time;
+    # 25 bars = ~5 trading weeks. Anything faster is intraday noise on daily.
+    "min_pattern_bars": 25,
+    # Neckline downslope cap. Sloped neckline is fine, but a strongly
+    # downsloping neckline (right peak << left peak) means the rally between
+    # shoulders is failing — invalid reversal context.
+    "max_neckline_downslope_pct": 5.0,
+    # Prior downtrend gate: IHS is a REVERSAL pattern. Need a real decline
+    # into the left shoulder, else it's a "W" mid-uptrend.
+    "prior_downtrend_lookback_bars": 30,
+    "min_prior_decline_pct": 8.0,
+    # Stale guards (existing).
     "argrelextrema_order": 5,
-    "max_breakout_extension_pct": 8.0,  # skip if price already >8% past neckline (stale)
-    "right_shoulder_max_age_bars": 25,  # right shoulder must be recent (within last N bars)
-    "invalidation_tolerance_pct": 1.0,  # after right shoulder, low can dip <=1% below it
+    "right_shoulder_max_age_bars": 25,
+    "invalidation_tolerance_pct": 1.0,
+    "max_breakout_extension_pct": 8.0,
+    # Cap entry-to-stop distance. IHS shoulders sit deeper below neckline
+    # than cup-handle handles do, so 15% (vs cup-handle's 10%) is realistic.
+    "max_stop_distance_pct": 15.0,
+    # PIVOT READY zone: how far below the (sloped) neckline at current bar
+    # we'll still accept as "approaching breakout".
+    "within_breakout_pct": 5.0,
 }
 
 SUPERTREND = {
