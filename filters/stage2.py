@@ -10,6 +10,8 @@ from patterns.utils import moving_average, series
 
 def evaluate(daily: dict) -> dict:
     close = series(daily, "close")
+    high = series(daily, "high")
+    low = series(daily, "low")
     cfg = settings.STAGE2
     ma_short_period = int(cfg["ma_short"])
     ma_long_period = int(cfg["ma_long"])
@@ -24,8 +26,11 @@ def evaluate(daily: dict) -> dict:
     ma_short_latest = float(ma_short[-1])
     ma_long_latest = float(ma_long[-1])
     ma_short_prior = float(ma_short[-1 - slope_lookback])
-    high_52w = float(np.max(close[-252:]))
-    low_52w = float(np.min(close[-252:]))
+    # Use intraday high / low for 52-week levels (O'Neil, Bulkowski
+    # convention). The previous close-based computation rejected valid
+    # candidates within 25% of the true 52w high.
+    high_52w = float(np.max(high[-252:])) if len(high) >= 252 else float(np.max(high))
+    low_52w = float(np.min(low[-252:])) if len(low) >= 252 else float(np.min(low))
 
     checks = {
         "close_gt_150ma": latest_close > ma_short_latest,

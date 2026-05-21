@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import contextlib
 import importlib.util
 import math
+import os
 import time
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -31,6 +33,67 @@ from patterns.base import PatternResult
 
 
 STAGE_ORDER = ("verify", "fetch_missing", "fetch", "pre_compute", "detect", "filter_and_score", "output")
+
+# Cross-process lock file. Held during the fetch_missing + fetch stages so
+# two scanners cannot write to the SQLite DB concurrently. Stale locks are
+# detected via PID-presence check.
+_FETCH_LOCK_PATH = settings.DATA_DIR / "scanner_fetch.lock"
+
+
+@contextlib.contextmanager
+def _fetch_lock(timeout_seconds: int = 600):
+    """Acquire a filesystem lock to serialize Dhan fetches across scanner runs.
+
+    Best-effort, portable across Windows and POSIX. Stale locks (PID no
+    longer running) are reclaimed automatically.
+    """
+    settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    deadline = time.time() + timeout_seconds
+    while True:
+        try:
+            fd = os.open(str(_FETCH_LOCK_PATH), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode("utf-8"))
+            os.close(fd)
+            break
+        except FileExistsError:
+            if _is_stale_lock():
+                try:
+                    _FETCH_LOCK_PATH.unlink()
+                except OSError:
+                    pass
+                continue
+            if time.time() >= deadline:
+                raise PipelineError(
+                    f"Could not acquire fetch lock at {_FETCH_LOCK_PATH} within {timeout_seconds}s"
+                )
+            time.sleep(2.0)
+    try:
+        yield
+    finally:
+        try:
+            _FETCH_LOCK_PATH.unlink()
+        except OSError:
+            pass
+
+
+def _is_stale_lock() -> bool:
+    """True if the lock file references a PID that is no longer running."""
+    try:
+        pid_text = _FETCH_LOCK_PATH.read_text(encoding="utf-8").strip()
+        pid = int(pid_text) if pid_text else 0
+    except (OSError, ValueError):
+        return True
+    if pid <= 0:
+        return True
+    try:
+        os.kill(pid, 0)
+        return False  # process exists
+    except ProcessLookupError:
+        return True  # gone
+    except PermissionError:
+        return False  # exists but inaccessible; treat as live
+    except OSError:
+        return True  # any other error - safer to reclaim
 
 
 @dataclass
@@ -141,6 +204,8 @@ class Pipeline:
         On by default; skipped when dry_run, skip_fetch, or fetch_missing flag
         is off. Failures use per-symbol fallback: failed symbols are dropped
         from this scan but the pipeline continues with the rest.
+        A filesystem lock prevents two concurrent scanners from writing to
+        the SQLite DB at the same time.
         """
         if self.ctx.dry_run or self.ctx.skip_fetch or not self.ctx.fetch_missing:
             self.ctx.stats["fetch_missing"] = "skipped"
@@ -148,12 +213,13 @@ class Pipeline:
         if self.ctx.selected_profile is None:
             raise PipelineError("verify must run before fetch_missing")
         assert self.ctx.loader is not None
-        summary = fetch_missing_for_profile(
-            self.ctx.loader.conn,
-            self.ctx.selected_profile,
-            require_latest_date=True,
-            execute=True,
-        )
+        with _fetch_lock():
+            summary = fetch_missing_for_profile(
+                self.ctx.loader.conn,
+                self.ctx.selected_profile,
+                require_latest_date=True,
+                execute=True,
+            )
         self.ctx.stats["fetch_missing"] = {
             "planned": summary.planned,
             "skipped": summary.skipped,
@@ -187,14 +253,15 @@ class Pipeline:
         if self.ctx.selected_profile is None:
             raise PipelineError("verify must run before fetch")
         assert self.ctx.loader is not None
-        rows = self.ctx.loader.fetch_todays_candles(
-            self.ctx.selected_profile,
-            universe_name=self.ctx.universe_name,
-        )
-        self.ctx.stats["rows_fetched"] = rows
-        _refresh_index_today(self.ctx.loader.conn)
-        if self.ctx.scan_date.weekday() == 4:
-            self._run_weekly_incremental()
+        with _fetch_lock():
+            rows = self.ctx.loader.fetch_todays_candles(
+                self.ctx.selected_profile,
+                universe_name=self.ctx.universe_name,
+            )
+            self.ctx.stats["rows_fetched"] = rows
+            _refresh_index_today(self.ctx.loader.conn)
+            if self.ctx.scan_date.weekday() == 4:
+                self._run_weekly_incremental()
 
     @stage("pre_compute")
     def pre_compute(self) -> None:

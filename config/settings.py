@@ -290,16 +290,48 @@ INV_HEAD_SHOULDERS = {
 SUPERTREND = {
     "atr_period": 10,
     "multiplier": 3.0,
-    "flip_lookback_bars": 3,
+    # Max bars since the bullish flip for the signal to count as fresh.
+    # Was 3 (which lets the detector report 3-day-old flips as BREAKING
+    # OUT after price has already moved 2 ATRs). 1 = today or yesterday.
+    "max_flip_age_bars": 1,
+    # Window we scan for any flip, regardless of staleness, so we can
+    # still detect old flips and grade them lower if needed.
+    "flip_lookback_bars": 5,
+    # Reward / risk target multiplier on ATR.
+    "atr_target_multiplier": 2.5,
+    # Stop-distance cap. Stop = supertrend line. If line sits >X% below
+    # close, position is untradable on a swing basis.
+    "max_stop_distance_pct": 10.0,
 }
 
 MULTIYEAR_BREAKOUT = {
     "min_years": 2,
-    "min_touches": 2,
-    "resistance_tolerance_pct": 3.0,
+    # Min touches at the multi-year resistance level. 2 was the floor;
+    # textbook breakout chartists want 3+ tests over the period.
+    "min_touches": 3,
+    # Resistance tolerance tightened 3.0 -> 1.5. A 3% range over multi-year
+    # data is a "zone" not a "line".
+    "resistance_tolerance_pct": 1.5,
+    # Touch dispersion guard: max(touch_high) - min(touch_high) as % of
+    # resistance. Tightens what counts as "the same level".
+    "max_touch_dispersion_pct": 1.0,
+    # Touch spread guard: touches must span at least this fraction of the
+    # lookback window. Prevents 3 touches clustered in the last quarter
+    # masquerading as multi-year resistance.
+    "min_touch_spread_fraction": 0.5,
+    # Volume surge required ONLY on the breakout candle. Pre-breakout
+    # bars (PIVOT READY) no longer need surge; surge becomes a grade
+    # component instead of a hard gate. Fixes the bug where pivot-ready
+    # multi-year breakouts were never detected.
     "volume_surge_ratio": 1.4,
-    "timeframe": "weekly",
+    # Stale guard.
     "max_breakout_extension_pct": 10.0,
+    # PIVOT READY zone.
+    "within_breakout_pct": 3.0,
+    # Stop-distance cap. Real-money swing stops must be tradable even on
+    # weekly setups.
+    "max_stop_distance_pct": 12.0,
+    "timeframe": "weekly",
 }
 
 # Filter thresholds
