@@ -47,15 +47,22 @@ TIER_LEADING = 60.0
 TIER_LAGGING = 40.0
 
 
-def compute_leaderboard(loader, sector_map: dict | None = None) -> dict:
+def compute_leaderboard(
+    loader,
+    sector_map: dict | None = None,
+    *,
+    breadth_stats: dict[str, dict[str, float | int | None]] | None = None,
+) -> dict:
     """Compute sector leaderboard rows, ranked by composite score descending.
 
     Args:
-        loader: object exposing get_index(name) -> DataFrame and
-            get_stock_daily(symbol) -> DataFrame. Both DataFrames must have
-            a 'close' column.
+        loader: object exposing get_index(name) -> DataFrame,
+            get_stock_daily(symbol) -> DataFrame, and
+            get_recent_close_stats(symbols, ma_periods=...) -> dict.
         sector_map: optional pre-loaded {symbol: {sector_index: ...}} dict.
             If None, loaded from settings.SECTOR_MAP_JSON.
+        breadth_stats: optional pre-loaded {symbol: {latest, ma50, ma200, bars}}.
+            If None, computed once for the full constituent universe.
 
     Returns:
         {"weights": {...}, "tier_thresholds": {...}, "rows": [row, ...]}
@@ -67,8 +74,11 @@ def compute_leaderboard(loader, sector_map: dict | None = None) -> dict:
     nifty_returns = {key: _frame_return(nifty, bars) for key, bars in LOOKBACKS.items()}
 
     sector_to_symbols = _invert_sector_map(sector_map)
+    if breadth_stats is None:
+        all_symbols = sorted({s for syms in sector_to_symbols.values() for s in syms})
+        breadth_stats = loader.get_recent_close_stats(all_symbols, ma_periods=(50, 200))
     rows = [
-        _compute_row(loader, name, symbols, nifty_returns)
+        _compute_row(loader, name, symbols, nifty_returns, breadth_stats)
         for name, symbols in sorted(sector_to_symbols.items())
     ]
     rows.sort(
@@ -89,7 +99,13 @@ def compute_leaderboard(loader, sector_map: dict | None = None) -> dict:
 # Per-sector compute
 # ---------------------------------------------------------------------------
 
-def _compute_row(loader, sector_name: str, symbols: list[str], nifty_returns: dict) -> dict:
+def _compute_row(
+    loader,
+    sector_name: str,
+    symbols: list[str],
+    nifty_returns: dict,
+    breadth_stats: dict[str, dict[str, float | int | None]],
+) -> dict:
     sector_df = loader.get_index(sector_name)
     rets = {key: _frame_return(sector_df, bars) for key, bars in LOOKBACKS.items()}
     rs = {
@@ -98,7 +114,7 @@ def _compute_row(loader, sector_name: str, symbols: list[str], nifty_returns: di
         for key in LOOKBACKS
     }
     stage2 = _sector_stage2(sector_df)
-    breadth_50, breadth_200 = _breadth(loader, symbols)
+    breadth_50, breadth_200 = _breadth(symbols, breadth_stats)
     score = _composite_score(rs, breadth_50, breadth_200, stage2)
     return {
         "sector": sector_name,
@@ -193,19 +209,23 @@ def _sector_stage2(frame: pd.DataFrame | None) -> bool:
     return latest > latest_ma50 > latest_ma200 and slope > 0
 
 
-def _breadth(loader, symbols: Iterable[str]) -> tuple[float | None, float | None]:
+def _breadth(
+    symbols: Iterable[str],
+    stats: dict[str, dict[str, float | int | None]],
+) -> tuple[float | None, float | None]:
     above_50, above_200, total = 0, 0, 0
     for symbol in symbols:
-        frame = _safe_get_stock_daily(loader, symbol)
-        if frame is None or len(frame) == 0:
+        record = stats.get(str(symbol).upper())
+        if not record:
             continue
-        close = pd.to_numeric(frame["close"], errors="coerce").dropna()
-        if len(close) < 200:
+        if (record.get("bars") or 0) < 200:
+            continue
+        latest = record.get("latest")
+        ma50 = record.get("ma50")
+        ma200 = record.get("ma200")
+        if latest is None or ma50 is None or ma200 is None:
             continue
         total += 1
-        latest = float(close.iloc[-1])
-        ma50 = float(close.iloc[-50:].mean())
-        ma200 = float(close.iloc[-200:].mean())
         if latest > ma50:
             above_50 += 1
         if latest > ma200:
@@ -216,14 +236,6 @@ def _breadth(loader, symbols: Iterable[str]) -> tuple[float | None, float | None
         round(above_50 / total * 100.0, 1),
         round(above_200 / total * 100.0, 1),
     )
-
-
-def _safe_get_stock_daily(loader, symbol: str) -> pd.DataFrame | None:
-    """get_stock_daily wrapped in try/except so one bad symbol doesn't kill the loop."""
-    try:
-        return loader.get_stock_daily(symbol)
-    except Exception:
-        return None
 
 
 def _load_sector_map() -> dict:

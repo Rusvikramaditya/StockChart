@@ -39,6 +39,32 @@ class _FakeLoader:
     def get_stock_daily(self, symbol: str) -> pd.DataFrame:
         return self._stocks.get(symbol.upper(), pd.DataFrame())
 
+    def get_recent_close_stats(
+        self,
+        symbols,
+        *,
+        ma_periods=(50, 200),
+    ) -> dict[str, dict[str, float | int | None]]:
+        ma_periods = tuple(sorted({int(p) for p in ma_periods if p > 0}))
+        out: dict[str, dict[str, float | int | None]] = {}
+        for symbol in symbols:
+            frame = self._stocks.get(str(symbol).upper())
+            if frame is None or len(frame) == 0:
+                continue
+            close = pd.to_numeric(frame["close"], errors="coerce").dropna()
+            if len(close) == 0:
+                continue
+            record: dict[str, float | int | None] = {
+                "latest": float(close.iloc[-1]),
+                "prior": float(close.iloc[-2]) if len(close) >= 2 else None,
+                "bars": int(len(close)),
+            }
+            for p in ma_periods:
+                tail = close.iloc[-p:] if len(close) >= p else close
+                record[f"ma{p}"] = float(tail.mean()) if len(tail) > 0 else None
+            out[str(symbol).upper()] = record
+        return out
+
 
 def _build_loader(sector_returns: dict[str, float], nifty_return: float = 0.0) -> _FakeLoader:
     """Build a loader where each sector index gains `sector_returns[name]%` over the

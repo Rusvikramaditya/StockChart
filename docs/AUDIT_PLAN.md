@@ -41,9 +41,9 @@
 
 ### 🟢 P3 — Cosmetic / nice-to-have
 
-- [ ] **UI-001**: TARGET annotation box on chart overlaps pattern title text. Z-index tweak. Pending.
-- [ ] **UX-001**: Surface `skip_reason` breakdown in a collapsible panel. Pending.
-- [ ] **PERF-001**: Batch-query breadth + leaderboard SQLite reads. Pending.
+- [x] ✅ **UI-001**: TARGET annotation card now reserves top 110px for pattern title and falls back to the right-of-arrow column when the default position would clip.
+- [x] ✅ **UX-001**: `skip_reason` breakdown surfaced in dashboard via `<details class="skip-breakdown">` panel with bucket counts and sample symbols.
+- [x] ✅ **PERF-001**: `DataLoader.get_recent_close_stats()` does latest/prior/MA50/MA200 in a single SQLite window-function query. Scanner pre-computes once and shares the dict with `compute_market_regime` (advance/decline) + `compute_leaderboard` (breadth), eliminating ~500 per-symbol SELECTs per scan.
 
 ## Pattern Audit Playbook
 
@@ -56,6 +56,6 @@ Same template across all detectors:
 
 ## Final Suite Status
 
-**242 tests pass, 0 failures, 0 regressions.**
+**255 tests pass, 0 failures, 0 regressions.**
 
-All P0 + P1 + P2 items shipped. Only P3 cosmetic items remain.
+All P0 + P1 + P2 + P3 items shipped. Audit closed.

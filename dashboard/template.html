@@ -487,6 +487,74 @@
     .rr-pill.rr-bad    { color: var(--red); border-color: rgba(239, 83, 80, 0.4); background: rgba(239, 83, 80, 0.10); }
     .rr-pill.rr-unknown { color: var(--muted); }
 
+    /* Skip-reason breakdown panel */
+    .skip-breakdown {
+      margin: 0 0 24px;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      background: #0c0c0c;
+    }
+    .skip-breakdown > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .skip-breakdown > summary::-webkit-details-marker { display: none; }
+    .skip-breakdown > summary::before {
+      content: "\25B8";
+      font-size: 12px;
+      color: var(--muted);
+      transition: transform 0.15s ease;
+      margin-right: 8px;
+    }
+    .skip-breakdown[open] > summary::before { transform: rotate(90deg); }
+    .skip-summary-title { color: var(--text); }
+    .skip-summary-hint { color: var(--faint); font-size: 11px; font-weight: 600; text-transform: none; }
+    .skip-breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+      padding: 4px 16px 14px;
+    }
+    .skip-row {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #101010;
+      padding: 10px 12px;
+    }
+    .skip-row-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .skip-row strong {
+      color: var(--text);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+    .skip-count {
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 14px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+    }
+    .skip-samples {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+    }
+
     /* Filter chip glossary panel */
     .filter-glossary {
       margin: 0 0 14px;
@@ -1173,6 +1241,28 @@
       <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
       <div class="stat"><span class="label">Errors</span><span class="value">{{ summary.error_count }}</span></div>
     </section>
+
+    {% if skip_breakdown %}
+    <details class="skip-breakdown" aria-label="Skipped setups breakdown">
+      <summary>
+        <span class="skip-summary-title">Why {{ skipped_count }} setups were skipped</span>
+        <span class="skip-summary-hint">Click to inspect by reason</span>
+      </summary>
+      <div class="skip-breakdown-grid">
+        {% for row in skip_breakdown %}
+        <div class="skip-row">
+          <div class="skip-row-head">
+            <strong>{{ row.label }}</strong>
+            <span class="skip-count">{{ row.count }}</span>
+          </div>
+          {% if row.samples %}
+          <div class="skip-samples">e.g. {{ row.samples|join(', ') }}{% if row.count > row.samples|length %} ...{% endif %}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
 
     <details class="leaderboard-panel" open aria-label="Sector momentum leaderboard">
       <summary>

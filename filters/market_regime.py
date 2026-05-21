@@ -8,7 +8,12 @@ from config import settings
 from patterns.utils import moving_average
 
 
-def compute_market_regime(loader, symbols: list[str] | None = None) -> dict:
+def compute_market_regime(
+    loader,
+    symbols: list[str] | None = None,
+    *,
+    breadth_stats: dict[str, dict[str, float | int | None]] | None = None,
+) -> dict:
     nifty = loader.get_index("NIFTY 50")
     close = pd.to_numeric(nifty["close"], errors="coerce").dropna().to_numpy(dtype=float)
     if len(close) < settings.MARKET_REGIME["nifty_ma_long"]:
@@ -24,7 +29,11 @@ def compute_market_regime(loader, symbols: list[str] | None = None) -> dict:
     latest_close = float(close[-1])
     latest_ma50 = float(ma50[-1])
     latest_ma200 = float(ma200[-1])
-    breadth = _advance_decline_ratio(loader, symbols or loader.get_all_active_symbols())
+    breadth = _advance_decline_ratio(
+        loader,
+        symbols or loader.get_all_active_symbols(),
+        stats=breadth_stats,
+    )
     checks = {
         "nifty_above_50ma": latest_close > latest_ma50,
         "nifty_above_200ma": latest_close > latest_ma200,
@@ -53,17 +62,25 @@ def compute_market_regime(loader, symbols: list[str] | None = None) -> dict:
     }
 
 
-def _advance_decline_ratio(loader, symbols: list[str]) -> float | None:
+def _advance_decline_ratio(
+    loader,
+    symbols: list[str],
+    *,
+    stats: dict[str, dict[str, float | int | None]] | None = None,
+) -> float | None:
+    if stats is None:
+        stats = loader.get_recent_close_stats(symbols, ma_periods=())
     advances = 0
     declines = 0
     for symbol in symbols:
-        frame = loader.get_stock_daily(symbol)
-        if len(frame) < 2:
+        record = stats.get(str(symbol).upper())
+        if not record:
             continue
-        closes = pd.to_numeric(frame["close"], errors="coerce").dropna()
-        if len(closes) < 2:
+        latest = record.get("latest")
+        prior = record.get("prior")
+        if latest is None or prior is None:
             continue
-        change = float(closes.iloc[-1]) - float(closes.iloc[-2])
+        change = float(latest) - float(prior)
         if change > 0:
             advances += 1
         elif change < 0:

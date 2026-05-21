@@ -99,12 +99,21 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
     tier_by_sector = _build_sector_to_tier(context.get("sector_leaderboard") or {})
     results = []
     skipped_count = 0
+    skip_reasons: dict[str, int] = {}
+    skipped_samples: dict[str, list[str]] = {}
     for item in _list(context, "results", "scored_results"):
         normalized = _normalize_result(item)
         # Real-money rule: SKIP tier setups never appear on the dashboard
-        # or go to Telegram. They are tracked for the summary only.
+        # or go to Telegram. They are tracked separately so the user can
+        # audit WHY each setup was rejected.
         if normalized["tier"] == "SKIP":
             skipped_count += 1
+            raw_reason = str(item.get("skip_reason") or normalized.get("skip_reason") or "UNKNOWN")
+            bucket = _skip_reason_bucket(raw_reason)
+            skip_reasons[bucket] = skip_reasons.get(bucket, 0) + 1
+            samples = skipped_samples.setdefault(bucket, [])
+            if len(samples) < 8:
+                samples.append(normalized["symbol"])
             continue
         symbol = normalized["symbol"]
         sector = sector_by_symbol.get(symbol) or "NIFTY 50"
@@ -113,6 +122,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         normalized["sector_tier"] = sector_tier
         normalized["sector_tier_class"] = sector_tier.lower()
         results.append(normalized)
+    skip_breakdown = _build_skip_breakdown(skip_reasons, skipped_samples)
     results.sort(key=lambda item: (TIER_ORDER.index(item["tier"]) if item["tier"] in TIER_ORDER else 99, -item["score"]))
     sectors = _normalize_sectors(context.get("sector_rs") or context.get("sector_cache") or context.get("sectors") or {})
     sector_leaderboard = _normalize_leaderboard(context.get("sector_leaderboard") or {})
@@ -152,6 +162,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "results": results,
         "tier_groups": tier_groups,
         "skipped_count": skipped_count,
+        "skip_breakdown": skip_breakdown,
         "sectors": sectors,
         "sector_leaderboard": sector_leaderboard,
         "errors": errors,
@@ -368,6 +379,49 @@ def _normalize_sectors(raw: Any) -> list[dict[str, Any]]:
             }
         )
     return sorted(normalized, key=lambda item: item["score"], reverse=True)
+
+
+_SKIP_REASON_LABELS = {
+    "LOW_PATTERN_QUALITY": "Pattern grade below threshold",
+    "REWARD_RISK_BELOW_FLOOR": "Reward / risk below 1.0:1",
+    "STAGE2_FAIL": "Not in Stage 2 uptrend",
+    "VOLUME_FAIL": "No breakout volume",
+    "SECTOR_LAGGING": "Sector lagging Nifty",
+    "REGIME_BEAR": "Market regime bear",
+    "RSI_OVERBOUGHT": "RSI overbought",
+    "MULTI_TF_DIVERGENT": "Daily / weekly divergent",
+    "UNKNOWN": "Unspecified",
+}
+
+
+def _skip_reason_bucket(raw: str) -> str:
+    """Collapse the per-symbol skip reason string into a short bucket key."""
+    if not raw:
+        return "UNKNOWN"
+    upper = raw.upper()
+    if upper.startswith("REWARD_RISK_BELOW_FLOOR"):
+        return "REWARD_RISK_BELOW_FLOOR"
+    if upper in _SKIP_REASON_LABELS:
+        return upper
+    return "UNKNOWN"
+
+
+def _build_skip_breakdown(
+    counts: dict[str, int], samples: dict[str, list[str]]
+) -> list[dict[str, Any]]:
+    """Sort skip-reason buckets by count desc, attach labels + samples."""
+    rows = []
+    for bucket, count in counts.items():
+        rows.append(
+            {
+                "key": bucket,
+                "label": _SKIP_REASON_LABELS.get(bucket, bucket.replace("_", " ").title()),
+                "count": int(count),
+                "samples": list(samples.get(bucket, [])),
+            }
+        )
+    rows.sort(key=lambda r: r["count"], reverse=True)
+    return rows
 
 
 def _build_symbol_to_sector(context: dict[str, Any]) -> dict[str, str]:

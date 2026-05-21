@@ -27,7 +27,7 @@ from engine.scorer import score_pattern
 from engine.thesis_chart import export_thesis_chart_png
 from filters.market_regime import compute_market_regime
 from engine.fetch_missing import fetch_missing_for_profile
-from engine.sector_leaderboard import compute_leaderboard
+from engine.sector_leaderboard import compute_leaderboard, _load_sector_map
 from filters.sector_rs import compute_sector_rs_cache
 from patterns.base import PatternResult
 
@@ -268,10 +268,26 @@ class Pipeline:
         if not self.ctx.symbols:
             raise PipelineError("verify must run before pre_compute")
         assert self.ctx.loader is not None
-        self.ctx.market_regime = compute_market_regime(self.ctx.loader, self.ctx.symbols)
+        sector_map = _load_sector_map()
+        sector_symbols = {str(s).upper() for s in sector_map.keys()}
+        breadth_universe = sorted(set(self.ctx.symbols) | sector_symbols)
+        try:
+            breadth_stats = self.ctx.loader.get_recent_close_stats(
+                breadth_universe, ma_periods=(50, 200)
+            )
+        except Exception as exc:  # batch breadth is an optimization; fall back to per-call
+            self._record_error("pre_compute", "-", f"breadth_stats: {exc}", critical=False)
+            breadth_stats = {}
+        self.ctx.market_regime = compute_market_regime(
+            self.ctx.loader, self.ctx.symbols, breadth_stats=breadth_stats or None
+        )
         self.ctx.sector_rs_cache = compute_sector_rs_cache(self.ctx.loader, self.ctx.symbols)
         try:
-            self.ctx.sector_leaderboard = compute_leaderboard(self.ctx.loader)
+            self.ctx.sector_leaderboard = compute_leaderboard(
+                self.ctx.loader,
+                sector_map=sector_map,
+                breadth_stats=breadth_stats or None,
+            )
         except Exception as exc:  # leaderboard is auxiliary; don't fail the scan
             self._record_error("pre_compute", "-", f"sector_leaderboard: {exc}", critical=False)
             self.ctx.sector_leaderboard = {}

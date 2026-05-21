@@ -121,10 +121,39 @@
           var row2H = labelFontSz + vpad * 2;
           var cardH = row1H + rowGap + row2H;
 
-          var lx = clamp(arrowX - cardW / 2, 4, W - cardW - 4);
-          var ly = uTop - cardH - (compact ? 4 : 6);
+          // Reserve a vertical band at the top of the canvas for the
+          // chart's own title + pattern header text (drawn by the
+          // renderer/payload layer above the candles). Without this the
+          // TARGET card was overlapping the "Inverse Head & Shoulders |
+          // BREAKING OUT" header on real charts.
+          var TOP_RESERVED = 110;
+          var defaultLy = uTop - cardH - (compact ? 4 : 6);
+          var lx, ly;
+          if (defaultLy >= TOP_RESERVED) {
+            // Card fits above the arrow box without intruding on the
+            // reserved title area.
+            lx = clamp(arrowX - cardW / 2, 4, W - cardW - 4);
+            ly = defaultLy;
+          } else {
+            // Not enough room above: place the card to the RIGHT of the
+            // arrow box, vertically centered with it. Falls back to the
+            // left side if the right side is also out of room.
+            ly = clamp(uTop + Math.max(0, (uH - cardH) / 2), TOP_RESERVED, H - cardH - 8);
+            var rightX = boxStart + boxW + 8;
+            var leftX = boxStart - cardW - 8;
+            if (rightX + cardW <= W - 4) {
+              lx = rightX;
+            } else if (leftX >= 4) {
+              lx = leftX;
+            } else {
+              // Worst case: stack at top-right corner just below the
+              // reserved band.
+              lx = W - cardW - 8;
+              ly = TOP_RESERVED + 4;
+            }
+          }
 
-          if (ly > 4) {
+          if (ly + cardH < H - 4) {
             // Card background
             ctx.fillStyle = '#1e3a8a';
             if (ctx.roundRect) {

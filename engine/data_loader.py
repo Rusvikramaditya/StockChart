@@ -146,6 +146,70 @@ class DataLoader:
             (index_name.upper(),),
         )
 
+    def get_recent_close_stats(
+        self,
+        symbols: list[str],
+        *,
+        ma_periods: tuple[int, ...] = (50, 200),
+    ) -> dict[str, dict[str, float | int | None]]:
+        """Batch-load per-symbol close stats in a single SQLite query.
+
+        Returns ``{symbol: {"latest": float, "prior": float, "ma50": float,
+        "ma200": float, "bars": int}}`` for every symbol that has at least
+        2 close rows in the DB. Used by market-regime breadth (advance /
+        decline) and the sector-leaderboard breadth calculation -- both
+        previously made one SELECT per symbol (~500 round trips per scan).
+
+        ``ma_periods`` controls which moving-average columns are produced
+        (default 50d + 200d). The largest period determines the window
+        size requested from SQLite.
+        """
+        if not symbols:
+            return {}
+        ma_periods = tuple(sorted({int(p) for p in ma_periods if p > 0}))
+        window = max(max(ma_periods) if ma_periods else 0, 2)
+
+        upper_symbols = sorted({str(s).upper() for s in symbols if s})
+        out: dict[str, dict[str, float | int | None]] = {}
+
+        # SQLite has a default placeholder cap. Chunk the IN(...) list so
+        # we never exceed it.
+        chunk_size = 800
+        for start in range(0, len(upper_symbols), chunk_size):
+            batch = upper_symbols[start : start + chunk_size]
+            placeholders = ",".join("?" for _ in batch)
+            ma_select = "".join(
+                f",\n                   AVG(CASE WHEN rn <= {p} THEN close END) AS ma{p}"
+                for p in ma_periods
+            )
+            sql = f"""
+            WITH ranked AS (
+                SELECT symbol, close,
+                       ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY date DESC) AS rn
+                FROM ohlcv_daily
+                WHERE symbol IN ({placeholders})
+            )
+            SELECT symbol,
+                   MAX(CASE WHEN rn = 1 THEN close END) AS latest,
+                   MAX(CASE WHEN rn = 2 THEN close END) AS prior{ma_select},
+                   SUM(CASE WHEN rn <= {window} THEN 1 ELSE 0 END) AS bars
+            FROM ranked
+            WHERE rn <= {window}
+            GROUP BY symbol
+            """
+            frame = storage.query_frame(self.conn, sql, batch)
+            for row in frame.itertuples(index=False):
+                sym = str(row.symbol).upper()
+                record: dict[str, float | int | None] = {
+                    "latest": _as_float(row.latest),
+                    "prior": _as_float(row.prior),
+                    "bars": int(row.bars or 0),
+                }
+                for p in ma_periods:
+                    record[f"ma{p}"] = _as_float(getattr(row, f"ma{p}", None))
+                out[sym] = record
+        return out
+
     def get_stock_daily_arrays(self, symbol: str) -> dict[str, np.ndarray]:
         frame = self.get_stock_daily(symbol)
         return dataframe_to_arrays(frame)
@@ -271,3 +335,14 @@ def _date_text(value: str | date) -> str:
     if isinstance(value, date):
         return value.isoformat()
     return str(value)
+
+
+def _as_float(value) -> float | None:
+    """Coerce a SQLite cell to ``float``; return None for NULL / NaN / non-numeric."""
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
