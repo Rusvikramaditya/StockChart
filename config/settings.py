@@ -191,12 +191,37 @@ ASCENDING_TRIANGLE = {
 }
 
 BULL_FLAG = {
-    "min_pole_pct": 12.0,
-    "pole_min_bars": 3,
+    # Pole: explosive advance. Textbook 1-3 weeks, >=15%. Was 12%/3-15 bars,
+    # which let 3-day spikes qualify as "poles" (ACUTAAS 2026-05-21 case).
+    "min_pole_pct": 15.0,
+    "pole_min_bars": 4,
     "pole_max_bars": 15,
-    "min_flag_pullback_pct": 2.0,
-    "max_flag_pullback_pct": 12.0,
-    "max_flag_vol_ratio": 0.9,
+    # Pole cleanliness. A choppy advance is not a pole. Max intra-pole
+    # drawdown (peak->trough during pole bars) must stay under this.
+    "max_pole_drawdown_pct": 6.0,
+    # Flag: controlled 1-3 week pullback. Was 5-20 bars / 2-12%; 20 bars and
+    # 12% pullback are too loose (deep correction, not a flag).
+    "flag_min_bars": 5,
+    "flag_max_bars": 15,
+    "min_flag_pullback_pct": 3.0,
+    "max_flag_pullback_pct": 8.0,
+    # Volume dry-up during flag. Textbook flag vol << pole vol; 0.9 was
+    # essentially "no contraction required". 0.7 enforces real drying.
+    "max_flag_vol_ratio": 0.7,
+    # Flag direction. Bull flag pulls DOWN or sideways; upward sloping flag
+    # is a rising wedge (bearish), not a flag.
+    "max_flag_upslope_pct": 1.0,
+    # Prior uptrend gate. Bull flag is a CONTINUATION pattern; the pole
+    # must sit inside an existing uptrend. Require positive gain over
+    # the lookback period BEFORE pole_start.
+    "prior_uptrend_lookback_bars": 30,
+    "min_prior_gain_pct": 5.0,
+    # Stop distance cap. Stop = flag_low; if it sits more than this % below
+    # pivot, swing-trade risk is unacceptable.
+    "max_stop_distance_pct": 10.0,
+    # Stale guards.
+    "within_breakout_pct": 3.0,
+    "max_breakout_extension_pct": 5.0,
 }
 
 VCP = {
