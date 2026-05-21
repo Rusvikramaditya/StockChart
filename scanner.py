@@ -24,12 +24,13 @@ from engine.explainer import attach_explanation
 from engine.scorer import score_pattern
 from engine.thesis_chart import export_thesis_chart_png
 from filters.market_regime import compute_market_regime
+from engine.fetch_missing import fetch_missing_for_profile
 from engine.sector_leaderboard import compute_leaderboard
 from filters.sector_rs import compute_sector_rs_cache
 from patterns.base import PatternResult
 
 
-STAGE_ORDER = ("verify", "fetch", "pre_compute", "detect", "filter_and_score", "output")
+STAGE_ORDER = ("verify", "fetch_missing", "fetch", "pre_compute", "detect", "filter_and_score", "output")
 
 
 @dataclass
@@ -39,6 +40,7 @@ class PipelineContext:
     scan_date: date = field(default_factory=date.today)
     dry_run: bool = False
     skip_fetch: bool = False
+    fetch_missing: bool = True
     stage: str | None = None
     workers: int = settings.PROCESS_WORKERS
     stock_timeout_seconds: int = settings.STOCK_TIMEOUT_SECONDS
@@ -131,6 +133,51 @@ class Pipeline:
         if new_verify_errors > 1:
             raise PipelineError(f"Verification failed with {new_verify_errors} non-critical data issue(s)")
         self.ctx.stats["symbols_selected"] = len(self.ctx.symbols)
+
+    @stage("fetch_missing", critical=False)
+    def fetch_missing(self) -> None:
+        """Backfill missing/stale historical OHLCV before today's-bar fetch.
+
+        On by default; skipped when dry_run, skip_fetch, or fetch_missing flag
+        is off. Failures use per-symbol fallback: failed symbols are dropped
+        from this scan but the pipeline continues with the rest.
+        """
+        if self.ctx.dry_run or self.ctx.skip_fetch or not self.ctx.fetch_missing:
+            self.ctx.stats["fetch_missing"] = "skipped"
+            return
+        if self.ctx.selected_profile is None:
+            raise PipelineError("verify must run before fetch_missing")
+        assert self.ctx.loader is not None
+        summary = fetch_missing_for_profile(
+            self.ctx.loader.conn,
+            self.ctx.selected_profile,
+            require_latest_date=True,
+            execute=True,
+        )
+        self.ctx.stats["fetch_missing"] = {
+            "planned": summary.planned,
+            "skipped": summary.skipped,
+            "success": summary.success,
+            "failed": summary.failed,
+            "rows_written": summary.rows_written,
+        }
+        # Per-symbol fallback: drop failed symbols from the scan so detectors
+        # don't read stale/empty rows for them. Non-critical errors go to
+        # the dashboard's errors panel.
+        if summary.failed_symbols:
+            failed_set = {s.upper() for s in summary.failed_symbols}
+            for symbol in summary.failed_symbols:
+                self._record_error(
+                    "fetch_missing",
+                    symbol,
+                    f"Backfill failed; symbol dropped from this scan",
+                    critical=False,
+                )
+            self.ctx.symbols = [s for s in self.ctx.symbols if s.upper() not in failed_set]
+            self.ctx.selected_profile = self.ctx.selected_profile[
+                ~self.ctx.selected_profile["symbol"].astype(str).str.upper().isin(failed_set)
+            ].reset_index(drop=True)
+            self.ctx.stats["symbols_dropped_after_fetch_missing"] = len(failed_set)
 
     @stage("fetch")
     def fetch(self) -> None:
@@ -596,6 +643,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the NSE pattern scanner pipeline.")
     parser.add_argument("--universe", default="nifty500", help="Universe profile to scan.")
     parser.add_argument("--skip-fetch", action="store_true", help="Do not fetch today's OHLC from Dhan.")
+    parser.add_argument(
+        "--no-fetch-missing",
+        action="store_true",
+        help="Skip the pre-scan historical-backfill stage. By default the scanner "
+        "backfills missing/stale OHLCV from Dhan before scanning so detectors "
+        "always see fresh data.",
+    )
     parser.add_argument("--stage", choices=STAGE_ORDER, default=None, help="Run through this stage and stop.")
     parser.add_argument("--dry-run", action="store_true", help="No Dhan fetch and no Telegram sends.")
     parser.add_argument("--workers", type=int, default=settings.PROCESS_WORKERS)
@@ -628,6 +682,7 @@ def main(argv: list[str] | None = None) -> int:
         universe_name=universe_name,
         dry_run=dry_run,
         skip_fetch=bool(args.skip_fetch or dry_run),
+        fetch_missing=not bool(args.no_fetch_missing),
         stage=args.stage,
         workers=args.workers,
         stock_timeout_seconds=args.timeout,
