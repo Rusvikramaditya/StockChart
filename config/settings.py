@@ -152,16 +152,40 @@ CUP_HANDLE = {
     "min_depth_pct": 12.0,
     "max_depth_pct": 55.0,
     "rim_tolerance_pct": 8.0,
-    "handle_max_retrace_pct": 50.0,
+    # Textbook cup & handle requires a real handle: small controlled pullback
+    # from right rim, NOT a deep retrace into the cup. 33% is the classic
+    # O'Neil ceiling. Anything deeper is a "double bottom" or "failed cup".
+    "handle_max_retrace_pct": 33.0,
+    # Handle must show meaningful pullback (>=2% below pivot) — flat sideways
+    # drift after rim isn't a handle, and stop becomes meaningless.
+    "handle_min_pullback_pct": 2.0,
+    # Handle high must test pivot (within 5%). If max in handle window is far
+    # below pivot, there's no real resistance test — it's just a base.
+    "handle_high_near_pivot_pct": 5.0,
+    # Cap entry-to-stop distance. Wider stops mean unacceptable risk on a
+    # swing trade. EMCURE example: stop 1381 from entry 1585 = 12.9%, too
+    # wide. Real-money breakout stops should be <=10% from pivot.
+    "max_stop_distance_pct": 10.0,
     "max_breakout_extension_pct": 8.0,
 }
 
 ASCENDING_TRIANGLE = {
     "lookback_bars": 60,
-    "min_resistance_touches": 2,
+    # Textbook ascending triangle requires >=3 touches at near-identical
+    # resistance and >=3 ascending higher lows. Real money depends on this
+    # being a real pattern, not a generic "consolidation near highs".
+    "min_resistance_touches": 3,
     "resistance_tolerance_pct": 1.5,
+    # Touch range: (max - min) / resistance among detected touches. Rejects
+    # messy "resistance zones" (e.g. APARINDS 12,676-13,024 = 2.7% range)
+    # that look like clusters under 1.5% tolerance but aren't truly flat.
+    # Textbook ascending triangles have all touches within ~0.5-1% range.
+    "max_touch_range_pct": 1.0,
     "within_breakout_pct": 4.0,
-    "min_rising_lows": 2,
+    "min_rising_lows": 3,
+    # Triangle base lows must sit at least this % below resistance, else
+    # they're flat consolidation near highs masquerading as a "low".
+    "min_low_gap_below_resistance_pct": 1.5,
     "argrelextrema_order": 4,
     "max_breakout_extension_pct": 8.0,
 }

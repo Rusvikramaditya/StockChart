@@ -168,6 +168,17 @@
         return 'rgba(0,0,0,0.55)';
       }());
 
+      var qualityScore = (pattern.quality_score != null && isFinite(pattern.quality_score))
+        ? Number(pattern.quality_score)
+        : null;
+      var qualityColor = '#6b7280';
+      var qualityLabel = '';
+      if (qualityScore != null) {
+        if (qualityScore >= 7.5)      { qualityColor = '#16a34a'; qualityLabel = 'TEXTBOOK'; }
+        else if (qualityScore >= 5.0) { qualityColor = '#d97706'; qualityLabel = 'DECENT';   }
+        else                          { qualityColor = '#dc2626'; qualityLabel = 'WEAK';     }
+      }
+
       titleEl.innerHTML =
         '<div style="font-size:' + (compact ? '18px' : '30px') + ';font-weight:700;' +
         'color:rgba(0,0,0,0.85);font-family:Inter,Segoe UI,Arial,sans-serif;' +
@@ -184,7 +195,15 @@
         'margin-top:2px;">' +
         _esc(pattern.type || 'Pattern') +
         (pattern.status ? ' | ' + _esc(pattern.status) : '') +
-        '</div>';
+        '</div>' +
+        (qualityScore != null
+          ? '<div style="font-size:' + (compact ? '10px' : '12px') + ';font-weight:700;' +
+            'color:' + qualityColor + ';font-family:Inter,Segoe UI,Arial,sans-serif;' +
+            'margin-top:3px;letter-spacing:0.3px;">' +
+            'PATTERN GRADE ' + qualityScore.toFixed(1) + '/10' +
+            (qualityLabel ? ' • ' + qualityLabel : '') +
+            '</div>'
+          : '');
       container.appendChild(titleEl);
 
       // Ticker badge — top-right corner, text only.

@@ -46,7 +46,10 @@ def detect(daily: dict, weekly: dict | None = None) -> list[PatternResult]:
     if bool(cfg["volume_declining"]) and not volume_declining:
         return []
 
-    pivot = float(np.max(high_w[-30:]))
+    # Pivot is the pre-existing high over the last 30 bars excluding today,
+    # so a breakout candle (today's close > prior high) is reachable.
+    prior_high_window = high_w[-30:-1] if len(high_w) > 30 else high_w[:-1]
+    pivot = float(np.max(prior_high_window)) if len(prior_high_window) else float(np.max(high_w))
     latest_close = float(close_w[-1])
     breakout = latest_close > pivot
     if not breakout and (pivot - latest_close) / pivot * 100.0 > 4.0:

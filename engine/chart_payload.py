@@ -34,6 +34,10 @@ def build_chart_payload(
     visible = frame.tail(max(20, actual_lookback))
     visible_start = len(frame) - len(visible)
 
+    extra = _field(pattern_result, "extra", {}) or {}
+    quality_score = _num(extra.get("pattern_quality_score")) if isinstance(extra, dict) else None
+    quality_breakdown = extra.get("pattern_quality_breakdown") if isinstance(extra, dict) else None
+
     return {
         "symbol": symbol.upper(),
         "company_name": company_name or symbol.upper(),
@@ -47,6 +51,8 @@ def build_chart_payload(
             "status": str(_field(pattern_result, "status", "")),
             "bars_in_pattern": _int(_field(pattern_result, "bars_in_pattern"), default=len(frame)),
             "geometry": geometry,
+            "quality_score": quality_score,
+            "quality_breakdown": quality_breakdown if isinstance(quality_breakdown, dict) else None,
         },
         "trade_plan": trade_plan,
         "annotations": _annotations(trade_plan),
