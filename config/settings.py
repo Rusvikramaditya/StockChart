@@ -308,9 +308,14 @@ RSI = {
     "period": 14,
     "healthy_low": 55,
     "healthy_high": 78,
-    "penalty_weak": {"threshold": 45, "penalty": 0},
-    "penalty_overbought": {"threshold": 80, "penalty": 0},
-    "penalty_divergence": 0,
+    # Penalties subtract from raw conviction score. Real-money rule: an
+    # overheated RSI (>= 80) or hidden bearish divergence must show up in
+    # the score, not just as a chip on the card. Previous values were all
+    # zero, which let RSI-87 setups still tier HIGHEST (ACUTAAS bull flag
+    # case, 2026-05-21).
+    "penalty_weak":        {"threshold": 45, "penalty": -10},
+    "penalty_overbought":  {"threshold": 80, "penalty": -15},
+    "penalty_divergence":  -20,
 }
 
 CONVICTION_WEIGHTS = {
@@ -328,7 +333,24 @@ QUALITY_SCORE_POINTS = (
     (50.0, 15),
     (0.0, 5),
 )
-MIN_TRADABLE_QUALITY_SCORE = 80.0
+# Pattern grade gate (0-100 scale; for audited detectors this is the 0-10
+# grade x10). Below this the scan rejects the setup outright as "low
+# pattern quality" - it does not appear on the dashboard and does not go
+# to Telegram. We trade real money; we do not show mediocre patterns.
+# Grade < 6.0 is WEAK by our chart labels and never reaches the user.
+MIN_TRADABLE_QUALITY_SCORE = 60.0
+
+# Reward/risk floors. A textbook pattern with bad R:R is still a bad
+# trade. EMCURE 2026-05-21: pattern was real, R:R 0.9:1, still tagged
+# HIGHEST. Now: R:R < 1.0 is auto-SKIP; R:R < 1.5 demotes one tier.
+MIN_REWARD_RISK_HARD = 1.0
+MIN_REWARD_RISK_SOFT = 1.5
+
+# Pattern grade ceiling for the HIGHEST tier. Setups in the
+# [MIN_TRADABLE_QUALITY_SCORE/10, PATTERN_GRADE_HIGHEST_FLOOR) band can
+# still tier HIGH or MEDIUM but never HIGHEST. Only TEXTBOOK-grade
+# patterns (>= 7.5/10) earn the loudest signal on the card.
+PATTERN_GRADE_HIGHEST_FLOOR = 7.5
 
 CONVICTION_TIERS = {
     "HIGHEST": 90,

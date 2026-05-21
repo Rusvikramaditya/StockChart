@@ -464,6 +464,29 @@
     .sector-pill.sector-tier-lagging { color: var(--red); border-color: rgba(239, 83, 80, 0.4); background: rgba(239, 83, 80, 0.10); }
     .sector-pill.sector-tier-unknown { color: var(--muted); }
 
+    /* Pattern grade + R:R chips on result cards */
+    .grade-pill, .rr-pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line-soft);
+      background: #181818;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .grade-pill.grade-textbook { color: var(--green); border-color: rgba(38, 166, 154, 0.45); background: rgba(38, 166, 154, 0.12); }
+    .grade-pill.grade-decent   { color: var(--yellow); border-color: rgba(224, 180, 0, 0.4); background: rgba(224, 180, 0, 0.10); }
+    .grade-pill.grade-weak     { color: var(--red); border-color: rgba(239, 83, 80, 0.4); background: rgba(239, 83, 80, 0.10); }
+    .grade-pill.grade-unknown  { color: var(--muted); }
+    .rr-pill.rr-strong { color: var(--green); border-color: rgba(38, 166, 154, 0.45); background: rgba(38, 166, 154, 0.10); }
+    .rr-pill.rr-ok     { color: var(--green); border-color: rgba(38, 166, 154, 0.30); background: rgba(38, 166, 154, 0.06); }
+    .rr-pill.rr-weak   { color: var(--yellow); border-color: rgba(224, 180, 0, 0.4); background: rgba(224, 180, 0, 0.10); }
+    .rr-pill.rr-bad    { color: var(--red); border-color: rgba(239, 83, 80, 0.4); background: rgba(239, 83, 80, 0.10); }
+    .rr-pill.rr-unknown { color: var(--muted); }
+
     /* Filter chip glossary panel */
     .filter-glossary {
       margin: 0 0 14px;
@@ -1146,6 +1169,7 @@
       <div class="stat"><span class="label">Stocks Scanned</span><span class="value">{{ stocks_scanned }}</span></div>
       <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
+      <div class="stat" title="Setups filtered out by quality / reward-risk gates"><span class="label">Skipped (low quality)</span><span class="value">{{ skipped_count }}</span></div>
       <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
       <div class="stat"><span class="label">Errors</span><span class="value">{{ summary.error_count }}</span></div>
     </section>
@@ -1352,6 +1376,8 @@
                   <div class="symbol-line">
                     <span class="symbol">{{ result.symbol }}</span>
                     <span class="tier-pill">{{ result.tier }}</span>
+                    <span class="grade-pill grade-{{ result.pattern_grade_class }}" title="Pattern quality grade 0-10 from the detector">{{ result.pattern_grade_label }}</span>
+                    <span class="rr-pill rr-{{ result.reward_risk_class }}" title="Reward to risk ratio at the published levels">R:R {{ result.reward_risk_display }}</span>
                     <span class="sector-pill sector-tier-{{ result.sector_tier_class }}" title="Sector momentum tier">{{ result.sector }} | {{ result.sector_tier }}</span>
                     {% if result.stacked_count > 1 %}
                     <span class="stack-pill">{{ result.stacked_count }} patterns</span>

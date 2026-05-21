@@ -378,6 +378,10 @@ class QualityScorePhase8bTest(unittest.TestCase):
         self.assertEqual(pattern.as_dict()["quality_score"], 66.5)
 
     def test_scorer_uses_quality_score_buckets_instead_of_linear_confidence(self):
+        """quality_score 64 (above MIN_TRADABLE 60, below 65 bucket) maps to
+        the 50-64 bucket of QUALITY_SCORE_POINTS = 15 pts. confidence=100
+        must NOT influence pattern_points (that was the legacy bug).
+        """
         pattern = PatternResult(
             pattern="VCP",
             status="PIVOT READY",
@@ -417,9 +421,39 @@ class QualityScorePhase8bTest(unittest.TestCase):
                 {},
             )
 
+        # Pattern points reflect the 50-64 bucket of QUALITY_SCORE_POINTS
+        # (15 pts), NOT the legacy confidence 100 (which would have been 25).
         self.assertEqual(scored["breakdown"]["pattern"], 15)
         self.assertEqual(scored["breakdown"]["pattern_quality_score"], 64.0)
         self.assertEqual(scored["breakdown"]["pattern_confidence"], 100.0)
+
+    def test_scorer_skips_when_quality_below_min_tradable(self):
+        """Below MIN_TRADABLE_QUALITY_SCORE -> SKIP regardless of confidence."""
+        from config import settings
+        # Use a quality score 1 point below the gate to be safely below.
+        below_gate = float(settings.MIN_TRADABLE_QUALITY_SCORE) - 1.0
+        pattern = PatternResult(
+            pattern="VCP",
+            status="PIVOT READY",
+            pivot=100.0,
+            target=120.0,
+            stop_loss=94.0,
+            confidence=100.0,
+            explanation="Below gate fixture.",
+            timeframe="daily",
+            bars_in_pattern=90,
+            quality_score=below_gate,
+        )
+        daily = {"open": [100.0], "high": [101.0], "low": [99.0], "close": [100.0], "volume": [1000.0]}
+        weekly = dict(daily)
+        with (
+            patch("engine.scorer.stage2.evaluate", return_value={"passed": False, "status": "NO_STAGE2"}),
+            patch("engine.scorer.volume.evaluate", return_value={"passed": False, "status": "NO_VOLUME", "details": {}}),
+            patch("engine.scorer.sector_rs.evaluate", return_value={"status": "LAGGING"}),
+            patch("engine.scorer.rsi.evaluate", return_value={"penalty": 0, "value": 55, "status": "HEALTHY", "bearish_divergence": False}),
+        ):
+            scored = score_pattern("TEST", pattern, daily, weekly,
+                                   {"score": 4, "verdict": "CONFIRMED UPTREND"}, {})
         self.assertEqual(scored["score"], 0)
         self.assertEqual(scored["tier"], "SKIP")
         self.assertEqual(scored["skip_reason"], "LOW_PATTERN_QUALITY")

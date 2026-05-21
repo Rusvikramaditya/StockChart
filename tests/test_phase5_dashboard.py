@@ -121,20 +121,26 @@ class DashboardPhase5BTest(unittest.TestCase):
             first.unlink(missing_ok=True)
             second.unlink(missing_ok=True)
 
-    def test_zero_score_is_preserved(self):
+    def test_zero_score_medium_tier_is_preserved(self):
+        """A zero-score MEDIUM result must still flow through normalization.
+        SKIP-tier results are filtered out entirely by build_dashboard_context
+        (real-money rule: SKIP setups never reach the dashboard) - this test
+        targets the more permissive MEDIUM case so the normalization logic
+        is still exercised for low-confidence-but-tradable scenarios.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             chart_path = Path(tmp) / "chart.png"
             chart_path.write_bytes(PNG_1X1)
             context = self._context(chart_path)
             context["results"][0]["score"] = 0
-            context["results"][0]["tier"] = "SKIP"
+            context["results"][0]["tier"] = "MEDIUM"
             context["results"][0]["cmp"] = 0
 
             normalized = build_dashboard_context(context)
 
             result = normalized["results"][0]
             self.assertEqual(result["score"], 0)
-            self.assertEqual(result["tier"], "SKIP")
+            self.assertEqual(result["tier"], "MEDIUM")
             self.assertEqual(result["cmp"], "Rs.0")
 
     def test_sector_filter_dropdown_and_card_data_attrs_present(self):

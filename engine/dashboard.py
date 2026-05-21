@@ -98,8 +98,14 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
     sector_by_symbol = _build_symbol_to_sector(context)
     tier_by_sector = _build_sector_to_tier(context.get("sector_leaderboard") or {})
     results = []
+    skipped_count = 0
     for item in _list(context, "results", "scored_results"):
         normalized = _normalize_result(item)
+        # Real-money rule: SKIP tier setups never appear on the dashboard
+        # or go to Telegram. They are tracked for the summary only.
+        if normalized["tier"] == "SKIP":
+            skipped_count += 1
+            continue
         symbol = normalized["symbol"]
         sector = sector_by_symbol.get(symbol) or "NIFTY 50"
         sector_tier = tier_by_sector.get(sector, "UNKNOWN")
@@ -119,8 +125,13 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
     if alerts_sent is None:
         alerts_sent = sum(1 for item in results if item["tradable"] and item["score"] >= settings.TELEGRAM_MIN_CONVICTION)
 
+    # SKIP tier is excluded entirely from dashboard tier groups so the
+    # "SKIP (252)" button never appears next to HIGHEST/HIGH/MEDIUM.
+    # Skipped count is tracked separately in the summary panel.
     tier_groups = []
     for tier in TIER_ORDER:
+        if tier == "SKIP":
+            continue
         items = [item for item in results if item["tier"] == tier]
         tier_groups.append(
             {
@@ -140,6 +151,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "duration": duration,
         "results": results,
         "tier_groups": tier_groups,
+        "skipped_count": skipped_count,
         "sectors": sectors,
         "sector_leaderboard": sector_leaderboard,
         "errors": errors,
@@ -193,6 +205,8 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
     all_patterns = _pattern_names(item.get("all_patterns") or item.get("patterns") or [])
     chart_src = _chart_data_uri(item.get("chart_data_uri") or item.get("chart_path"))
     chart_payload_json = _get_chart_payload_json(item)
+    pattern_grade = _resolve_pattern_grade(item, pattern_result)
+    reward_risk = _number(_coalesce(item.get("reward_risk"), (item.get("breakdown") or {}).get("reward_risk")))
 
     return {
         "symbol": str(item.get("symbol") or "UNKNOWN").upper(),
@@ -223,7 +237,64 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "chart_available": bool(chart_src),
         "chart_payload_json": chart_payload_json,
         "has_thesis_chart": bool(chart_payload_json),
+        "pattern_grade": pattern_grade,
+        "pattern_grade_display": "n/a" if pattern_grade is None else f"{pattern_grade:.1f}",
+        "pattern_grade_class": _grade_class(pattern_grade),
+        "pattern_grade_label": _grade_label(pattern_grade),
+        "reward_risk": reward_risk,
+        "reward_risk_display": "n/a" if reward_risk is None else f"{reward_risk:.2f}:1",
+        "reward_risk_class": _rr_class(reward_risk),
     }
+
+
+def _resolve_pattern_grade(item: dict[str, Any], pattern_result: Any) -> float | None:
+    """Return the 0-10 pattern grade if the detector or scorer published one."""
+    candidates = [
+        item.get("pattern_grade"),
+        (item.get("breakdown") or {}).get("pattern_grade"),
+    ]
+    extra = _field(pattern_result, "extra", {}) or {}
+    if isinstance(extra, dict):
+        candidates.append(extra.get("pattern_quality_score"))
+    for value in candidates:
+        number = _number(value)
+        if number is not None:
+            return round(number, 2)
+    return None
+
+
+def _grade_class(grade: float | None) -> str:
+    if grade is None:
+        return "unknown"
+    if grade >= 7.5:
+        return "textbook"
+    if grade >= 5.0:
+        return "decent"
+    return "weak"
+
+
+def _grade_label(grade: float | None) -> str:
+    if grade is None:
+        return "PATTERN GRADE n/a"
+    if grade >= 7.5:
+        tier = "TEXTBOOK"
+    elif grade >= 5.0:
+        tier = "DECENT"
+    else:
+        tier = "WEAK"
+    return f"GRADE {grade:.1f}/10 • {tier}"
+
+
+def _rr_class(rr: float | None) -> str:
+    if rr is None:
+        return "unknown"
+    if rr >= 2.0:
+        return "strong"
+    if rr >= 1.5:
+        return "ok"
+    if rr >= 1.0:
+        return "weak"
+    return "bad"
 
 
 def _normalize_filters(filters: dict[str, Any]) -> list[dict[str, Any]]:
