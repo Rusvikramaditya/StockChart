@@ -1,14 +1,34 @@
 #Requires -Version 5.1
-# Run this once to create the desktop shortcut with custom icon.
+<#
+.SYNOPSIS
+    Create / refresh desktop shortcuts for the NSE Pattern Finder.
+
+.DESCRIPTION
+    Builds two desktop shortcuts:
+      1. "NSE Pattern Finder Dashboard.lnk"  -> launch_dashboard.ps1
+         (recommended; opens localhost:8765 control UI in browser)
+      2. "NSE Pattern Finder Scanner.lnk"    -> launch_scanner.ps1
+         (CLI scan + auto-open generated dashboard HTML)
+
+    Both shortcuts share the same custom candlestick icon. Run this script
+    once. Pure ASCII output for PowerShell 5.1 compatibility.
+#>
+param(
+    [switch]$DashboardOnly,
+    [switch]$ScannerOnly
+)
 
 $ErrorActionPreference = "Stop"
 
-$ScriptDir    = $PSScriptRoot
-$LauncherPath = Join-Path $ScriptDir "launch_scanner.ps1"
-$RepoRoot     = Split-Path -Parent $ScriptDir
-$IconPath     = Join-Path $ScriptDir "scanner_icon.ico"
-$Desktop      = [Environment]::GetFolderPath("Desktop")
-$ShortcutPath = Join-Path $Desktop "NSE Pattern Finder.lnk"
+$ScriptDir          = $PSScriptRoot
+$DashboardLauncher  = Join-Path $ScriptDir "launch_dashboard.ps1"
+$ScannerLauncher    = Join-Path $ScriptDir "launch_scanner.ps1"
+$RepoRoot           = Split-Path -Parent $ScriptDir
+$IconPath           = Join-Path $ScriptDir "scanner_icon.ico"
+$Desktop            = [Environment]::GetFolderPath("Desktop")
+$DashboardShortcut  = Join-Path $Desktop "NSE Pattern Finder Dashboard.lnk"
+$ScannerShortcut    = Join-Path $Desktop "NSE Pattern Finder Scanner.lnk"
+$LegacyShortcut     = Join-Path $Desktop "NSE Pattern Finder.lnk"
 
 # Build custom candlestick icon using System.Drawing
 try {
@@ -114,18 +134,55 @@ try {
     $IconPath = "$env:SystemRoot\System32\imageres.dll,170"
 }
 
-# Create .lnk shortcut
+# Create shortcuts
 $shell = New-Object -ComObject WScript.Shell
-$lnk   = $shell.CreateShortcut($ShortcutPath)
-$lnk.TargetPath       = "powershell.exe"
-$lnk.Arguments        = "-ExecutionPolicy Bypass -NoExit -File `"$LauncherPath`""
-$lnk.WorkingDirectory = $RepoRoot
-$lnk.IconLocation     = $IconPath
-$lnk.Description      = "Run NSE Pattern Finder and open dashboard"
-$lnk.Save()
+
+function New-LauncherShortcut {
+    param(
+        [string]$ShortcutPath,
+        [string]$LauncherPath,
+        [string]$Description
+    )
+    if (-not (Test-Path $LauncherPath)) {
+        Write-Host "  [SKIP] Missing launcher: $LauncherPath" -ForegroundColor Yellow
+        return $false
+    }
+    $lnk = $shell.CreateShortcut($ShortcutPath)
+    $lnk.TargetPath       = "powershell.exe"
+    $lnk.Arguments        = "-ExecutionPolicy Bypass -NoExit -File `"$LauncherPath`""
+    $lnk.WorkingDirectory = $RepoRoot
+    $lnk.IconLocation     = $IconPath
+    $lnk.Description      = $Description
+    $lnk.Save()
+    return $true
+}
+
+# Clean up legacy single-shortcut from earlier installs.
+if (Test-Path $LegacyShortcut) {
+    try { Remove-Item -Path $LegacyShortcut -Force; Write-Host "Removed legacy shortcut: $LegacyShortcut" -ForegroundColor DarkGray } catch {}
+}
+
+$created = @()
+if (-not $ScannerOnly) {
+    if (New-LauncherShortcut -ShortcutPath $DashboardShortcut -LauncherPath $DashboardLauncher -Description "Start the NSE Pattern Finder web dashboard at http://localhost:8765") {
+        $created += $DashboardShortcut
+    }
+}
+if (-not $DashboardOnly) {
+    if (New-LauncherShortcut -ShortcutPath $ScannerShortcut -LauncherPath $ScannerLauncher -Description "Run an NSE Pattern Finder scan and open the result dashboard") {
+        $created += $ScannerShortcut
+    }
+}
 
 Write-Host ""
-Write-Host "Shortcut created on Desktop:" -ForegroundColor Green
-Write-Host "  $ShortcutPath" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Double-click it to run the scanner." -ForegroundColor Yellow
+if ($created.Count -eq 0) {
+    Write-Host "No shortcuts were created." -ForegroundColor Yellow
+} else {
+    Write-Host "Desktop shortcuts created:" -ForegroundColor Green
+    foreach ($p in $created) {
+        Write-Host "  $p" -ForegroundColor Cyan
+    }
+    Write-Host ""
+    Write-Host "Recommended: double-click 'NSE Pattern Finder Dashboard' to open" -ForegroundColor Yellow
+    Write-Host "the web control UI at http://localhost:8765 in your browser."   -ForegroundColor Yellow
+}

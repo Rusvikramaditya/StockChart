@@ -20,7 +20,7 @@ $Stamp         = Get-Date -Format "yyyyMMdd_HHmmss"
 $DashboardPath = Join-Path $OutputDir "scan_$Stamp.html"
 $LogPath       = Join-Path $LogDir    "scan_$Stamp.log"
 
-# ── Banner ───────────────────────────────────────────────────────────────────
+# Banner (pure ASCII for PowerShell 5.1 compatibility)
 Write-Host ""
 Write-Host "  +----------------------------------------------------------+" -ForegroundColor DarkYellow
 Write-Host "  |                                                          |" -ForegroundColor DarkYellow
@@ -37,7 +37,7 @@ Write-Host ""
 Write-Host "  ----------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
-# ── Run scanner ──────────────────────────────────────────────────────────────
+# Run scanner
 $ScanArgs = @("scanner.py", "--universe", $Universe, "--workers", [string]$Workers, "--output", $DashboardPath)
 if ($SkipFetch)  { $ScanArgs += "--skip-fetch"   }
 if ($NoTelegram) { $ScanArgs += "--no-telegram"  }
@@ -62,10 +62,10 @@ Write-Host ""
 Write-Host "  ----------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
-# ── Result ───────────────────────────────────────────────────────────────────
+# Result
 if ($ExitCode -eq 0 -and (Test-Path $DashboardPath)) {
     Write-Host "  " -NoNewline
-    Write-Host "✓  Scan complete" -ForegroundColor Green -NoNewline
+    Write-Host "[OK] Scan complete" -ForegroundColor Green -NoNewline
     Write-Host "  ($Elapsed)" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Dashboard  " -ForegroundColor DarkGray -NoNewline; Write-Host $DashboardPath -ForegroundColor Cyan
@@ -79,7 +79,7 @@ if ($ExitCode -eq 0 -and (Test-Path $DashboardPath)) {
     Read-Host | Out-Null
 } else {
     Write-Host "  " -NoNewline
-    Write-Host "✗  Scan FAILED" -ForegroundColor Red -NoNewline
+    Write-Host "[FAIL] Scan FAILED" -ForegroundColor Red -NoNewline
     Write-Host "  (exit $ExitCode, elapsed $Elapsed)" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Log  " -ForegroundColor DarkGray -NoNewline; Write-Host $LogPath -ForegroundColor Yellow
