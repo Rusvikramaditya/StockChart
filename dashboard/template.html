@@ -310,6 +310,160 @@
     .sector.lagging .metric { color: var(--red); }
     .sector.unknown .metric { color: var(--muted); }
 
+    /* Sector Leaderboard (top-down sector momentum) */
+    .leaderboard-panel {
+      margin: 0 0 24px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #0c0c0c;
+      overflow: hidden;
+    }
+    .leaderboard-panel > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #111;
+      border-bottom: 1px solid var(--line);
+    }
+    .leaderboard-panel > summary::-webkit-details-marker { display: none; }
+    .leaderboard-panel > summary::before {
+      content: "\25B8";
+      font-size: 12px;
+      color: var(--muted);
+      transition: transform 0.15s ease;
+      display: inline-block;
+    }
+    .leaderboard-panel[open] > summary::before { transform: rotate(90deg); }
+    .leaderboard-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .leaderboard-title h3 {
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .leaderboard-title .subline {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0;
+    }
+    .leaderboard-summary-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .lb-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.05em;
+    }
+    .lb-chip.leading { background: rgba(38, 166, 154, 0.18); color: var(--green); }
+    .lb-chip.neutral { background: rgba(224, 180, 0, 0.18); color: var(--yellow); }
+    .lb-chip.lagging { background: rgba(239, 83, 80, 0.18); color: var(--red); }
+
+    .leaderboard-table-wrap { overflow-x: auto; }
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    .leaderboard-table thead th {
+      text-align: right;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      background: #101010;
+      position: sticky;
+      top: 0;
+    }
+    .leaderboard-table thead th:first-child,
+    .leaderboard-table thead th:nth-child(2) { text-align: left; }
+    .leaderboard-table tbody td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      text-align: right;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .leaderboard-table tbody td:first-child,
+    .leaderboard-table tbody td:nth-child(2) {
+      text-align: left;
+      font-family: inherit;
+    }
+    .leaderboard-table tbody tr:hover td { background: #131313; }
+    .leaderboard-table tr.lb-leading td:nth-child(2) { border-left: 3px solid var(--green); }
+    .leaderboard-table tr.lb-neutral td:nth-child(2) { border-left: 3px solid var(--yellow); }
+    .leaderboard-table tr.lb-lagging td:nth-child(2) { border-left: 3px solid var(--red); }
+    .leaderboard-table tr.lb-unknown td:nth-child(2) { border-left: 3px solid var(--muted); }
+
+    .lb-rank {
+      display: inline-block;
+      min-width: 22px;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 800;
+      text-align: center;
+      background: #181818;
+      color: var(--muted);
+      border-radius: 4px;
+    }
+    .lb-sector-name { font-weight: 700; color: var(--text); }
+    .lb-rs.leading { color: var(--green); font-weight: 700; }
+    .lb-rs.lagging { color: var(--red); font-weight: 700; }
+    .lb-rs.neutral { color: var(--muted); }
+    .lb-rs.unknown { color: var(--muted); }
+    .lb-stage2-yes { color: var(--green); font-weight: 700; }
+    .lb-stage2-no { color: var(--muted); }
+    .lb-score {
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: #181818;
+      color: var(--text);
+    }
+    tr.lb-leading .lb-score { background: rgba(38, 166, 154, 0.22); color: var(--green); }
+    tr.lb-neutral .lb-score { background: rgba(224, 180, 0, 0.18); color: var(--yellow); }
+    tr.lb-lagging .lb-score { background: rgba(239, 83, 80, 0.18); color: var(--red); }
+    .leaderboard-empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Sector chip on result cards */
+    .sector-pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #181818;
+      color: var(--muted);
+      border: 1px solid var(--line-soft);
+      white-space: nowrap;
+    }
+    .sector-pill.sector-tier-leading { color: var(--green); border-color: rgba(38, 166, 154, 0.45); background: rgba(38, 166, 154, 0.12); }
+    .sector-pill.sector-tier-neutral { color: var(--yellow); border-color: rgba(224, 180, 0, 0.4); background: rgba(224, 180, 0, 0.10); }
+    .sector-pill.sector-tier-lagging { color: var(--red); border-color: rgba(239, 83, 80, 0.4); background: rgba(239, 83, 80, 0.10); }
+    .sector-pill.sector-tier-unknown { color: var(--muted); }
+
     .pattern-guide {
       margin: 0 0 24px;
     }
@@ -349,7 +503,7 @@
 
     .results-controls {
       display: grid;
-      grid-template-columns: minmax(260px, 1fr) auto;
+      grid-template-columns: minmax(200px, 1fr) minmax(160px, 220px) minmax(160px, 220px) auto;
       gap: 12px;
       margin: 0 0 14px;
       padding: 12px;
@@ -387,6 +541,34 @@
     .search-box input:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(255, 72, 0, 0.16);
+    }
+
+    .search-box select {
+      width: 100%;
+      min-height: 40px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101010;
+      color: var(--text);
+      outline: 0;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a3a3a3' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+      padding-right: 32px;
+    }
+
+    .search-box select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255, 72, 0, 0.16);
+    }
+
+    .search-box select option {
+      background: #1a1a1a;
+      color: var(--text);
     }
 
     .control-actions {
@@ -856,6 +1038,8 @@
       .setup-summary { grid-template-columns: 1fr; }
       .results-controls { grid-template-columns: 1fr; }
       .control-actions { justify-content: space-between; }
+      .results-controls .search-box:nth-child(2),
+      .results-controls .search-box:nth-child(3) { grid-column: 1; }
     }
 
     @media (max-width: 760px) {
@@ -910,6 +1094,64 @@
       <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
       <div class="stat"><span class="label">Errors</span><span class="value">{{ summary.error_count }}</span></div>
     </section>
+
+    <details class="leaderboard-panel" open aria-label="Sector momentum leaderboard">
+      <summary>
+        <div class="leaderboard-title">
+          <h3>Sector Leaderboard</h3>
+          <p class="subline">Top-down view of sector momentum. Ranked by composite score (1M / 3M / 6M RS vs Nifty, breadth, trend).</p>
+        </div>
+        <div class="leaderboard-summary-chips">
+          <span class="lb-chip leading">{{ sector_leaderboard.leading_count }} leading</span>
+          <span class="lb-chip neutral">{{ sector_leaderboard.neutral_count }} neutral</span>
+          <span class="lb-chip lagging">{{ sector_leaderboard.lagging_count }} lagging</span>
+        </div>
+      </summary>
+      {% if sector_leaderboard.rows %}
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Sector</th>
+              <th scope="col">Score</th>
+              <th scope="col">1M</th>
+              <th scope="col">3M</th>
+              <th scope="col">6M</th>
+              <th scope="col">RS 1M</th>
+              <th scope="col">RS 3M</th>
+              <th scope="col">RS 6M</th>
+              <th scope="col">Stage 2</th>
+              <th scope="col">&gt;50DMA</th>
+              <th scope="col">&gt;200DMA</th>
+              <th scope="col">Stocks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in sector_leaderboard.rows %}
+            <tr class="lb-{{ row.tier_class }}">
+              <td><span class="lb-rank">{{ row.rank }}</span></td>
+              <td><span class="lb-sector-name">{{ row.sector }}</span></td>
+              <td><span class="lb-score">{{ row.composite_score_display }}</span></td>
+              <td>{{ row.ret_1m_display }}</td>
+              <td>{{ row.ret_3m_display }}</td>
+              <td>{{ row.ret_6m_display }}</td>
+              <td class="lb-rs {{ row.rs_1m_class }}">{{ row.rs_1m_display }}</td>
+              <td class="lb-rs {{ row.rs_3m_class }}">{{ row.rs_3m_display }}</td>
+              <td class="lb-rs {{ row.rs_6m_class }}">{{ row.rs_6m_display }}</td>
+              <td class="{% if row.stage2 %}lb-stage2-yes{% else %}lb-stage2-no{% endif %}">{% if row.stage2 %}Yes{% else %}No{% endif %}</td>
+              <td>{{ row.breadth_50dma_display }}</td>
+              <td>{{ row.breadth_200dma_display }}</td>
+              <td>{{ row.constituents }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="leaderboard-empty">Sector leaderboard data is not available for this run.</div>
+      {% endif %}
+    </details>
 
     <section class="panel pattern-guide" aria-label="Pattern guide">
       <div class="panel-head">
@@ -982,6 +1224,21 @@
           <span>Search setups</span>
           <input id="resultSearch" type="search" placeholder="Symbol, pattern, status, tier">
         </label>
+        <label class="search-box" for="patternFilter">
+          <span>Pattern</span>
+          <select id="patternFilter">
+            <option value="">All patterns</option>
+          </select>
+        </label>
+        <label class="search-box" for="sectorFilter">
+          <span>Sector</span>
+          <select id="sectorFilter">
+            <option value="">All sectors</option>
+            <option value="__LEADING__">Leading sectors only</option>
+            <option value="__TOP3__">Top 3 leading</option>
+            <option value="__TOP5__">Top 5 leading</option>
+          </select>
+        </label>
         <div class="control-actions">
           <div class="result-count" id="resultCount" aria-live="polite">
             <span>Visible</span>
@@ -1012,12 +1269,13 @@
           {% if group.results %}
           <div class="cards">
             {% for result in group.results %}
-            <article class="result-card tier-{{ result.tier_class }}" data-tier-card="{{ result.tier }}" data-search-text="{{ result.symbol }} {{ result.pattern }} {{ result.status }} {{ result.tier }} {{ result.timeframe }} {{ result.all_patterns|join(' ') }}">
+            <article class="result-card tier-{{ result.tier_class }}" data-tier-card="{{ result.tier }}" data-pattern="{{ result.pattern }}" data-sector="{{ result.sector }}" data-sector-tier="{{ result.sector_tier }}" data-search-text="{{ result.symbol }} {{ result.pattern }} {{ result.status }} {{ result.tier }} {{ result.timeframe }} {{ result.sector }} {{ result.all_patterns|join(' ') }}">
               <div class="result-main">
                 <div>
                   <div class="symbol-line">
                     <span class="symbol">{{ result.symbol }}</span>
                     <span class="tier-pill">{{ result.tier }}</span>
+                    <span class="sector-pill sector-tier-{{ result.sector_tier_class }}" title="Sector momentum tier">{{ result.sector }} | {{ result.sector_tier }}</span>
                     {% if result.stacked_count > 1 %}
                     <span class="stack-pill">{{ result.stacked_count }} patterns</span>
                     {% endif %}
@@ -1182,10 +1440,77 @@
     const sections = Array.from(document.querySelectorAll("[data-tier-section]"));
     const detailsButton = document.getElementById("toggleDetails");
     const searchInput = document.getElementById("resultSearch");
+    const patternFilter = document.getElementById("patternFilter");
+    const sectorFilter = document.getElementById("sectorFilter");
     const resultCount = document.getElementById("resultCount");
     const searchEmpty = document.querySelector("[data-search-empty]");
     const totalCards = document.querySelectorAll("[data-tier-card]").length;
     let activeTier = "ALL";
+    let activePattern = "";
+    let activeSector = "";
+
+    // Leading-sector set: derived from the leaderboard table at the top.
+    // Row order in that table is already rank-ascending, so the first K rows
+    // with tier LEADING form the "Top K" leading sets.
+    const leaderboardRows = Array.from(document.querySelectorAll(".leaderboard-table tbody tr"));
+    const orderedLeadingSectors = leaderboardRows
+      .filter((row) => row.classList.contains("lb-leading"))
+      .map((row) => {
+        const cells = row.querySelectorAll("td");
+        // 2nd column holds the sector name (rank chip is 1st)
+        return cells.length >= 2 ? cells[1].textContent.trim() : "";
+      })
+      .filter(Boolean);
+    const leadingSectorSet = new Set(orderedLeadingSectors);
+    const top3Set = new Set(orderedLeadingSectors.slice(0, 3));
+    const top5Set = new Set(orderedLeadingSectors.slice(0, 5));
+
+    // Build pattern dropdown from unique patterns in the DOM
+    if (patternFilter) {
+      const patterns = [...new Set(
+        Array.from(document.querySelectorAll("[data-pattern]"))
+          .map(c => c.dataset.pattern)
+          .filter(Boolean)
+      )].sort();
+      patterns.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        patternFilter.appendChild(opt);
+      });
+      patternFilter.addEventListener("change", () => {
+        activePattern = patternFilter.value;
+        updateResultFilters();
+      });
+    }
+
+    // Build sector dropdown: presets are static (Leading / Top3 / Top5),
+    // append individual sectors that appear on result cards.
+    if (sectorFilter) {
+      const cardSectors = [...new Set(
+        Array.from(document.querySelectorAll("[data-sector]"))
+          .map((c) => c.dataset.sector)
+          .filter(Boolean)
+      )].sort();
+      cardSectors.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        sectorFilter.appendChild(opt);
+      });
+      sectorFilter.addEventListener("change", () => {
+        activeSector = sectorFilter.value;
+        updateResultFilters();
+      });
+    }
+
+    function sectorMatches(cardSector) {
+      if (!activeSector) return true;
+      if (activeSector === "__LEADING__") return leadingSectorSet.has(cardSector);
+      if (activeSector === "__TOP3__") return top3Set.has(cardSector);
+      if (activeSector === "__TOP5__") return top5Set.has(cardSector);
+      return cardSector === activeSector;
+    }
 
     function updateResultFilters() {
       const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
@@ -1198,8 +1523,12 @@
 
         cards.forEach((card) => {
           const searchText = (card.dataset.searchText || "").toLowerCase();
+          const cardPattern = card.dataset.pattern || "";
+          const cardSector = card.dataset.sector || "";
           const matchesSearch = !query || searchText.includes(query);
-          const shouldShow = tierMatches && matchesSearch;
+          const matchesPattern = !activePattern || cardPattern === activePattern;
+          const matchesSector = sectorMatches(cardSector);
+          const shouldShow = tierMatches && matchesSearch && matchesPattern && matchesSector;
           card.classList.toggle("hidden", !shouldShow);
           if (shouldShow) {
             visibleCards += 1;

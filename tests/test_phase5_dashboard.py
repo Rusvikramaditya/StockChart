@@ -137,6 +137,61 @@ class DashboardPhase5BTest(unittest.TestCase):
             self.assertEqual(result["tier"], "SKIP")
             self.assertEqual(result["cmp"], "Rs.0")
 
+    def test_sector_filter_dropdown_and_card_data_attrs_present(self):
+        """Result cards must carry data-sector/data-sector-tier and the controls
+        bar must include a sector filter dropdown with leading-N presets."""
+        with tempfile.TemporaryDirectory() as tmp:
+            chart_path = Path(tmp) / "chart.png"
+            chart_path.write_bytes(PNG_1X1)
+            ctx = self._context(chart_path)
+            ctx["sector_rs"] = {
+                **(ctx.get("sector_rs") or {}),
+                "symbol_to_sector": {
+                    "TESTSTOCK": {"sector_index": "NIFTY IT", "industry": "IT"}
+                },
+            }
+            ctx["sector_leaderboard"] = {
+                "rows": [
+                    {
+                        "sector": "NIFTY IT", "rank": 1, "tier": "LEADING",
+                        "composite_score": 78.4, "ret_1m_pct": 4.8,
+                        "ret_3m_pct": 11.2, "ret_6m_pct": 18.5,
+                        "rs_1m_pct": 2.1, "rs_3m_pct": 5.4, "rs_6m_pct": 6.8,
+                        "stage2": True, "breadth_50dma_pct": 72.0,
+                        "breadth_200dma_pct": 64.0, "constituents": 11,
+                    },
+                ],
+            }
+            html = render_dashboard(ctx)
+
+        self.assertIn('id="sectorFilter"', html, "Sector filter dropdown missing")
+        self.assertIn('value="__LEADING__"', html, "Leading-only preset missing")
+        self.assertIn('value="__TOP3__"', html)
+        self.assertIn('value="__TOP5__"', html)
+        self.assertIn('data-sector="NIFTY IT"', html, "Result card missing data-sector")
+        self.assertIn('data-sector-tier="LEADING"', html, "Result card missing data-sector-tier")
+        self.assertIn("NIFTY IT | LEADING", html, "Sector chip not rendered on card")
+        # Leaderboard panel itself
+        self.assertIn("Sector Leaderboard", html)
+        self.assertIn("lb-leading", html)
+
+    def test_normalized_result_carries_sector_metadata(self):
+        ctx = self._context(Path("missing.png"))
+        ctx["sector_rs"] = {
+            **(ctx.get("sector_rs") or {}),
+            "symbol_to_sector": {
+                "TESTSTOCK": {"sector_index": "NIFTY METAL", "industry": "Metal"}
+            },
+        }
+        ctx["sector_leaderboard"] = {
+            "rows": [{"sector": "NIFTY METAL", "rank": 9, "tier": "LAGGING", "composite_score": 28.5}],
+        }
+        normalized = build_dashboard_context(ctx)
+        first = normalized["results"][0]
+        self.assertEqual(first["sector"], "NIFTY METAL")
+        self.assertEqual(first["sector_tier"], "LAGGING")
+        self.assertEqual(first["sector_tier_class"], "lagging")
+
     def test_no_results_state_explains_empty_scan(self):
         context = self._context(Path("missing.png"))
         context["results"] = []

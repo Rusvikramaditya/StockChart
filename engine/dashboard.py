@@ -95,9 +95,21 @@ def write_dashboard(
 def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
     """Normalize scanner output into a stable template contract."""
     market_regime = _normalize_market_regime(context.get("market_regime") or context.get("regime") or {})
-    results = [_normalize_result(item) for item in _list(context, "results", "scored_results")]
+    sector_by_symbol = _build_symbol_to_sector(context)
+    tier_by_sector = _build_sector_to_tier(context.get("sector_leaderboard") or {})
+    results = []
+    for item in _list(context, "results", "scored_results"):
+        normalized = _normalize_result(item)
+        symbol = normalized["symbol"]
+        sector = sector_by_symbol.get(symbol) or "NIFTY 50"
+        sector_tier = tier_by_sector.get(sector, "UNKNOWN")
+        normalized["sector"] = sector
+        normalized["sector_tier"] = sector_tier
+        normalized["sector_tier_class"] = sector_tier.lower()
+        results.append(normalized)
     results.sort(key=lambda item: (TIER_ORDER.index(item["tier"]) if item["tier"] in TIER_ORDER else 99, -item["score"]))
     sectors = _normalize_sectors(context.get("sector_rs") or context.get("sector_cache") or context.get("sectors") or {})
+    sector_leaderboard = _normalize_leaderboard(context.get("sector_leaderboard") or {})
     errors = [_normalize_error(item) for item in _list(context, "errors", "failed_stages")]
 
     generated_at = _format_datetime(_coalesce(context.get("generated_at"), context.get("scan_time")))
@@ -129,6 +141,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "results": results,
         "tier_groups": tier_groups,
         "sectors": sectors,
+        "sector_leaderboard": sector_leaderboard,
         "errors": errors,
         "pattern_guide": _supported_pattern_guide(),
         "summary": {
@@ -284,6 +297,96 @@ def _normalize_sectors(raw: Any) -> list[dict[str, Any]]:
             }
         )
     return sorted(normalized, key=lambda item: item["score"], reverse=True)
+
+
+def _build_symbol_to_sector(context: dict[str, Any]) -> dict[str, str]:
+    """Map symbol -> sector_index using whichever upstream source is present."""
+    raw = context.get("sector_rs") or context.get("sector_cache") or {}
+    mapping = raw.get("symbol_to_sector") if isinstance(raw, dict) else None
+    if not isinstance(mapping, dict):
+        return {}
+    out: dict[str, str] = {}
+    for symbol, info in mapping.items():
+        if isinstance(info, dict):
+            sector = info.get("sector_index")
+            if sector:
+                out[str(symbol).upper()] = str(sector)
+    return out
+
+
+def _build_sector_to_tier(leaderboard: dict[str, Any]) -> dict[str, str]:
+    if not isinstance(leaderboard, dict):
+        return {}
+    out: dict[str, str] = {}
+    for row in leaderboard.get("rows") or []:
+        if isinstance(row, dict):
+            sector = row.get("sector")
+            tier = row.get("tier")
+            if sector and tier:
+                out[str(sector)] = str(tier)
+    return out
+
+
+def _normalize_leaderboard(raw: Any) -> dict[str, Any]:
+    """Shape compute_leaderboard output for the template.
+
+    Each row gets per-column display strings (signed %s) and CSS class names
+    derived from the tier. Sort is preserved from the compute side (already
+    ranked by composite_score desc).
+    """
+    if not isinstance(raw, dict):
+        return {"rows": [], "leading_count": 0, "lagging_count": 0, "neutral_count": 0}
+    rows = raw.get("rows") or []
+    out_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        tier = str(row.get("tier") or "UNKNOWN")
+        composite = _number(row.get("composite_score"))
+        out_rows.append(
+            {
+                "sector": str(row.get("sector") or "UNKNOWN"),
+                "rank": _int(row.get("rank"), default=0),
+                "tier": tier,
+                "tier_class": tier.lower(),
+                "composite_score": composite,
+                "composite_score_display": "n/a" if composite is None else f"{composite:.1f}",
+                "ret_1m_display": _fmt_percent(row.get("ret_1m_pct")),
+                "ret_3m_display": _fmt_percent(row.get("ret_3m_pct")),
+                "ret_6m_display": _fmt_percent(row.get("ret_6m_pct")),
+                "rs_1m": _number(row.get("rs_1m_pct")),
+                "rs_3m": _number(row.get("rs_3m_pct")),
+                "rs_6m": _number(row.get("rs_6m_pct")),
+                "rs_1m_display": _fmt_percent(row.get("rs_1m_pct")),
+                "rs_3m_display": _fmt_percent(row.get("rs_3m_pct")),
+                "rs_6m_display": _fmt_percent(row.get("rs_6m_pct")),
+                "rs_1m_class": _rs_class(row.get("rs_1m_pct")),
+                "rs_3m_class": _rs_class(row.get("rs_3m_pct")),
+                "rs_6m_class": _rs_class(row.get("rs_6m_pct")),
+                "stage2": bool(row.get("stage2")),
+                "breadth_50dma_display": _fmt_percent(row.get("breadth_50dma_pct"), signed=False),
+                "breadth_200dma_display": _fmt_percent(row.get("breadth_200dma_pct"), signed=False),
+                "constituents": _int(row.get("constituents"), default=0),
+            }
+        )
+    return {
+        "rows": out_rows,
+        "leading_count": sum(1 for r in out_rows if r["tier"] == "LEADING"),
+        "neutral_count": sum(1 for r in out_rows if r["tier"] == "NEUTRAL"),
+        "lagging_count": sum(1 for r in out_rows if r["tier"] == "LAGGING"),
+        "weights": raw.get("weights") or {},
+    }
+
+
+def _rs_class(value: Any) -> str:
+    n = _number(value)
+    if n is None:
+        return "unknown"
+    if n >= 1.0:
+        return "leading"
+    if n <= -1.0:
+        return "lagging"
+    return "neutral"
 
 
 def _normalize_error(item: Any) -> dict[str, Any]:
@@ -495,11 +598,13 @@ def _fmt_money(value: Any) -> str:
     return "Rs." + f"{number:,.2f}".rstrip("0").rstrip(".")
 
 
-def _fmt_percent(value: Any) -> str:
+def _fmt_percent(value: Any, *, signed: bool = True) -> str:
     number = _number(value)
     if number is None:
         return "N/A"
-    return f"{number:+.2f}%".replace("+0.00", "0.00")
+    if signed:
+        return f"{number:+.2f}%".replace("+0.00", "0.00")
+    return f"{number:.1f}%"
 
 
 def _fmt_number(value: Any, *, suffix: str = "") -> str:

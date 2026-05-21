@@ -24,6 +24,7 @@ from engine.explainer import attach_explanation
 from engine.scorer import score_pattern
 from engine.thesis_chart import export_thesis_chart_png
 from filters.market_regime import compute_market_regime
+from engine.sector_leaderboard import compute_leaderboard
 from filters.sector_rs import compute_sector_rs_cache
 from patterns.base import PatternResult
 
@@ -55,6 +56,7 @@ class PipelineContext:
     liquidity_profile: dict[str, dict] = field(default_factory=dict)
     market_regime: dict = field(default_factory=dict)
     sector_rs_cache: dict = field(default_factory=dict)
+    sector_leaderboard: dict = field(default_factory=dict)
     daily_arrays: dict[str, dict] = field(default_factory=dict)
     weekly_arrays: dict[str, dict] = field(default_factory=dict)
     raw_hits: list[dict] = field(default_factory=list)
@@ -154,6 +156,11 @@ class Pipeline:
         assert self.ctx.loader is not None
         self.ctx.market_regime = compute_market_regime(self.ctx.loader, self.ctx.symbols)
         self.ctx.sector_rs_cache = compute_sector_rs_cache(self.ctx.loader, self.ctx.symbols)
+        try:
+            self.ctx.sector_leaderboard = compute_leaderboard(self.ctx.loader)
+        except Exception as exc:  # leaderboard is auxiliary; don't fail the scan
+            self._record_error("pre_compute", "-", f"sector_leaderboard: {exc}", critical=False)
+            self.ctx.sector_leaderboard = {}
         self.ctx.liquidity_profile = _liquidity_map(self.ctx.selected_profile)
         self.ctx.stats["market_regime"] = self.ctx.market_regime.get("verdict", "UNKNOWN")
 
@@ -241,6 +248,7 @@ class Pipeline:
             "stocks_scanned": len(self.ctx.symbols),
             "market_regime": self.ctx.market_regime,
             "sector_rs": self.ctx.sector_rs_cache,
+            "sector_leaderboard": self.ctx.sector_leaderboard,
             "results": self.ctx.scored_results,
             "errors": self.ctx.errors,
             "alerts_sent": self.ctx.alerts_sent,
