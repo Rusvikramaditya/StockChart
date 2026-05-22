@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Path B — Analyst-Post Chart Redesign</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Segoe UI, Arial, sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; }
+  .page { max-width: 960px; margin: 0 auto; padding: 48px 32px; }
+  h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+  .subtitle { color: #64748b; font-size: 1rem; margin-bottom: 48px; }
+  h2 { font-size: 1.4rem; font-weight: 700; color: #0f172a; margin: 48px 0 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+  h3 { font-size: 1.05rem; font-weight: 700; color: #334155; margin: 28px 0 8px; }
+  p { margin-bottom: 12px; color: #334155; }
+  code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 1px 5px; font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.85em; color: #7c3aed; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 20px 24px; overflow-x: auto; margin: 16px 0 24px; font-family: 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.7; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; margin-right: 6px; }
+  .tag-done  { background: #dcfce7; color: #166534; }
+  .tag-wip   { background: #fef9c3; color: #854d0e; }
+  .tag-todo  { background: #f1f5f9; color: #475569; }
+  .tag-file  { background: #ede9fe; color: #5b21b6; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; font-size: 0.9rem; }
+  th { background: #f1f5f9; text-align: left; padding: 10px 14px; font-weight: 700; color: #334155; border-bottom: 2px solid #e2e8f0; }
+  td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:hover td { background: #fafafa; }
+  .mockup { background: #fff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 16px 0 24px; font-family: monospace; font-size: 0.82rem; line-height: 1.8; color: #334155; overflow-x: auto; }
+  .rule { background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+  .rule strong { color: #b91c1c; }
+  .ok { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+  .ok strong { color: #15803d; }
+  .note { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+  .phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 16px 0 24px; }
+  .phase { background: #fff; border: 2px solid #e2e8f0; border-radius: 10px; padding: 18px; }
+  .phase.done { border-color: #86efac; background: #f0fdf4; }
+  .phase.active { border-color: #93c5fd; background: #eff6ff; }
+  .phase-num { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; }
+  .phase-title { font-size: 1rem; font-weight: 700; margin-top: 4px; color: #1e293b; }
+  .phase-file { font-size: 0.78rem; color: #7c3aed; margin-top: 6px; font-family: monospace; }
+  .phase.done .phase-num { color: #16a34a; }
+  .phase.active .phase-num { color: #2563eb; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Path B — Analyst-Post Chart Redesign</h1>
+  <p class="subtitle">Full visual overhaul to match TradingView analyst-post aesthetics. Architect spec v1.0 · 2026-05-20</p>
+
+  <!-- ── GOAL ── -->
+  <h2>Goal</h2>
+  <p>Transform thesis charts from a <em>technical-tool look</em> (cluttered bezier arcs, horizontal fill zones, small corner labels) into a <em>shareable analyst-post</em> (large centered title, clean geometric overlays, vertical arrow target box, bottom insight text). Reference: TradingView analyst screenshots provided by user.</p>
+
+  <!-- ── PHASES ── -->
+  <h2>Implementation Phases</h2>
+  <div class="phases">
+    <div class="phase done">
+      <div class="phase-num">Phase 1 ✓ Done</div>
+      <div class="phase-title">Centered Title</div>
+      <div class="phase-file">chart_renderer.js</div>
+    </div>
+    <div class="phase active">
+      <div class="phase-num">Phase 2 · Active</div>
+      <div class="phase-title">Vertical Arrow Target Box</div>
+      <div class="phase-file">chart_annotations.js</div>
+    </div>
+    <div class="phase active">
+      <div class="phase-num">Phase 3 · Active</div>
+      <div class="phase-title">Pattern Overlay Cleanup</div>
+      <div class="phase-file">chart_annotations.js</div>
+    </div>
+    <div class="phase active">
+      <div class="phase-num">Phase 4 · Active</div>
+      <div class="phase-title">Bottom Insight Text + Margin Fix</div>
+      <div class="phase-file">chart_renderer.js</div>
+    </div>
+    <div class="phase">
+      <div class="phase-num">Phase 5 · Pending</div>
+      <div class="phase-title">Regenerate Samples + QA</div>
+      <div class="phase-file">scripts/</div>
+    </div>
+  </div>
+
+  <!-- ── DESIGN SYSTEM ── -->
+  <h2>Design System</h2>
+
+  <h3>Typography</h3>
+  <table>
+    <tr><th>Element</th><th>Desktop</th><th>Compact (&lt;520px)</th><th>Weight</th><th>Color</th></tr>
+    <tr><td>Company name</td><td>30px</td><td>18px</td><td>700</td><td>rgba(0,0,0,0.85)</td></tr>
+    <tr><td>Timeframe subtitle</td><td>14px</td><td>11px</td><td>600</td><td>rgba(0,0,0,0.55)</td></tr>
+    <tr><td>Pattern | Status</td><td>13px</td><td>10px</td><td>700</td><td>status-driven (see below)</td></tr>
+    <tr><td>Target box label</td><td>13px</td><td>11px</td><td>700</td><td>#ffffff on blue bg</td></tr>
+    <tr><td>Bottom insight text</td><td>14px</td><td>11px</td><td>700</td><td>rgba(0,0,0,0.60)</td></tr>
+    <tr><td>Ticker badge (top-right)</td><td>14px</td><td>12px</td><td>700</td><td>#1d4ed8</td></tr>
+  </table>
+
+  <h3>Status Colors</h3>
+  <table>
+    <tr><th>Status</th><th>Color</th></tr>
+    <tr><td>BREAKING OUT</td><td><code>#16a34a</code> (green)</td></tr>
+    <tr><td>PIVOT READY</td><td><code>#2563eb</code> (blue)</td></tr>
+    <tr><td>default</td><td><code>rgba(0,0,0,0.55)</code></td></tr>
+  </table>
+
+  <h3>Color Palette</h3>
+  <table>
+    <tr><th>Token</th><th>Value</th><th>Usage</th></tr>
+    <tr><td>background</td><td><code>#ffffff</code></td><td>Chart background</td></tr>
+    <tr><td>grid</td><td><code>#eeeeee</code></td><td>Grid lines</td></tr>
+    <tr><td>candle-up</td><td><code>#26a69a</code></td><td>Bullish candle</td></tr>
+    <tr><td>candle-down</td><td><code>#ef5350</code></td><td>Bearish candle</td></tr>
+    <tr><td>target-fill</td><td><code>rgba(37,99,235,0.12)</code></td><td>Arrow box upside zone</td></tr>
+    <tr><td>target-border</td><td><code>#2563eb</code></td><td>Arrow box border + arrow</td></tr>
+    <tr><td>entry-line</td><td><code>#ff6b00</code></td><td>Entry price line</td></tr>
+    <tr><td>stop-line</td><td><code>#ef5350</code></td><td>Stop price line</td></tr>
+    <tr><td>pattern-line</td><td><code>rgba(0,0,0,0.78)</code></td><td>Arc, trendline</td></tr>
+    <tr><td>support-zone</td><td><code>rgba(38,166,154,0.15)</code></td><td>Horizontal support band</td></tr>
+  </table>
+
+  <!-- ── PHASE 1 DONE ── -->
+  <h2>Phase 1: Centered Title <span class="tag tag-done">DONE</span></h2>
+  <div class="ok"><strong>Complete.</strong> chart_renderer.js now renders a large bold centered title with company name, timeframe, and pattern status. No background box, no border. Ticker badge top-right. 115 tests pass.</div>
+
+  <h3>Known issue to fix in Phase 4</h3>
+  <p>The chart's <code>scaleMargins.top</code> is currently <code>0.12</code> (desktop). The new title takes ~90px vertical space. On a 700px chart that's ~13%. Increase to <code>0.22</code> desktop / <code>0.18</code> compact to prevent candles from overlapping title text.</p>
+
+  <!-- ── PHASE 2 ── -->
+  <h2>Phase 2: Vertical Arrow Target Box <span class="tag tag-wip">IN PROGRESS</span> <span class="tag tag-file">chart_annotations.js</span></h2>
+
+  <h3>Current state (to replace)</h3>
+  <p>Lines 58–110 of the <code>redraw()</code> function draw two horizontal fill rectangles (teal upside zone, red downside zone) side by side in the future area. Text labels "Upside +17.4%" and "Risk -6.5%" are drawn inside. This looks like a trading dashboard widget, not an analyst post.</p>
+
+  <h3>Target design</h3>
+  <div class="mockup">
+┌─────────────┐  ← targetY (top)
+│  ↑           │
+│  ₹1,348      │  ← label: "{target} (+{upside_pct}%)" white text on blue badge, positioned ABOVE box top
+│  (+17.4%)    │
+│              │
+│              │  ← blue fill rgba(37,99,235,0.12)
+│    │         │  ← vertical arrow line, centered, 1.5px #2563eb
+│    │         │
+│    ▼ (entry) │  ← entryY
+└─────────────┘
+                    ── ── ── ── ──  ← stopY: thin dashed red horizontal line only (no fill box)
+
+R:R 2.7:1           ← below box, same x-center, small text
+  </div>
+
+  <h3>Spec</h3>
+  <table>
+    <tr><th>Element</th><th>Spec</th></tr>
+    <tr><td>Box position</td><td>Same <code>boxStart</code>/<code>boxW</code> logic as before</td></tr>
+    <tr><td>Upside fill</td><td><code>rgba(37,99,235,0.12)</code> rect from <code>targetY</code> to <code>entryY</code></td></tr>
+    <tr><td>Border</td><td><code>#2563eb</code> 1.5px stroke rect</td></tr>
+    <tr><td>Arrow line</td><td>Vertical line at <code>boxStart + boxW/2</code>, from <code>entryY - 4</code> to <code>targetY + 10</code>, 1.5px <code>#2563eb</code></td></tr>
+    <tr><td>Arrowhead</td><td>Triangle at <code>targetY + 4</code>: ▲ filled <code>#2563eb</code>, 5px base, 7px height</td></tr>
+    <tr><td>Top label</td><td>White pill badge above box top: "₹{target} (+{upside_pct}%)". Blue fill <code>#2563eb</code>, white text, 4px radius, centered at <code>boxStart + boxW/2</code>, y = <code>targetY - 12</code></td></tr>
+    <tr><td>Stop line</td><td>Thin dashed red horizontal at <code>stopY</code>, spans <code>boxStart</code> to <code>boxEnd</code>, 1.5px <code>rgba(239,83,80,0.7)</code></td></tr>
+    <tr><td>R:R text</td><td>Below box: "R:R {n}:1", 13px bold, rgba(0,0,0,0.55), centered</td></tr>
+    <tr><td>Compact mode</td><td>Smaller font (11px label), arrowhead 4px</td></tr>
+  </table>
+
+  <h3>Remove entirely</h3>
+  <ul style="margin:8px 0 16px 20px;">
+    <li>Red downside fill rectangle</li>
+    <li>"Risk -X.X%" text inside any box</li>
+    <li>"Upside +X.X%" text inside box (moved to label above)</li>
+  </ul>
+
+  <div class="rule"><strong>Guard:</strong> If <code>uH &lt; 10</code> (entry ≈ target, bad data), skip the box entirely. If <code>targetY &gt; entryY</code> (target is BELOW entry — invalid), skip. Always draw stop line independently.</div>
+
+  <!-- ── PHASE 3 ── -->
+  <h2>Phase 3: Pattern Overlay Cleanup <span class="tag tag-wip">IN PROGRESS</span> <span class="tag tag-file">chart_annotations.js</span></h2>
+
+  <h3>Design principle</h3>
+  <p>The large centered title already tells the viewer what pattern it is. The overlay should only draw <strong>geometric shapes</strong> — no text labels on the canvas body. This matches the reference images exactly (reference chart 1: just a diagonal line; reference chart 2: just two horizontal bands).</p>
+
+  <h3>Label removal per pattern</h3>
+  <table>
+    <tr><th>Pattern function</th><th>Remove labels</th><th>Keep</th></tr>
+    <tr><td><code>drawCupHandle</code></td><td>"Cup Base", "Handle", "Breakout Rim"</td><td>Arc line, 3 dots (left rim / trough / right rim), handle box, pivot dashed line</td></tr>
+    <tr><td><code>drawInverseHeadShoulders</code></td><td>"Head", "L.Shoulder", "R.Shoulder"</td><td>W-curve lines, 3 dots, neckline dashed line, "Neckline" label only (tells viewer WHERE to enter)</td></tr>
+    <tr><td><code>drawAscendingTriangle</code></td><td>"Flat Resistance", "Rising Support"</td><td>Resistance dashed line, support trendline, fill triangle, dots</td></tr>
+    <tr><td><code>drawBullFlag</code></td><td>"Pole", "Flag Pullback"</td><td>Pole line, flag rectangle fill+border</td></tr>
+    <tr><td><code>drawVcp</code></td><td>"C1 X%", "C2 X%", "C3 X%", "VCP Pivot"</td><td>3 contraction boxes (fills only, no stroke labels), pivot dashed line</td></tr>
+    <tr><td><code>drawSupertrend</code></td><td>"Supertrend Support"</td><td>Support dashed line</td></tr>
+    <tr><td><code>drawMultiYearBreakout</code></td><td>"Long Resistance"</td><td>Dashed resistance line</td></tr>
+  </table>
+
+  <div class="note"><strong>Exception: "Neckline" label in IHS.</strong> Keep this single label — it marks the exact entry trigger price and is actionable info that isn't communicated by the geometry alone.</div>
+
+  <h3>Implementation: remove all <code>drawSimplePatternLabel</code> calls EXCEPT IHS neckline</h3>
+  <p>Delete every <code>drawSimplePatternLabel(...</code> call inside the seven <code>draw*</code> functions, except the one line in <code>drawInverseHeadShoulders</code> that draws "Neckline".</p>
+
+  <!-- ── PHASE 4 ── -->
+  <h2>Phase 4: Bottom Insight Text + Scale Margin Fix <span class="tag tag-wip">IN PROGRESS</span> <span class="tag tag-file">chart_renderer.js</span></h2>
+
+  <h3>Bottom insight text</h3>
+  <p>A centered HTML overlay div at the bottom of the chart, above the TradingView attribution. Displays upside %, R:R, or custom text.</p>
+
+  <pre>// Positioned absolute bottom, centered
+var insightEl = document.createElement('div');
+insightEl.style.cssText = [
+  'position:absolute',
+  'bottom:28px',          // above TradingView attribution
+  'left:0',
+  'right:90px',           // leave room for price scale
+  'text-align:center',
+  'pointer-events:none',
+  'z-index:4',
+  'user-select:none',
+].join(';');
+
+// Content: "Upside +17.4%  ·  R:R 2.7:1"
+var insightParts = [];
+if (tp.upside_pct != null) insightParts.push('Upside +' + tp.upside_pct.toFixed(1) + '%');
+if (tp.reward_risk != null) insightParts.push('R:R ' + tp.reward_risk.toFixed(1) + ':1');
+var insightText = insightParts.join('  ·  ');
+
+insightEl.innerHTML = '&lt;div style="font-size:' + (compact ? '11px' : '14px') + ';' +
+  'font-weight:700;color:rgba(0,0,0,0.60);' +
+  'font-family:Inter,Segoe UI,Arial,sans-serif;"&gt;' +
+  _esc(insightText) + '&lt;/div&gt;';
+container.appendChild(insightEl);</pre>
+
+  <h3>Scale margin fix</h3>
+  <p>Increase <code>scaleMargins.top</code> so title doesn't overlap candles:</p>
+  <pre>rightPriceScale: {
+  scaleMargins: {
+    top: compact ? 0.18 : 0.22,   // was 0.08 / 0.12
+    bottom: compact ? 0.12 : 0.10,
+  }
+}</pre>
+
+  <!-- ── PHASE 5 ── -->
+  <h2>Phase 5: Regenerate Samples + QA <span class="tag tag-todo">PENDING</span></h2>
+  <pre>python scripts/gen_sample_thesis_chart.py --sample-pack</pre>
+  <p>Open all 7 HTML files in browser. Visual checklist:</p>
+  <table>
+    <tr><th>Check</th><th>Pass criteria</th></tr>
+    <tr><td>Title visible, not overlapping candles</td><td>Top 22% of chart is empty of candles</td></tr>
+    <tr><td>Target box</td><td>Blue vertical box right of last candle, arrow pointing up, price+% label</td></tr>
+    <tr><td>Stop line</td><td>Thin dashed red line below entry, no fill box</td></tr>
+    <tr><td>Pattern overlays</td><td>Geometric shapes only, no text labels on canvas body</td></tr>
+    <tr><td>Bottom text</td><td>"Upside +X% · R:R X:1" visible at bottom center</td></tr>
+    <tr><td>Mobile (&lt;520px)</td><td>All elements scale down cleanly, no overflow</td></tr>
+    <tr><td>Tests</td><td>python -m pytest tests/ → all pass</td></tr>
+  </table>
+
+  <!-- ── FILE MAP ── -->
+  <h2>File Change Map</h2>
+  <table>
+    <tr><th>File</th><th>Changes</th><th>Phase</th></tr>
+    <tr><td><code>dashboard/chart_renderer.js</code></td><td>Title redesign (done), scaleMargins.top increase, bottom insight text div</td><td>1 ✓, 4</td></tr>
+    <tr><td><code>dashboard/chart_annotations.js</code></td><td>Replace upside/downside zones with vertical arrow box; remove all pattern labels except IHS neckline</td><td>2, 3</td></tr>
+    <tr><td><code>engine/chart_payload.py</code></td><td>No changes needed</td><td>—</td></tr>
+    <tr><td><code>scripts/gen_sample_thesis_chart.py</code></td><td>No changes needed</td><td>—</td></tr>
+  </table>
+
+  <!-- ── CODE REVIEW CHECKLIST ── -->
+  <h2>Code Review Checklist</h2>
+  <p>Every PR / agent output MUST pass these before merge:</p>
+  <table>
+    <tr><th>#</th><th>Check</th><th>How to verify</th></tr>
+    <tr><td>1</td><td><code>python -m pytest tests/ -x -q</code> → all pass</td><td>CI / manual</td></tr>
+    <tr><td>2</td><td>No <code>drawSimplePatternLabel</code> calls remain in draw* functions except IHS neckline</td><td>grep</td></tr>
+    <tr><td>3</td><td>Target box draws correctly when upside &lt; 10px (skip gracefully)</td><td>Code review</td></tr>
+    <tr><td>4</td><td>Target box draws correctly when target &lt; entry (invalid — skip)</td><td>Code review</td></tr>
+    <tr><td>5</td><td>No <code>null</code> dereferences: all canvas coords checked before use (<code>Number.isFinite</code>)</td><td>Code review</td></tr>
+    <tr><td>6</td><td>Compact mode (W &lt; 520px) has smaller fonts and arrowhead sizes</td><td>Browser at 400px width</td></tr>
+    <tr><td>7</td><td>Title text does NOT overlap candles (scaleMargins.top = 0.22)</td><td>Visual check</td></tr>
+    <tr><td>8</td><td>Bottom insight text does NOT overlap price scale or TradingView logo</td><td>Visual check</td></tr>
+    <tr><td>9</td><td>All 7 sample patterns generate without errors</td><td><code>--sample-pack</code></td></tr>
+    <tr><td>10</td><td>No backward compatibility shims, no dead code left behind</td><td>Code review</td></tr>
+  </table>
+
+  <!-- ── ANTI-PATTERNS ── -->
+  <h2>Anti-Patterns to Avoid</h2>
+  <div class="rule"><strong>DO NOT</strong> use <code>entry</code> price as neckline fallback in IHS — it places the neckline below the pattern (already fixed).</div>
+  <div class="rule"><strong>DO NOT</strong> draw the handle as a line from handle_start to right_rim — it draws backward (already fixed).</div>
+  <div class="rule"><strong>DO NOT</strong> use a fixed pixel offset (e.g. <code>trough.y + 24</code>) for bezier control points — use the midpoint formula (already fixed).</div>
+  <div class="rule"><strong>DO NOT</strong> use <code>relativeChartIndex</code> fallback that maps out-of-range indices to candle array index — causes wrong dot placement (already fixed).</div>
+  <div class="rule"><strong>DO NOT</strong> hardcode text like "Upside +17.4%" inside fill rectangles — move to labeled badges above boxes.</div>
+  <div class="rule"><strong>DO NOT</strong> ask for confirmation mid-task — fix all items in scope and run tests.</div>
+
+  <footer style="margin-top:64px;padding-top:24px;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:0.8rem;">
+    PathB.html · Pattern Finder v5R → v6 · Last updated 2026-05-20
+  </footer>
+</div>
+</body>
+</html>

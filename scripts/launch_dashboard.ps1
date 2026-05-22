@@ -53,7 +53,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $Stamp     = Get-Date -Format "yyyyMMdd_HHmmss"
 $ServerLog = Join-Path $LogDir "control_server_$Stamp.log"
 
-$ServerArgs = @($ServerPath, "--host", $BindHost, "--port", [string]$Port)
+$ServerArgs = @("`"$ServerPath`"", "--host", $BindHost, "--port", [string]$Port)
 $Proc = Start-Process -FilePath "python" -ArgumentList $ServerArgs `
     -WorkingDirectory $RepoRoot `
     -RedirectStandardOutput $ServerLog `
