@@ -6,7 +6,8 @@ the EMCURE / ACUTAAS 100/100 HIGHEST over-rating bug (2026-05-21):
 1. Pattern grade flows through: extra.pattern_quality_score (0-10) is
    the dominant input; legacy confidence is only a fallback.
 2. RSI extreme penalties subtract from raw conviction.
-3. Reward / risk floors gate the tier: <1.0 = SKIP, <1.5 = demote.
+3. Reward / risk floors gate the tier from the scan-date entry:
+   <1.0 = SKIP, actionable <1.5 = SKIP, historical <1.5 = demote.
 4. Pattern grade ceiling: grades < PATTERN_GRADE_HIGHEST_FLOOR cannot
    tier HIGHEST regardless of filter passes.
 
@@ -196,21 +197,48 @@ class ScorePatternEndToEndTest(unittest.TestCase):
         self.assertFalse(result["tradable"])
         self.assertIsNotNone(result["skip_reason"])
 
-    def test_acutaas_like_pattern_capped_below_highest(self):
-        """Strong filters + decent grade 6.0 + R:R 1.4 must not be HIGHEST.
-        Pattern-grade cap demotes from HIGHEST, then weak R:R demotes again.
-        """
-        p = _pattern(name="Bull Flag", grade=6.0, pivot=3025.0, target=3478.4, stop_loss=2702.8)
+    def test_acutaas_like_pattern_skipped_when_future_rr_is_weak(self):
+        """Strong filters + decent grade 6.0 + R:R 1.4 is not actionable."""
+        p = _pattern(name="Bull Flag", grade=6.0, pivot=100.0, target=139.0, stop_loss=90.0)
         result = self._run(p)
-        self.assertNotEqual(result["tier"], "HIGHEST")
-        self.assertIn(result["tier"], ("HIGH", "MEDIUM"))
+        self.assertEqual(result["tier"], "SKIP")
+        self.assertFalse(result["tradable"])
+        self.assertTrue(result["skip_reason"].startswith("ACTIONABLE_REWARD_RISK_BELOW_FLOOR"))
 
     def test_textbook_pattern_stays_highest(self):
         """Grade 8 + RR 2.0 + clean filters -> HIGHEST."""
-        p = _pattern(grade=8.5, pivot=100.0, target=140.0, stop_loss=80.0)
+        p = _pattern(grade=8.5, pivot=120.0, target=180.0, stop_loss=100.0)
         result = self._run(p)
         self.assertEqual(result["tier"], "HIGHEST")
         self.assertTrue(result["tradable"])
+
+    def test_scan_date_entry_rejects_late_breakout(self):
+        """Once price is far above pivot, R:R must be judged from scan close."""
+        p = _pattern(grade=8.5, pivot=100.0, target=130.0, stop_loss=90.0)
+        result = self._run(p)
+        self.assertEqual(result["entry_price"], 110.0)
+        self.assertEqual(result["entry_basis"], "scan_close")
+        self.assertEqual(result["tier"], "SKIP")
+        self.assertTrue(result["skip_reason"].startswith("ACTIONABLE_REWARD_RISK_BELOW_FLOOR"))
+
+    def test_target_hit_after_breakout_is_rejected(self):
+        """Do not surface a pattern whose measured move has already happened."""
+        p = _pattern(grade=8.5, pivot=100.0, target=130.0, stop_loss=90.0)
+        daily = _trending_daily(n=260, start=90.0, end=110.0)
+        daily["close"][-5:] = np.array([98.0, 101.0, 118.0, 110.0, 109.0])
+        daily["high"][-5:] = np.array([99.0, 102.0, 131.0, 112.0, 110.0])
+        daily["open"] = daily["close"].copy()
+        daily["low"] = daily["close"] - 1.0
+        weekly = _trending_daily(n=80, start=100.0, end=110.0)
+        with patch("engine.scorer.stage2.evaluate", return_value={"passed": True, "status": "PASS", "details": {"close": 109.0}}), \
+             patch("engine.scorer.volume.evaluate", return_value={"passed": True, "status": "PASS", "details": {}}), \
+             patch("engine.scorer.sector_rs.evaluate", return_value={"passed": True, "status": "LEADING", "details": {}}), \
+             patch("engine.scorer.rsi.evaluate", return_value={"name": "rsi", "value": 65.0, "penalty": 0, "status": "HEALTHY", "bearish_divergence": False, "details": {}}):
+            result = scorer.score_pattern("TEST", p, daily, weekly, {"score": 4}, {"sectors": {}})
+
+        self.assertEqual(result["tier"], "SKIP")
+        self.assertEqual(result["skip_reason"], "MOVE_ALREADY_HAPPENED_TARGET_HIT")
+        self.assertTrue(result["target_hit_since_breakout"])
 
     def test_rsi_overbought_penalty_active(self):
         """An RSI 87 reading with config penalty -15 must subtract from score."""
@@ -270,6 +298,43 @@ class DashboardSkipFilterTest(unittest.TestCase):
         # No SKIP tier group should be exposed to the template
         tier_names = [g["name"] for g in normalized["tier_groups"]]
         self.assertNotIn("SKIP", tier_names)
+
+    def test_dashboard_uses_scan_date_entry_for_visible_levels(self):
+        from engine.dashboard import build_dashboard_context
+        ctx = {
+            "generated_at": "2026-05-21",
+            "market_regime": {"score": 4, "verdict": "CONFIRMED UPTREND", "checks": {}, "details": {}},
+            "results": [
+                {"symbol": "AAA", "pattern": "Bull Flag", "tier": "HIGH", "score": 82,
+                 "pivot": 100, "entry_price": 112, "target": 142, "stop_loss": 96,
+                 "reward_risk": 1.88, "tradable": True,
+                 "filters": {}, "breakdown": {}, "explanation": "ok"},
+            ],
+            "errors": [],
+        }
+        result = build_dashboard_context(ctx)["results"][0]
+
+        self.assertEqual(result["pivot_text"], "Rs.100")
+        self.assertEqual(result["entry_text"], "Rs.112")
+        self.assertEqual(result["risk_reward"], "1.88:1")
+
+    def test_actionable_rr_skip_reason_is_bucketed(self):
+        from engine.dashboard import build_dashboard_context
+        ctx = {
+            "generated_at": "2026-05-21",
+            "market_regime": {"score": 4, "verdict": "CONFIRMED UPTREND", "checks": {}, "details": {}},
+            "results": [
+                {"symbol": "LATE", "pattern": "Bull Flag", "tier": "SKIP", "score": 0,
+                 "pivot": 100, "entry_price": 118, "target": 130, "stop_loss": 90,
+                 "tradable": False, "skip_reason": "ACTIONABLE_REWARD_RISK_BELOW_FLOOR_0.43",
+                 "filters": {}, "breakdown": {}, "explanation": "ok"},
+            ],
+            "errors": [],
+        }
+        breakdown = build_dashboard_context(ctx)["skip_breakdown"]
+
+        self.assertEqual(breakdown[0]["key"], "ACTIONABLE_REWARD_RISK_BELOW_FLOOR")
+        self.assertEqual(breakdown[0]["label"], "Future reward / risk below 1.5:1")
 
 
 if __name__ == "__main__":

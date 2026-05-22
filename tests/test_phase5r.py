@@ -103,6 +103,16 @@ class ChartPayloadTest(unittest.TestCase):
         self.assertEqual(tp["target"], 230.0)
         self.assertEqual(tp["stop"], 185.0)
 
+    def test_trade_plan_uses_scan_date_entry_override(self):
+        result = _FakeResult(pivot=200.0, target=240.0, stop_loss=185.0)
+        df = _ohlcv()
+        payload = build_chart_payload(df, "X", result, entry_price=212.0)
+        tp = payload["trade_plan"]
+
+        self.assertEqual(tp["entry"], 212.0)
+        self.assertAlmostEqual(tp["upside_pct"], 13.21, places=2)
+        self.assertAlmostEqual(tp["downside_pct"], 12.74, places=2)
+
     def test_annotations_contain_three_hlines(self):
         df = _ohlcv()
         payload = build_chart_payload(df, "X", _FakeResult())

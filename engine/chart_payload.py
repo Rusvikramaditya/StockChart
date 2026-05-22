@@ -18,6 +18,7 @@ def build_chart_payload(
     pattern_result: Any,
     *,
     company_name: str | None = None,
+    entry_price: float | None = None,
     timeframe: str = "Daily",
     lookback_bars: int = LOOKBACK_BARS,
 ) -> dict[str, Any]:
@@ -26,7 +27,7 @@ def build_chart_payload(
     Raises ValueError if candles or required trade levels are absent.
     """
     frame = _prepare_frame(df, lookback_bars)
-    trade_plan = _trade_plan(pattern_result)
+    trade_plan = _trade_plan(pattern_result, entry_price=entry_price)
     geometry = _geometry(pattern_result)
 
     bars_in_pattern = _int(_field(pattern_result, "bars_in_pattern"), default=lookback_bars)
@@ -127,8 +128,10 @@ def _candle_list(frame: pd.DataFrame) -> list[dict[str, Any]]:
     return out
 
 
-def _trade_plan(pattern_result: Any) -> dict[str, Any]:
-    entry = _num(_field(pattern_result, "pivot"))
+def _trade_plan(pattern_result: Any, *, entry_price: float | None = None) -> dict[str, Any]:
+    entry = _num(entry_price)
+    if entry is None:
+        entry = _num(_field(pattern_result, "pivot"))
     target = _num(_field(pattern_result, "target"))
     stop = _num(_field(pattern_result, "stop_loss"))
 

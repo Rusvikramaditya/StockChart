@@ -7,16 +7,17 @@ Telegram) only when ALL of the following hold:
     audited detectors this is the 0-10 ``extra.pattern_quality_score``
     multiplied by 10; legacy detectors fall back to the dataclass
     ``quality_score`` then ``confidence``).
-  * Reward/risk >= ``MIN_REWARD_RISK_HARD``. Below 1:1 is a bad bet by
-    definition; we do not surface it.
+  * Reward/risk from the scan-date actionable entry must be acceptable.
+    Below 1:1 is a bad bet by definition; below the actionable floor is
+    too late to surface as a fresh opportunity.
 
 If both gates pass, the raw 0-100 conviction score determines the tier
 via ``CONVICTION_TIERS``. Two soft caps then refine the tier:
 
   * If the pattern grade (0-10) is below
     ``PATTERN_GRADE_HIGHEST_FLOOR``, the tier cannot exceed HIGH.
-  * If reward/risk is below ``MIN_REWARD_RISK_SOFT``, the tier is
-    demoted by one step.
+  * Legacy/historical reward:risk below ``MIN_REWARD_RISK_SOFT`` demotes
+    one step when a scan-date actionable gate is not already rejecting it.
 
 This keeps directionally correct but technically mediocre setups
 (EMCURE IHS 5.5/10, ACUTAAS bull flag RSI 87 + R:R 1.4 cases on
@@ -25,12 +26,15 @@ This keeps directionally correct but technically mediocre setups
 
 from __future__ import annotations
 
+import math
 from typing import Any
+
+import numpy as np
 
 from config import settings
 from filters import rsi, sector_rs, stage2, volume
 from patterns.base import PatternResult
-from patterns.utils import moving_average, series
+from patterns.utils import last_finite, moving_average, series
 
 
 TIER_ORDER = ("HIGHEST", "HIGH", "MEDIUM", "SKIP")
@@ -70,9 +74,10 @@ def score_pattern(
         + rsi_adjustment
     )
 
-    reward_risk = _reward_risk_ratio(pattern)
+    trade_plan = _scan_trade_plan(pattern, daily, weekly)
+    reward_risk = trade_plan["reward_risk"]
 
-    skip_reason = _skip_reason(pattern_score_100, reward_risk)
+    skip_reason = _skip_reason(pattern_score_100, reward_risk, trade_plan)
     if skip_reason is not None:
         final_score = 0
         tier = "SKIP"
@@ -90,6 +95,12 @@ def score_pattern(
         "pattern": pattern.pattern,
         "status": pattern.status,
         "pivot": pattern.pivot,
+        "technical_pivot": pattern.pivot,
+        "entry_price": trade_plan["entry"],
+        "entry_basis": trade_plan["entry_basis"],
+        "scan_close": trade_plan["scan_close"],
+        "breakout_age_bars": trade_plan["breakout_age_bars"],
+        "target_hit_since_breakout": trade_plan["target_hit_since_breakout"],
         "target": pattern.target,
         "stop_loss": pattern.stop_loss,
         "timeframe": pattern.timeframe,
@@ -105,6 +116,12 @@ def score_pattern(
             "pattern_quality_score": pattern_score_100,
             "pattern_grade": pattern_grade_10,
             "pattern_confidence": pattern.confidence,
+            "entry_price": trade_plan["entry"],
+            "entry_basis": trade_plan["entry_basis"],
+            "technical_pivot": pattern.pivot,
+            "scan_close": trade_plan["scan_close"],
+            "breakout_age_bars": trade_plan["breakout_age_bars"],
+            "target_hit_since_breakout": trade_plan["target_hit_since_breakout"],
             "stage2": stage2_points,
             "volume": volume_points,
             "sector_rs": sector_points,
@@ -175,31 +192,163 @@ def _reward_risk_ratio(pattern: PatternResult) -> float | None:
     None (not 0) when downside is <= 0 so callers can distinguish "no R:R
     available" from "R:R = 0".
     """
-    pivot, target, stop = pattern.pivot, pattern.target, pattern.stop_loss
-    if pivot is None or target is None or stop is None:
+    return _reward_risk_from_levels(pattern.pivot, pattern.target, pattern.stop_loss)
+
+
+def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = None) -> dict[str, Any]:
+    """Return scan-date actionable levels for user-facing trade decisions.
+
+    Detectors publish the technical pivot. That is useful for geometry, but it
+    is not always the right entry after the breakout is already underway. For
+    dashboard/Telegram eligibility, compute reward/risk from the latest scan
+    close when price is already above the current pivot/neckline, and reject
+    patterns whose target was already touched after breakout.
+    """
+    technical_pivot = _num(pattern.pivot)
+    target = _num(pattern.target)
+    stop = _num(pattern.stop_loss)
+    daily_close = series(daily, "close")
+    history = weekly if pattern.timeframe.lower() == "weekly" and weekly else daily
+    close = series(history, "close")
+    high = series(history, "high")
+    latest_close = last_finite(daily_close)
+    if latest_close is None:
+        latest_close = last_finite(close)
+
+    window_close, window_high = _action_window(pattern, close, high)
+    current_pivot = _pivot_at_index(pattern, len(window_close) - 1, technical_pivot) if len(window_close) else technical_pivot
+    breakout_index = _first_breakout_index(pattern, window_close, technical_pivot)
+    target_hit = _target_hit_since_breakout(pattern, window_high, breakout_index)
+
+    entry = technical_pivot
+    entry_basis = "pivot"
+    if latest_close is not None and current_pivot is not None and latest_close > current_pivot:
+        entry = latest_close
+        entry_basis = "scan_close"
+
+    reward_risk = _reward_risk_from_levels(entry, target, stop)
+    skip_reason = None
+    if target_hit:
+        skip_reason = "MOVE_ALREADY_HAPPENED_TARGET_HIT"
+    elif latest_close is not None and target is not None and latest_close >= target:
+        skip_reason = "TARGET_ALREADY_REACHED"
+    elif latest_close is not None and stop is not None and latest_close <= stop:
+        skip_reason = "STOP_ALREADY_BROKEN"
+
+    return {
+        "entry": None if entry is None else round(entry, 2),
+        "entry_basis": entry_basis,
+        "scan_close": None if latest_close is None else round(latest_close, 2),
+        "reward_risk": None if reward_risk is None else round(reward_risk, 4),
+        "skip_reason": skip_reason,
+        "breakout_age_bars": None if breakout_index is None else max(0, len(window_close) - 1 - breakout_index),
+        "target_hit_since_breakout": target_hit,
+    }
+
+
+def _reward_risk_from_levels(entry: Any, target: Any, stop: Any) -> float | None:
+    if entry is None or target is None or stop is None:
         return None
     try:
-        pivot_f = float(pivot)
+        entry_f = float(entry)
         target_f = float(target)
         stop_f = float(stop)
     except (TypeError, ValueError):
         return None
-    if pivot_f <= 0:
+    if entry_f <= 0:
         return None
-    upside = (target_f - pivot_f) / pivot_f
-    downside = (pivot_f - stop_f) / pivot_f
+    upside = (target_f - entry_f) / entry_f
+    downside = (entry_f - stop_f) / entry_f
     if downside <= 0 or upside <= 0:
         return None
     return upside / downside
 
 
-def _skip_reason(pattern_score_100: float, reward_risk: float | None) -> str | None:
+def _skip_reason(
+    pattern_score_100: float,
+    reward_risk: float | None,
+    trade_plan: dict[str, Any] | None = None,
+) -> str | None:
     """Hard gates before tiering. Either failure means SKIP regardless of score."""
+    if trade_plan and trade_plan.get("skip_reason"):
+        return str(trade_plan["skip_reason"])
     if pattern_score_100 < float(settings.MIN_TRADABLE_QUALITY_SCORE):
         return "LOW_PATTERN_QUALITY"
     if reward_risk is not None and reward_risk < float(settings.MIN_REWARD_RISK_HARD):
         return f"REWARD_RISK_BELOW_FLOOR_{reward_risk:.2f}"
+    if (
+        trade_plan is not None
+        and reward_risk is not None
+        and reward_risk < float(settings.MIN_ACTIONABLE_REWARD_RISK)
+    ):
+        return f"ACTIONABLE_REWARD_RISK_BELOW_FLOOR_{reward_risk:.2f}"
     return None
+
+
+def _action_window(pattern: PatternResult, close: np.ndarray, high: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    count = min(len(close), len(high))
+    if count <= 0:
+        return np.array([], dtype=float), np.array([], dtype=float)
+    try:
+        bars = int(float(pattern.bars_in_pattern))
+    except (TypeError, ValueError):
+        bars = count
+    bars = max(1, min(count, bars))
+    return close[-bars:], high[-bars:]
+
+
+def _first_breakout_index(
+    pattern: PatternResult,
+    close_window: np.ndarray,
+    fallback_pivot: float | None,
+) -> int | None:
+    for idx, value in enumerate(close_window):
+        if not math.isfinite(float(value)):
+            continue
+        pivot = _pivot_at_index(pattern, idx, fallback_pivot)
+        if pivot is not None and float(value) > pivot:
+            return idx
+    return None
+
+
+def _target_hit_since_breakout(
+    pattern: PatternResult,
+    high_window: np.ndarray,
+    breakout_index: int | None,
+) -> bool:
+    target = _num(pattern.target)
+    if target is None or breakout_index is None:
+        return False
+    for value in high_window[breakout_index:]:
+        if math.isfinite(float(value)) and float(value) >= target:
+            return True
+    return False
+
+
+def _pivot_at_index(pattern: PatternResult, idx: int, fallback_pivot: float | None) -> float | None:
+    extra = pattern.extra if isinstance(pattern.extra, dict) else {}
+    left_idx = _num(extra.get("left_neck_idx"))
+    right_idx = _num(extra.get("right_neck_idx"))
+    left_price = _num(extra.get("left_neck_price"))
+    right_price = _num(extra.get("right_neck_price"))
+    if (
+        left_idx is not None
+        and right_idx is not None
+        and left_price is not None
+        and right_price is not None
+        and right_idx != left_idx
+    ):
+        slope = (right_price - left_price) / (right_idx - left_idx)
+        return left_price + slope * (idx - left_idx)
+    return fallback_pivot
+
+
+def _num(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _apply_tier_caps(*, tier: str, pattern_grade: float, reward_risk: float | None) -> str:

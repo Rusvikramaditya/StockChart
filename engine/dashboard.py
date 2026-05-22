@@ -205,12 +205,13 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
     pattern_result = item.get("pattern_result")
     pattern = str(_coalesce(item.get("pattern"), _field(pattern_result, "pattern"), "Pattern"))
     pivot = _number(_coalesce(item.get("pivot"), _field(pattern_result, "pivot")))
+    entry = _number(_coalesce(item.get("entry_price"), pivot))
     target = _number(_coalesce(item.get("target"), _field(pattern_result, "target")))
     stop_loss = _number(_coalesce(item.get("stop_loss"), _field(pattern_result, "stop_loss")))
     score = _int(_coalesce(item.get("score"), item.get("final_score"), _field(pattern_result, "confidence")), default=0)
     tier = str(_coalesce(item.get("tier"), _tier(score))).upper()
     explanation = str(_coalesce(item.get("explanation"), _field(pattern_result, "explanation"), ""))
-    sections = _build_sections(pattern, explanation, item, pivot, target, stop_loss)
+    sections = _build_sections(pattern, explanation, item, entry, target, stop_loss)
     filters = _normalize_filters(item.get("filters") or {})
     breakdown = _normalize_breakdown(item.get("breakdown") or {})
     all_patterns = _pattern_names(item.get("all_patterns") or item.get("patterns") or [])
@@ -226,12 +227,19 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "status": str(_coalesce(item.get("status"), _field(pattern_result, "status"), "")),
         "timeframe": str(_coalesce(item.get("timeframe"), _field(pattern_result, "timeframe"), "daily")),
         "pivot": pivot,
+        "technical_pivot": _number(_coalesce(item.get("technical_pivot"), pivot)),
+        "entry_price": entry,
+        "entry_basis": str(item.get("entry_basis") or "pivot"),
+        "scan_close": _number(item.get("scan_close")),
         "target": target,
         "stop_loss": stop_loss,
         "pivot_text": _fmt_money(pivot),
+        "technical_pivot_text": _fmt_money(_coalesce(item.get("technical_pivot"), pivot)),
+        "entry_text": _fmt_money(entry),
+        "scan_close_text": _fmt_money(item.get("scan_close")),
         "target_text": _fmt_money(target),
         "stop_text": _fmt_money(stop_loss),
-        "risk_reward": _risk_reward(pivot, target, stop_loss),
+        "risk_reward": _risk_reward(entry, target, stop_loss),
         "score": score,
         "tier": tier if tier in TIER_ORDER else "SKIP",
         "tier_label": TIER_LABELS.get(tier, tier.title()),
@@ -384,6 +392,10 @@ def _normalize_sectors(raw: Any) -> list[dict[str, Any]]:
 _SKIP_REASON_LABELS = {
     "LOW_PATTERN_QUALITY": "Pattern grade below threshold",
     "REWARD_RISK_BELOW_FLOOR": "Reward / risk below 1.0:1",
+    "ACTIONABLE_REWARD_RISK_BELOW_FLOOR": "Future reward / risk below 1.5:1",
+    "MOVE_ALREADY_HAPPENED_TARGET_HIT": "Target already hit after breakout",
+    "TARGET_ALREADY_REACHED": "Already at or above target",
+    "STOP_ALREADY_BROKEN": "Already below stop",
     "STAGE2_FAIL": "Not in Stage 2 uptrend",
     "VOLUME_FAIL": "No breakout volume",
     "SECTOR_LAGGING": "Sector lagging Nifty",
@@ -401,6 +413,8 @@ def _skip_reason_bucket(raw: str) -> str:
     upper = raw.upper()
     if upper.startswith("REWARD_RISK_BELOW_FLOOR"):
         return "REWARD_RISK_BELOW_FLOOR"
+    if upper.startswith("ACTIONABLE_REWARD_RISK_BELOW_FLOOR"):
+        return "ACTIONABLE_REWARD_RISK_BELOW_FLOOR"
     if upper in _SKIP_REASON_LABELS:
         return upper
     return "UNKNOWN"
@@ -529,7 +543,7 @@ def _build_sections(
     pattern: str,
     explanation: str,
     item: dict[str, Any],
-    pivot: float | None,
+    entry: float | None,
     target: float | None,
     stop_loss: float | None,
 ) -> dict[str, str]:
@@ -542,7 +556,7 @@ def _build_sections(
         "pattern_header": parsed.get(0) or pattern.upper(),
         "pattern_101": parsed.get(1) or PATTERN_101.get(pattern, "Pattern education is not available yet."),
         "stock_specific": parsed.get(2) or _field(item.get("pattern_result"), "explanation", "Detector details are not available."),
-        "action_plan": parsed.get(3) or _default_action_plan(pivot, target, stop_loss),
+        "action_plan": parsed.get(3) or _default_action_plan(entry, target, stop_loss),
         "risk": parsed.get(4) or _default_risk_note(stop_loss),
         "conviction": parsed.get(5) or "\n".join(breakdown_lines) or "Conviction breakdown is not available.",
     }
@@ -586,7 +600,9 @@ def _get_chart_payload_json(item: dict[str, Any]) -> str | None:
             company_name = item.get("company_name") or item.get("name")
             tf = str(item.get("timeframe") or "Daily").capitalize()
             payload = build_chart_payload(df, symbol, pattern_result,
-                                          company_name=company_name, timeframe=tf)
+                                          company_name=company_name,
+                                          entry_price=item.get("entry_price"),
+                                          timeframe=tf)
             return payload_to_json(payload)
         except Exception:
             pass
@@ -652,17 +668,17 @@ def _pattern_names(values: Iterable[Any]) -> list[str]:
     return names
 
 
-def _risk_reward(pivot: float | None, target: float | None, stop_loss: float | None) -> str:
-    if pivot is None or target is None or stop_loss is None:
+def _risk_reward(entry: float | None, target: float | None, stop_loss: float | None) -> str:
+    if entry is None or target is None or stop_loss is None:
         return "N/A"
-    risk = max(pivot - stop_loss, 0.0)
-    reward = max(target - pivot, 0.0)
+    risk = max(entry - stop_loss, 0.0)
+    reward = max(target - entry, 0.0)
     return _fmt_number(reward / risk if risk > 0 else 0.0) + ":1"
 
 
-def _default_action_plan(pivot: float | None, target: float | None, stop_loss: float | None) -> str:
+def _default_action_plan(entry: float | None, target: float | None, stop_loss: float | None) -> str:
     return (
-        f"Entry above {_fmt_money(pivot)}. Target {_fmt_money(target)}. "
+        f"Entry above {_fmt_money(entry)}. Target {_fmt_money(target)}. "
         f"Stop {_fmt_money(stop_loss)}. Respect the stop if the setup fails."
     )
 

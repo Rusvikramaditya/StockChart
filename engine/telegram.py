@@ -104,7 +104,7 @@ def format_alert(scored: dict[str, Any]) -> str:
         f"\U0001F6A8 <b>{symbol}</b> | CMP Rs.{_fmt(cmp_value)}",
         f"\U0001F4D0 <b>{pattern}</b> {status}",
         (
-            f"Entry Rs.{_fmt(scored.get('pivot'))} | Target Rs.{_fmt(scored.get('target'))} | "
+            f"Entry Rs.{_fmt(_entry_price(scored))} | Target Rs.{_fmt(scored.get('target'))} | "
             f"Stop Rs.{_fmt(scored.get('stop_loss'))} | R:R {rr}:1"
         ),
         f"Conviction: <b>{int(scored.get('score', 0))}/100</b> {tier}",
@@ -134,7 +134,7 @@ def format_chart_caption(scored: dict[str, Any]) -> str:
             f"\U0001F4D0 <b>{pattern}</b> | {symbol}",
             why,
             (
-                f"Entry Rs.{_fmt(scored.get('pivot'))} | Stop Rs.{_fmt(scored.get('stop_loss'))} | "
+                f"Entry Rs.{_fmt(_entry_price(scored))} | Stop Rs.{_fmt(scored.get('stop_loss'))} | "
                 f"Target Rs.{_fmt(scored.get('target'))} | R:R {rr}:1"
             ),
             f"Conviction: <b>{int(scored.get('score', 0))}/100</b> {_esc(scored.get('tier', ''))}",
@@ -266,14 +266,18 @@ def _current_price(scored: dict[str, Any]) -> float | None:
 
 
 def _risk_reward(scored: dict[str, Any]) -> str:
-    pivot = _num(scored.get("pivot"))
+    entry = _num(_entry_price(scored))
     target = _num(scored.get("target"))
     stop = _num(scored.get("stop_loss"))
-    if pivot is None or target is None or stop is None:
+    if entry is None or target is None or stop is None:
         return "0"
-    risk = max(pivot - stop, 0.0)
-    reward = max(target - pivot, 0.0)
+    risk = max(entry - stop, 0.0)
+    reward = max(target - entry, 0.0)
     return _fmt(reward / risk if risk > 0 else 0.0)
+
+
+def _entry_price(scored: dict[str, Any]) -> Any:
+    return scored.get("entry_price") if scored.get("entry_price") is not None else scored.get("pivot")
 
 
 def _short_reason(scored: dict[str, Any]) -> str:

@@ -1467,7 +1467,7 @@
                     <span class="symbol">{{ result.symbol }}</span>
                     <span class="tier-pill">{{ result.tier }}</span>
                     <span class="grade-pill grade-{{ result.pattern_grade_class }}" title="Pattern quality grade 0-10 from the detector">{{ result.pattern_grade_label }}</span>
-                    <span class="rr-pill rr-{{ result.reward_risk_class }}" title="Reward to risk ratio at the published levels">R:R {{ result.reward_risk_display }}</span>
+                    <span class="rr-pill rr-{{ result.reward_risk_class }}" title="Reward to risk ratio from the scan-date entry">R:R {{ result.reward_risk_display }}</span>
                     <span class="sector-pill sector-tier-{{ result.sector_tier_class }}" title="Sector momentum tier">{{ result.sector }} | {{ result.sector_tier }}</span>
                     {% if result.stacked_count > 1 %}
                     <span class="stack-pill">{{ result.stacked_count }} patterns</span>
@@ -1488,7 +1488,7 @@
 
               <div class="metric-grid" aria-label="{{ result.symbol }} levels">
                 <div class="metric"><span class="label">CMP</span><span class="value">{{ result.cmp }}</span></div>
-                <div class="metric"><span class="label">Entry</span><span class="value">{{ result.pivot_text }}</span></div>
+                <div class="metric"><span class="label">Entry</span><span class="value">{{ result.entry_text }}</span></div>
                 <div class="metric"><span class="label">Target</span><span class="value">{{ result.target_text }}</span></div>
                 <div class="metric"><span class="label">Stop / R:R</span><span class="value">{{ result.stop_text }} / {{ result.risk_reward }}</span></div>
               </div>

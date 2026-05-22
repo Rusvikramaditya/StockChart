@@ -33,7 +33,7 @@ class Phase3ContractTest(unittest.TestCase):
             pattern="Ascending Triangle",
             status="BREAKING OUT",
             pivot=200.0,
-            target=230.0,
+            target=250.0,
             stop_loss=190.0,
             confidence=100.0,
             explanation="Synthetic breakout.",

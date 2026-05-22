@@ -480,6 +480,7 @@ class Pipeline:
                 symbol,
                 pattern,
                 company_name=scored.get("company_name"),
+                entry_price=scored.get("entry_price"),
                 timeframe=timeframe.title(),
             )
         except Exception as exc:

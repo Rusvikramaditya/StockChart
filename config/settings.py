@@ -398,10 +398,16 @@ QUALITY_SCORE_POINTS = (
 MIN_TRADABLE_QUALITY_SCORE = 60.0
 
 # Reward/risk floors. A textbook pattern with bad R:R is still a bad
-# trade. EMCURE 2026-05-21: pattern was real, R:R 0.9:1, still tagged
-# HIGHEST. Now: R:R < 1.0 is auto-SKIP; R:R < 1.5 demotes one tier.
+# trade. The scorer uses scan-date actionable entry, not the old pivot,
+# once price is already above the breakout level. This prevents cards
+# where the move already happened from looking attractive.
 MIN_REWARD_RISK_HARD = 1.0
 MIN_REWARD_RISK_SOFT = 1.5
+# Dashboard/Telegram floor from the scan-date actionable entry. This is
+# intentionally stricter than the historical hard floor because users
+# should see future opportunity, not a target box that only made sense at
+# yesterday's or last week's pivot.
+MIN_ACTIONABLE_REWARD_RISK = 1.5
 
 # Pattern grade ceiling for the HIGHEST tier. Setups in the
 # [MIN_TRADABLE_QUALITY_SCORE/10, PATTERN_GRADE_HIGHEST_FLOOR) band can

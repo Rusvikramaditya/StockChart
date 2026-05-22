@@ -88,6 +88,16 @@ class TelegramPhase4Test(unittest.TestCase):
         self.assertIn("Stage2 \u2705", message)
         self.assertIn("Regime CONFIRMED UPTREND", message)
 
+    def test_format_alert_uses_scan_date_entry_when_present(self):
+        scored = sample_scored()
+        scored["entry_price"] = 108.0
+        message = telegram.format_alert(scored)
+        caption = telegram.format_chart_caption(scored)
+
+        self.assertIn("Entry Rs.108", message)
+        self.assertIn("R:R 0.86:1", message)
+        self.assertIn("Entry Rs.108", caption)
+
     def test_format_alert_lists_stacked_pattern_names(self):
         scored = sample_scored()
         scored["stacked_count"] = 3

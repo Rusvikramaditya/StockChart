@@ -44,13 +44,13 @@ def generate_explanation(scored: dict) -> str:
     pattern: PatternResult = scored["pattern_result"]
     filters = scored["filters"]
     breakdown = scored["breakdown"]
-    rr = _risk_reward(pattern)
+    rr = _risk_reward(scored)
     return "\n\n".join(
         [
             f"SECTION 0: {pattern.pattern.upper()}",
             "SECTION 1: PATTERN 101\n" + PATTERN_101.get(pattern.pattern, pattern.explanation),
-            "SECTION 2: THIS STOCK SPECIFICALLY\n" + _stock_specific(symbol, pattern, filters),
-            "SECTION 3: ACTION PLAN\n" + _action_plan(pattern, rr),
+            "SECTION 2: THIS STOCK SPECIFICALLY\n" + _stock_specific(symbol, scored, filters),
+            "SECTION 3: ACTION PLAN\n" + _action_plan(scored, rr),
             "SECTION 4: RISK\n" + _risk_note(pattern, filters),
             "SECTION 5: CONVICTION BREAKDOWN\n" + _breakdown(scored, breakdown, filters),
         ]
@@ -63,14 +63,17 @@ def attach_explanation(scored: dict) -> dict:
     return enriched
 
 
-def _stock_specific(symbol: str, pattern: PatternResult, filters: dict) -> str:
+def _stock_specific(symbol: str, scored: dict, filters: dict) -> str:
+    pattern: PatternResult = scored["pattern_result"]
     stage = filters["stage2"]
     volume = filters["volume"]
     sector = filters["sector_rs"]
     rsi = filters["rsi"]
+    entry = _entry_price(scored)
     return (
         f"{symbol} triggered {pattern.pattern} on the {pattern.timeframe} chart. "
         f"Detector detail: {pattern.explanation} Pivot is Rs.{pattern.pivot}, "
+        f"scan-date entry is Rs.{entry}, "
         f"target is Rs.{pattern.target}, and stop is Rs.{pattern.stop_loss}. "
         f"Stage 2 is {stage['status']}; volume is {volume['status']} with "
         f"{volume.get('details', {}).get('breakout_volume_ratio', 0)}x breakout volume; "
@@ -78,9 +81,11 @@ def _stock_specific(symbol: str, pattern: PatternResult, filters: dict) -> str:
     )
 
 
-def _action_plan(pattern: PatternResult, rr: dict) -> str:
+def _action_plan(scored: dict, rr: dict) -> str:
+    pattern: PatternResult = scored["pattern_result"]
+    entry = _entry_price(scored)
     return (
-        f"Entry: Buy only above Rs.{pattern.pivot} with volume confirmation. "
+        f"Entry: Buy only above Rs.{entry} with volume confirmation. "
         f"Stop loss: Rs.{pattern.stop_loss}. Target: Rs.{pattern.target}. "
         f"Risk per share: Rs.{rr['risk']}. Reward per share: Rs.{rr['reward']}. "
         f"Reward:risk: {rr['ratio']}:1."
@@ -117,8 +122,17 @@ def _breakdown(scored: dict, breakdown: dict, filters: dict) -> str:
     )
 
 
-def _risk_reward(pattern: PatternResult) -> dict:
-    risk = max(round(pattern.pivot - pattern.stop_loss, 2), 0.0)
-    reward = max(round(pattern.target - pattern.pivot, 2), 0.0)
+def _risk_reward(scored: dict) -> dict:
+    pattern: PatternResult = scored["pattern_result"]
+    entry = _entry_price(scored)
+    risk = max(round(entry - pattern.stop_loss, 2), 0.0)
+    reward = max(round(pattern.target - entry, 2), 0.0)
     ratio = round(reward / risk, 2) if risk > 0 else 0.0
     return {"risk": risk, "reward": reward, "ratio": ratio}
+
+
+def _entry_price(scored: dict) -> float:
+    entry = scored.get("entry_price")
+    if entry is None:
+        entry = scored["pattern_result"].pivot
+    return float(entry)
