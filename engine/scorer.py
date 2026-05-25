@@ -32,7 +32,7 @@ from typing import Any
 import numpy as np
 
 from config import settings
-from filters import rsi, sector_rs, stage2, volume
+from filters import pocket_pivot, rsi, sector_rs, stage2, volume
 from patterns.base import PatternResult
 from patterns.utils import last_finite, moving_average, series
 
@@ -50,6 +50,7 @@ def score_pattern(
 ) -> dict:
     stage2_result = stage2.evaluate(daily)
     volume_result = volume.evaluate(daily)
+    pocket_pivot_result = pocket_pivot.evaluate(daily)
     sector_result = sector_rs.evaluate(symbol, daily, sector_rs_cache)
     rsi_result = rsi.evaluate(daily)
     multi_tf_result = _multi_timeframe_alignment(pattern, weekly)
@@ -88,6 +89,15 @@ def score_pattern(
             tier=tier,
             pattern_grade=pattern_grade_10,
             reward_risk=reward_risk,
+            trade_plan=trade_plan,
+            filters={
+                "stage2": stage2_result,
+                "volume": volume_result,
+                "pocket_pivot": pocket_pivot_result,
+                "sector_rs": sector_result,
+                "rsi": rsi_result,
+                "multi_tf": multi_tf_result,
+            },
         )
 
     return {
@@ -129,10 +139,12 @@ def score_pattern(
             "multi_tf": multi_tf_points,
             "rsi_adjustment": rsi_adjustment,
             "reward_risk": None if reward_risk is None else round(reward_risk, 2),
+            "stop_distance_pct": trade_plan["stop_distance_pct"],
         },
         "filters": {
             "stage2": stage2_result,
             "volume": volume_result,
+            "pocket_pivot": pocket_pivot_result,
             "sector_rs": sector_result,
             "market_regime": market_regime_result,
             "rsi": rsi_result,
@@ -227,6 +239,15 @@ def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = 
         entry_basis = "scan_close"
 
     reward_risk = _reward_risk_from_levels(entry, target, stop)
+    stop_distance_pct = None
+    if entry is not None and stop is not None:
+        try:
+            entry_f = float(entry)
+            stop_f = float(stop)
+            if entry_f > 0:
+                stop_distance_pct = round((entry_f - stop_f) / entry_f * 100.0, 4)
+        except (TypeError, ValueError):
+            stop_distance_pct = None
     skip_reason = None
     if target_hit:
         skip_reason = "MOVE_ALREADY_HAPPENED_TARGET_HIT"
@@ -240,6 +261,7 @@ def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = 
         "entry_basis": entry_basis,
         "scan_close": None if latest_close is None else round(latest_close, 2),
         "reward_risk": None if reward_risk is None else round(reward_risk, 4),
+        "stop_distance_pct": stop_distance_pct,
         "skip_reason": skip_reason,
         "breakout_age_bars": None if breakout_index is None else max(0, len(window_close) - 1 - breakout_index),
         "target_hit_since_breakout": target_hit,
@@ -351,12 +373,79 @@ def _num(value: Any) -> float | None:
     return number if math.isfinite(number) else None
 
 
-def _apply_tier_caps(*, tier: str, pattern_grade: float, reward_risk: float | None) -> str:
+def _apply_tier_caps(
+    *,
+    tier: str,
+    pattern_grade: float,
+    reward_risk: float | None,
+    trade_plan: dict[str, Any] | None = None,
+    filters: dict[str, dict] | None = None,
+) -> str:
     """Soft caps. Setup passed gates but should not be the loudest signal."""
     if pattern_grade < float(settings.PATTERN_GRADE_HIGHEST_FLOOR):
         tier = _cap_tier(tier, "HIGH")
     if reward_risk is not None and reward_risk < float(settings.MIN_REWARD_RISK_SOFT):
         tier = _demote_tier(tier)
+    tier = _apply_textbook_filter_caps(
+        tier=tier,
+        reward_risk=reward_risk,
+        trade_plan=trade_plan,
+        filters=filters,
+    )
+    return tier
+
+
+def _apply_textbook_filter_caps(
+    *,
+    tier: str,
+    reward_risk: float | None,
+    trade_plan: dict[str, Any] | None,
+    filters: dict[str, dict] | None,
+) -> str:
+    """Keep weak confirmations out of Telegram/top-tier results."""
+    if filters is None:
+        return tier
+    filters = filters or {}
+    volume_result = filters.get("volume") or {}
+    pocket_result = filters.get("pocket_pivot") or {}
+    stage2_result = filters.get("stage2") or {}
+    sector_result = filters.get("sector_rs") or {}
+    rsi_result = filters.get("rsi") or {}
+    multi_tf_result = filters.get("multi_tf") or {}
+
+    volume_ok = bool(volume_result.get("passed")) or bool(pocket_result.get("passed"))
+    volume_dryup = str(volume_result.get("status", "")).upper() == "DRY_UP"
+    if not volume_ok and not volume_dryup:
+        tier = _cap_tier(tier, "MEDIUM")
+
+    if not bool(stage2_result.get("passed")):
+        tier = _cap_tier(tier, "MEDIUM")
+
+    rsi_status = str(rsi_result.get("status", "")).upper()
+    if "DIVERGENCE" in rsi_status or "OVERBOUGHT" in rsi_status:
+        tier = _cap_tier(tier, "MEDIUM")
+
+    sector_status = str(sector_result.get("status", "")).upper()
+    if sector_status == "LAGGING":
+        tier = _cap_tier(tier, "MEDIUM")
+    elif sector_status and sector_status != "LEADING":
+        tier = _cap_tier(tier, "HIGH")
+
+    if tier == "HIGHEST":
+        gates = settings.TEXTBOOK_HIGHEST_GATES
+        stop_distance = None if trade_plan is None else trade_plan.get("stop_distance_pct")
+        if reward_risk is not None and reward_risk < float(gates["min_reward_risk"]):
+            tier = "HIGH"
+        elif stop_distance is not None and float(stop_distance) > float(gates["max_stop_distance_pct"]):
+            tier = "HIGH"
+        elif not bool(stage2_result.get("passed")):
+            tier = "HIGH"
+        elif not volume_ok:
+            tier = "HIGH"
+        elif sector_status != "LEADING":
+            tier = "HIGH"
+        elif not bool(multi_tf_result.get("passed")):
+            tier = "HIGH"
     return tier
 
 

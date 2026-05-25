@@ -8,6 +8,8 @@ from typing import Iterable
 from config import settings
 from engine.scorer import conviction_tier
 
+TIER_ORDER = ("HIGHEST", "HIGH", "MEDIUM", "SKIP")
+
 
 def deduplicate_results(scored_results: Iterable[dict]) -> list[dict]:
     """Return one consolidated scored result per symbol.
@@ -45,7 +47,8 @@ def _merge_symbol(symbol: str, items: list[dict]) -> dict:
     )
     individual_score = int(primary.get("score", 0))
     final_score = min(100, max(0, individual_score + stack_bonus))
-    tier = conviction_tier(final_score)
+    primary_tier = str(primary.get("tier") or conviction_tier(individual_score)).upper()
+    tier = _lower_tier(conviction_tier(final_score), primary_tier)
 
     merged["individual_score"] = individual_score
     merged["stack_bonus"] = stack_bonus
@@ -67,6 +70,17 @@ def _merge_symbol(symbol: str, items: list[dict]) -> dict:
         merged["explanation"] = f"{explanation}\n\n{note}" if explanation else note
 
     return merged
+
+
+def _lower_tier(left: str, right: str) -> str:
+    """Return the lower-conviction tier so scorer caps survive dedup."""
+    left = str(left or "SKIP").upper()
+    right = str(right or "SKIP").upper()
+    if left not in TIER_ORDER:
+        left = "SKIP"
+    if right not in TIER_ORDER:
+        right = "SKIP"
+    return left if TIER_ORDER.index(left) >= TIER_ORDER.index(right) else right
 
 
 def _unique_patterns(primary: dict, items: list[dict]) -> list[str]:

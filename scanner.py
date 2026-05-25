@@ -488,7 +488,10 @@ class Pipeline:
 
     def _send_alerts(self) -> int:
         sent = 0
+        max_alerts = int(getattr(settings, "TELEGRAM_MAX_ALERTS", 0) or 0)
         for scored in self.ctx.scored_results:
+            if max_alerts > 0 and sent >= max_alerts:
+                break
             if not telegram.should_send_alert(scored):
                 continue
             if not _liquidity_allows_alert(scored):

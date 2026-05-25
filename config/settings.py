@@ -190,6 +190,22 @@ ASCENDING_TRIANGLE = {
     "max_breakout_extension_pct": 8.0,
 }
 
+FLAT_BASE = {
+    # O'Neil/Darvas-style continuation base: tight, horizontal, near highs.
+    "min_base_bars": 25,
+    "max_base_bars": 75,
+    "min_depth_pct": 3.0,
+    "max_depth_pct": 15.0,
+    "min_resistance_touches": 3,
+    "resistance_tolerance_pct": 1.0,
+    "max_touch_range_pct": 0.8,
+    "max_from_52w_high_pct": 12.0,
+    "max_volume_contraction_ratio": 0.9,
+    "within_breakout_pct": 2.0,
+    "max_breakout_extension_pct": 3.0,
+    "max_stop_distance_pct": 10.0,
+}
+
 BULL_FLAG = {
     # Pole: explosive advance. Textbook 1-3 weeks, >=15%. Was 12%/3-15 bars,
     # which let 3-day spikes qualify as "poles" (ACUTAAS 2026-05-21 case).
@@ -222,6 +238,23 @@ BULL_FLAG = {
     # Stale guards.
     "within_breakout_pct": 3.0,
     "max_breakout_extension_pct": 5.0,
+}
+
+HIGH_TIGHT_FLAG = {
+    # Rare power continuation pattern. Kept intentionally severe so it
+    # produces only a handful of true momentum candidates.
+    "min_advance_pct": 80.0,
+    "advance_min_bars": 10,
+    "advance_max_bars": 40,
+    "flag_min_bars": 8,
+    "flag_max_bars": 25,
+    "min_flag_pullback_pct": 8.0,
+    "max_flag_pullback_pct": 25.0,
+    "max_flag_volume_ratio": 0.75,
+    "max_flag_upslope_pct": 1.0,
+    "within_breakout_pct": 2.0,
+    "max_breakout_extension_pct": 3.0,
+    "max_stop_distance_pct": 15.0,
 }
 
 VCP = {
@@ -287,6 +320,23 @@ INV_HEAD_SHOULDERS = {
     "within_breakout_pct": 5.0,
 }
 
+DOUBLE_BOTTOM = {
+    # Undercut-and-reclaim reversal base. This is the strict replacement
+    # candidate for loose IHS-like reversals.
+    "lookback_bars": 150,
+    "min_low_separation_bars": 15,
+    "max_low_separation_bars": 90,
+    "min_base_depth_pct": 8.0,
+    "max_base_depth_pct": 35.0,
+    "min_undercut_pct": 0.3,
+    "max_undercut_pct": 8.0,
+    "max_second_low_volume_ratio": 0.9,
+    "within_breakout_pct": 3.0,
+    "max_breakout_extension_pct": 5.0,
+    "max_stop_distance_pct": 15.0,
+    "swing_order": 4,
+}
+
 SUPERTREND = {
     "atr_period": 10,
     "multiplier": 3.0,
@@ -348,6 +398,14 @@ VOLUME = {
     "avg_vol_period": 50,
 }
 
+POCKET_PIVOT = {
+    "lookback_bars": 10,
+    "min_history_bars": 60,
+    "ma_periods": (10, 20, 50),
+    "close_range_min_pct": 60.0,
+    "max_down_day_lookback": 10,
+}
+
 SECTOR_RS = {
     "lookback_days": 63,
     "leading_threshold": 1.0,
@@ -378,7 +436,7 @@ RSI = {
 CONVICTION_WEIGHTS = {
     "pattern": 25,
     "stage2": 15,
-    "volume": 0,
+    "volume": 10,
     "sector_rs": 20,
     "market_regime": 0,
     "multi_tf": 40,
@@ -394,8 +452,8 @@ QUALITY_SCORE_POINTS = (
 # grade x10). Below this the scan rejects the setup outright as "low
 # pattern quality" - it does not appear on the dashboard and does not go
 # to Telegram. We trade real money; we do not show mediocre patterns.
-# Grade < 6.0 is WEAK by our chart labels and never reaches the user.
-MIN_TRADABLE_QUALITY_SCORE = 60.0
+# Grade < 7.0 is not clean enough for the live dashboard/Telegram feed.
+MIN_TRADABLE_QUALITY_SCORE = 70.0
 
 # Reward/risk floors. A textbook pattern with bad R:R is still a bad
 # trade. The scorer uses scan-date actionable entry, not the old pivot,
@@ -413,7 +471,12 @@ MIN_ACTIONABLE_REWARD_RISK = 1.5
 # [MIN_TRADABLE_QUALITY_SCORE/10, PATTERN_GRADE_HIGHEST_FLOOR) band can
 # still tier HIGH or MEDIUM but never HIGHEST. Only TEXTBOOK-grade
 # patterns (>= 7.5/10) earn the loudest signal on the card.
-PATTERN_GRADE_HIGHEST_FLOOR = 7.5
+PATTERN_GRADE_HIGHEST_FLOOR = 8.0
+
+TEXTBOOK_HIGHEST_GATES = {
+    "min_reward_risk": 2.0,
+    "max_stop_distance_pct": 10.0,
+}
 
 CONVICTION_TIERS = {
     "HIGHEST": 90,
@@ -427,3 +490,5 @@ STACK_BONUS_CAP = 0
 PROCESS_WORKERS = 8
 STOCK_TIMEOUT_SECONDS = 30
 TELEGRAM_MIN_CONVICTION = 70
+TELEGRAM_ALLOWED_TIERS = {"HIGHEST", "HIGH"}
+TELEGRAM_MAX_ALERTS = 5

@@ -34,6 +34,7 @@ BREAKDOWN_LABELS = {
     "pattern": "Pattern quality",
     "stage2": "Stage 2 uptrend",
     "volume": "Volume confirmation",
+    "pocket_pivot": "Pocket pivot",
     "sector_rs": "Sector relative strength",
     "market_regime": "Market regime",
     "multi_tf": "Multi-timeframe",
@@ -42,6 +43,7 @@ BREAKDOWN_LABELS = {
 FILTER_LABELS = {
     "stage2": "Stage 2",
     "volume": "Volume",
+    "pocket_pivot": "Pocket Pivot",
     "sector_rs": "Sector RS",
     "market_regime": "Regime",
     "rsi": "RSI",
@@ -51,7 +53,10 @@ PATTERN_CHART_GUIDE = {
     "Ascending Triangle": "Flat resistance should be marked above price while rising lows form the support line. A valid setup needs price to hold the rising support and break the resistance area.",
     "Cup & Handle": "The cup base should show a rounded recovery back near the old high. The handle is the final smaller pullback before the breakout rim.",
     "Bull Flag": "The pole should be the sharp advance. The flag is the controlled pullback or pause after that advance; heavy selling inside the flag weakens the setup.",
+    "Flat Base": "The base should be tight and horizontal near 52-week highs. A valid setup waits for price to clear the box instead of chasing an old move.",
     "VCP": "The chart should show volatility boxes shrinking from left to right. The final box should be tight near the pivot, with entry only after price clears that area.",
+    "Double Bottom": "The second low should undercut the first low, shake out weak holders, and reclaim the middle pivot with improving volume.",
+    "High Tight Flag": "The chart should show a very sharp advance followed by a short controlled flag near the highs. It is rare and should not be forced.",
     "Inverse Head & Shoulders": "The left shoulder, deeper head, and right shoulder should be visible below the neckline. The setup only confirms when price clears the neckline.",
     "Supertrend Bullish Flip": "The chart should show price reclaiming the supertrend support line. The support line is the invalidation reference if the flip fails.",
     "Multi-Year Breakout": "The chart should show a long resistance level that has been tested before. A real breakout needs price and volume to clear that ceiling.",
@@ -133,7 +138,10 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
     stocks_scanned = _coalesce(context.get("stocks_scanned"), context.get("scan_count"), context.get("symbols_scanned"), "N/A")
     alerts_sent = context.get("alerts_sent")
     if alerts_sent is None:
-        alerts_sent = sum(1 for item in results if item["tradable"] and item["score"] >= settings.TELEGRAM_MIN_CONVICTION)
+        alerts_sent = min(
+            _telegram_alert_limit(),
+            sum(1 for item in results if _would_send_telegram(item)),
+        )
 
     # SKIP tier is excluded entirely from dashboard tier groups so the
     # "SKIP (252)" button never appears next to HIGHEST/HIGH/MEDIUM.
@@ -285,9 +293,9 @@ def _resolve_pattern_grade(item: dict[str, Any], pattern_result: Any) -> float |
 def _grade_class(grade: float | None) -> str:
     if grade is None:
         return "unknown"
-    if grade >= 7.5:
+    if grade >= 8.0:
         return "textbook"
-    if grade >= 5.0:
+    if grade >= 7.0:
         return "decent"
     return "weak"
 
@@ -295,9 +303,9 @@ def _grade_class(grade: float | None) -> str:
 def _grade_label(grade: float | None) -> str:
     if grade is None:
         return "PATTERN GRADE n/a"
-    if grade >= 7.5:
+    if grade >= 8.0:
         tier = "TEXTBOOK"
-    elif grade >= 5.0:
+    elif grade >= 7.0:
         tier = "DECENT"
     else:
         tier = "WEAK"
@@ -359,6 +367,20 @@ def _normalize_breakdown(breakdown: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         rows.append({"label": label, "value": _fmt_number(breakdown.get(key))})
     return rows
+
+
+def _would_send_telegram(item: dict[str, Any]) -> bool:
+    allowed = {str(tier).upper() for tier in getattr(settings, "TELEGRAM_ALLOWED_TIERS", {"HIGHEST", "HIGH"})}
+    return (
+        bool(item.get("tradable"))
+        and str(item.get("tier", "")).upper() in allowed
+        and int(item.get("score", 0)) >= int(settings.TELEGRAM_MIN_CONVICTION)
+    )
+
+
+def _telegram_alert_limit() -> int:
+    limit = int(getattr(settings, "TELEGRAM_MAX_ALERTS", 0) or 0)
+    return limit if limit > 0 else 10**9
 
 
 def _normalize_sectors(raw: Any) -> list[dict[str, Any]]:

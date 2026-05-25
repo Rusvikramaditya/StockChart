@@ -306,6 +306,9 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         detector_modules = {detector.__module__ for detector in ALL_DETECTORS}
         for module in (
             "patterns.cup_handle",
+            "patterns.double_bottom",
+            "patterns.flat_base",
+            "patterns.high_tight_flag",
             "patterns.inv_head_shoulders",
             "patterns.multiyear_breakout",
             "patterns.ascending_triangle",
@@ -315,13 +318,16 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         ):
             self.assertIn(module, detector_modules)
 
-    def test_profile_detector_policy_uses_all_detectors(self):
+    def test_profile_detector_policy_uses_profile_specific_detectors(self):
         def modules(profile: str, symbol: str | None = None) -> set[str]:
             return {detector.__module__ for detector in get_detectors_for_universe(profile, symbol=symbol)}
 
         all_modules = {detector.__module__ for detector in ALL_DETECTORS}
-        self.assertEqual(modules("nifty500"), all_modules)
-        self.assertEqual(modules("small_mid_liquid"), all_modules)
+        self.assertNotIn("patterns.cup_handle", modules("nifty500"))
+        self.assertNotIn("patterns.multiyear_breakout", modules("nifty500"))
+        self.assertNotIn("patterns.inv_head_shoulders", modules("small_mid_liquid"))
+        self.assertIn("patterns.flat_base", modules("nifty500"))
+        self.assertIn("patterns.double_bottom", modules("small_mid_liquid"))
         self.assertEqual(modules("watchlist"), all_modules)
 
     def test_all_nse_equity_detector_policy_routes_known_symbols_by_profile(self):
@@ -341,9 +347,10 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         with patch("patterns._profile_symbols", side_effect=fake_profile_symbols):
             all_modules = {detector.__module__ for detector in ALL_DETECTORS}
             self.assertEqual(modules("WATCH"), all_modules)
-            # All profiles now route to ALL_DETECTORS so every pattern type is scanned.
-            self.assertEqual(modules("NIFTY"), all_modules)
-            self.assertEqual(modules("SMALL"), all_modules)
+            self.assertNotEqual(modules("NIFTY"), all_modules)
+            self.assertNotEqual(modules("SMALL"), all_modules)
+            self.assertIn("patterns.flat_base", modules("NIFTY"))
+            self.assertIn("patterns.multiyear_breakout", modules("SMALL"))
 
     def test_scanner_detector_worker_uses_universe_policy(self):
         called = []
@@ -543,7 +550,7 @@ class QualityScorePhase8bTest(unittest.TestCase):
             )
 
         explanation = attach_explanation(scored)["explanation"]
-        self.assertIn("Volume: disabled (NO_VOLUME)", explanation)
+        self.assertIn("Volume: 0/10 (NO_VOLUME)", explanation)
         self.assertIn("Market regime: disabled (CONFIRMED UPTREND)", explanation)
         self.assertNotIn("/0", explanation)
 
@@ -552,6 +559,9 @@ class QualityScorePhase8bTest(unittest.TestCase):
             "patterns/ascending_triangle.py",
             "patterns/bull_flag.py",
             "patterns/cup_handle.py",
+            "patterns/double_bottom.py",
+            "patterns/flat_base.py",
+            "patterns/high_tight_flag.py",
             "patterns/inv_head_shoulders.py",
             "patterns/multiyear_breakout.py",
             "patterns/supertrend.py",

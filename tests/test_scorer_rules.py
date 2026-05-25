@@ -24,7 +24,7 @@ from unittest.mock import patch
 import numpy as np
 
 from config import settings
-from engine import scorer
+from engine import dedup, scorer, telegram
 from patterns.base import PatternResult
 
 
@@ -113,7 +113,7 @@ class TierHelperTest(unittest.TestCase):
 class SkipReasonTest(unittest.TestCase):
 
     def test_low_pattern_quality_skips(self):
-        # grade 5.5 -> 55 score, below MIN_TRADABLE 70
+        # grade 5.5 -> 55 score, below the live tradable floor
         self.assertEqual(
             scorer._skip_reason(pattern_score_100=55.0, reward_risk=2.0),
             "LOW_PATTERN_QUALITY",
@@ -198,8 +198,8 @@ class ScorePatternEndToEndTest(unittest.TestCase):
         self.assertIsNotNone(result["skip_reason"])
 
     def test_acutaas_like_pattern_skipped_when_future_rr_is_weak(self):
-        """Strong filters + decent grade 6.0 + R:R 1.4 is not actionable."""
-        p = _pattern(name="Bull Flag", grade=6.0, pivot=100.0, target=139.0, stop_loss=90.0)
+        """Strong filters + decent grade 7.1 + R:R 1.4 is not actionable."""
+        p = _pattern(name="Bull Flag", grade=7.1, pivot=100.0, target=139.0, stop_loss=90.0)
         result = self._run(p)
         self.assertEqual(result["tier"], "SKIP")
         self.assertFalse(result["tradable"])
@@ -207,7 +207,7 @@ class ScorePatternEndToEndTest(unittest.TestCase):
 
     def test_textbook_pattern_stays_highest(self):
         """Grade 8 + RR 2.0 + clean filters -> HIGHEST."""
-        p = _pattern(grade=8.5, pivot=120.0, target=180.0, stop_loss=100.0)
+        p = _pattern(grade=8.5, pivot=120.0, target=180.0, stop_loss=108.0)
         result = self._run(p)
         self.assertEqual(result["tier"], "HIGHEST")
         self.assertTrue(result["tradable"])
@@ -270,6 +270,24 @@ class ScorePatternEndToEndTest(unittest.TestCase):
                 {"score": 4}, {"sectors": {}},
             )
         self.assertLess(result["score"], healthy["score"])
+
+
+class DedupAndTelegramGateTest(unittest.TestCase):
+
+    def test_dedup_preserves_scorer_tier_cap(self):
+        merged = dedup.deduplicate_results([
+            {
+                "symbol": "AAA", "pattern": "Flat Base", "score": 95, "tier": "HIGH",
+                "tradable": True, "pattern_result": _pattern(name="Flat Base", grade=7.5),
+            }
+        ])[0]
+
+        self.assertEqual(merged["tier"], "HIGH")
+        self.assertTrue(merged["tradable"])
+
+    def test_telegram_does_not_send_medium_even_with_high_score(self):
+        self.assertFalse(telegram.should_send_alert({"tradable": True, "score": 95, "tier": "MEDIUM"}))
+        self.assertTrue(telegram.should_send_alert({"tradable": True, "score": 95, "tier": "HIGH"}))
 
 
 class DashboardSkipFilterTest(unittest.TestCase):

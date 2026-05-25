@@ -20,9 +20,21 @@ PATTERN_101 = {
         "A Bull Flag forms after a sharp advance followed by a tight consolidation. "
         "The flag is useful only when volume cools off instead of showing heavy selling."
     ),
+    "Flat Base": (
+        "A Flat Base forms when price moves sideways in a tight range near highs. "
+        "It is a continuation setup; the clean entry comes only near the box breakout."
+    ),
     "VCP": (
         "A Volatility Contraction Pattern shows each price swing becoming smaller. "
         "That tightening suggests weak holders are being shaken out before a breakout."
+    ),
+    "Double Bottom": (
+        "A Double Bottom base has two major lows. The higher-quality version undercuts "
+        "the first low, reclaims the middle pivot, and shows selling pressure drying up."
+    ),
+    "High Tight Flag": (
+        "A High Tight Flag forms after a very sharp advance, then a short controlled "
+        "pullback near the highs. It is rare and should be treated as a power setup."
     ),
     "Inverse Head & Shoulders": (
         "An Inverse Head & Shoulders is a reversal pattern with three troughs. The "
@@ -67,6 +79,7 @@ def _stock_specific(symbol: str, scored: dict, filters: dict) -> str:
     pattern: PatternResult = scored["pattern_result"]
     stage = filters["stage2"]
     volume = filters["volume"]
+    pocket = filters.get("pocket_pivot", {})
     sector = filters["sector_rs"]
     rsi = filters["rsi"]
     entry = _entry_price(scored)
@@ -77,6 +90,7 @@ def _stock_specific(symbol: str, scored: dict, filters: dict) -> str:
         f"target is Rs.{pattern.target}, and stop is Rs.{pattern.stop_loss}. "
         f"Stage 2 is {stage['status']}; volume is {volume['status']} with "
         f"{volume.get('details', {}).get('breakout_volume_ratio', 0)}x breakout volume; "
+        f"pocket pivot is {pocket.get('status', 'UNKNOWN')}; "
         f"sector RS is {sector['status']} versus Nifty; RSI is {rsi['value']} ({rsi['status']})."
     )
 

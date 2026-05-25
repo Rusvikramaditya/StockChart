@@ -16,6 +16,9 @@ from patterns import (
     ascending_triangle,
     bull_flag,
     cup_handle,
+    double_bottom,
+    flat_base,
+    high_tight_flag,
     inv_head_shoulders,
     multiyear_breakout,
     supertrend,
@@ -23,8 +26,11 @@ from patterns import (
 )
 
 ALL_DETECTORS = [
+    flat_base.detect,
     cup_handle.detect,
     vcp.detect,
+    double_bottom.detect,
+    high_tight_flag.detect,
     inv_head_shoulders.detect,
     multiyear_breakout.detect,
     ascending_triangle.detect,
@@ -33,8 +39,30 @@ ALL_DETECTORS = [
 ]
 
 PROFILE_DETECTORS = {
-    "nifty500": ALL_DETECTORS,
-    "small_mid_liquid": ALL_DETECTORS,
+    # Nifty large-cap scans should prefer tight continuation bases and avoid
+    # historically weak broad-profile detectors unless they are on a watchlist.
+    "nifty500": [
+        flat_base.detect,
+        vcp.detect,
+        high_tight_flag.detect,
+        ascending_triangle.detect,
+        bull_flag.detect,
+        inv_head_shoulders.detect,
+        supertrend.detect,
+    ],
+    # Small/mid scans keep multi-year breakouts and cup bases, where the
+    # latest backtests were better, but avoid noisy IHS flooding.
+    "small_mid_liquid": [
+        flat_base.detect,
+        vcp.detect,
+        double_bottom.detect,
+        high_tight_flag.detect,
+        multiyear_breakout.detect,
+        cup_handle.detect,
+        ascending_triangle.detect,
+        bull_flag.detect,
+        supertrend.detect,
+    ],
     "watchlist": ALL_DETECTORS,
 }
 

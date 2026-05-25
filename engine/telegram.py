@@ -87,7 +87,13 @@ def send_chart_alert(
 
 def should_send_alert(scored: dict[str, Any], min_conviction: int | None = None) -> bool:
     min_conviction = int(min_conviction or settings.TELEGRAM_MIN_CONVICTION)
-    return bool(scored.get("tradable", True)) and int(scored.get("score", 0)) >= min_conviction
+    allowed = {str(tier).upper() for tier in getattr(settings, "TELEGRAM_ALLOWED_TIERS", {"HIGHEST", "HIGH"})}
+    tier = str(scored.get("tier", "")).upper()
+    return (
+        bool(scored.get("tradable", True))
+        and tier in allowed
+        and int(scored.get("score", 0)) >= min_conviction
+    )
 
 
 def format_alert(scored: dict[str, Any]) -> str:
