@@ -27,6 +27,7 @@ RECENT_LISTINGS_CSV = CONFIG_DIR / "recent_listings.csv"
 SECTOR_MAP_JSON = CONFIG_DIR / "sector_map.json"
 INSTRUMENT_MASTER_PATH = DATA_DIR / "dhan_instrument_master.csv"
 DHAN_SESSION_TOKEN_CACHE_PATH = DATA_DIR / "dhan_session.json"
+DHAN_RATE_LIMIT_CACHE_PATH = DATA_DIR / "dhan_rate_limit.json"
 
 # Dhan API
 DHAN_CLIENT_ID = os.getenv("DHAN_CLIENT_ID", "").strip()
@@ -49,6 +50,8 @@ DHAN_REFRESH_COOLDOWN_SECONDS = int(os.getenv("DHAN_REFRESH_COOLDOWN_SECONDS", "
 DHAN_INVALID_TOTP_COOLDOWN_SECONDS = int(
     os.getenv("DHAN_INVALID_TOTP_COOLDOWN_SECONDS", "30")
 )
+DHAN_RATE_LIMIT_COOLDOWN_SECONDS = int(os.getenv("DHAN_RATE_LIMIT_COOLDOWN_SECONDS", "900"))
+DHAN_MARKETFEED_BATCH_SLEEP_SECONDS = float(os.getenv("DHAN_MARKETFEED_BATCH_SLEEP_SECONDS", "1.0"))
 
 # NSE Nifty 500 universe. The archives endpoint is a fallback for the same file.
 NIFTY500_URLS = [
@@ -356,6 +359,9 @@ SUPERTREND = {
 
 MULTIYEAR_BREAKOUT = {
     "min_years": 2,
+    # Practical long-base scan window. The old detector effectively looked
+    # back about 3 years; 5 years catches real multi-year overhead supply.
+    "max_years": 5,
     # Min touches at the multi-year resistance level. 2 was the floor;
     # textbook breakout chartists want 3+ tests over the period.
     "min_touches": 3,
@@ -365,6 +371,17 @@ MULTIYEAR_BREAKOUT = {
     # Touch dispersion guard: max(touch_high) - min(touch_high) as % of
     # resistance. Tightens what counts as "the same level".
     "max_touch_dispersion_pct": 1.0,
+    # Practical resistance-zone mode. Real Indian charts often respect a zone
+    # around the old high, not one exact tick-perfect line.
+    "resistance_zone_width_pct": 4.0,
+    "max_zone_touch_range_pct": 4.0,
+    "recent_touch_exclusion_weeks": 12,
+    # Related old-high breakout mode: catches a clean multi-year/52-week high
+    # breakout even when the old high was not touched 3 perfect times.
+    "long_high_base_weeks": 26,
+    "long_high_max_base_depth_pct": 18.0,
+    "long_high_near_high_pct": 10.0,
+    "long_high_min_near_high_weeks": 8,
     # Touch spread guard: touches must span at least this fraction of the
     # lookback window. Prevents 3 touches clustered in the last quarter
     # masquerading as multi-year resistance.

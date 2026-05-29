@@ -80,6 +80,43 @@ def _build_multiyear(
     return {"open": open_, "high": high, "low": low, "close": close, "volume": volume}
 
 
+def _build_long_high_breakout(
+    *,
+    weeks: int = 156,
+    resistance: float = 1000.0,
+    breakout_volume_ratio: float = 1.8,
+    loose_base: bool = False,
+) -> dict:
+    open_ = np.full(weeks, resistance * 0.7, dtype=float)
+    high = np.full(weeks, resistance * 0.72, dtype=float)
+    low = np.full(weeks, resistance * 0.68, dtype=float)
+    close = np.full(weeks, resistance * 0.7, dtype=float)
+    volume = np.full(weeks, 1_000_000.0, dtype=float)
+
+    # One old high only. This should not satisfy the 3-touch strict/zone
+    # detector, but it is still a valid old-high breakout if the recent base
+    # is tight and the breakout week confirms with volume.
+    old_high_idx = 30
+    high[old_high_idx] = resistance
+    close[old_high_idx] = resistance * 0.99
+    open_[old_high_idx] = resistance * 0.97
+    low[old_high_idx] = resistance * 0.95
+
+    base_low = resistance * (0.75 if loose_base else 0.93)
+    for idx in range(weeks - 27, weeks - 1):
+        open_[idx] = resistance * 0.94
+        high[idx] = resistance * 0.95
+        low[idx] = base_low
+        close[idx] = resistance * 0.94
+
+    close[-1] = resistance * 1.02
+    open_[-1] = resistance * 0.98
+    high[-1] = resistance * 1.025
+    low[-1] = resistance * 1.01
+    volume[-1] = 1_000_000.0 * breakout_volume_ratio
+    return {"open": open_, "high": high, "low": low, "close": close, "volume": volume}
+
+
 class MultiYearDetectionTest(unittest.TestCase):
 
     def test_pivot_ready_detected_without_volume_surge(self):
@@ -102,6 +139,45 @@ class MultiYearDetectionTest(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].status, "BREAKING OUT")
 
+    def test_practical_resistance_zone_breakout_detected(self):
+        """Real charts often break out from a zone, not one exact line.
+
+        A 3% resistance band would fail the strict line detector's 1% touch
+        dispersion guard, but should still count as a multi-year breakout
+        when the touches are spread out and the weekly close clears the zone.
+        """
+        daily = _build_multiyear(
+            touch_count=4,
+            touch_dispersion_pct=3.0,
+            latest_close_pct_of_resistance=1.02,
+            breakout_volume_ratio=1.8,
+        )
+        results = multiyear_breakout.detect(
+            daily={"open": [], "high": [], "low": [], "close": [], "volume": []},
+            weekly=daily,
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].status, "BREAKING OUT")
+        self.assertEqual(results[0].extra["resistance_model"], "resistance_zone")
+
+    def test_long_high_breakout_detected_without_three_touches(self):
+        daily = _build_long_high_breakout()
+        results = multiyear_breakout.detect(
+            daily={"open": [], "high": [], "low": [], "close": [], "volume": []},
+            weekly=daily,
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].status, "BREAKING OUT")
+        self.assertEqual(results[0].extra["resistance_model"], "long_high_breakout")
+
+    def test_long_high_breakout_rejects_loose_recent_base(self):
+        daily = _build_long_high_breakout(loose_base=True)
+        results = multiyear_breakout.detect(
+            daily={"open": [], "high": [], "low": [], "close": [], "volume": []},
+            weekly=daily,
+        )
+        self.assertEqual(results, [])
+
     def test_breakout_without_volume_surge_rejected(self):
         """Breakout candle without volume surge is a low-conviction
         candidate; detector rejects it to keep the BREAKING OUT label
@@ -119,9 +195,9 @@ class MultiYearDetectionTest(unittest.TestCase):
         results = multiyear_breakout.detect(daily={"open": [], "high": [], "low": [], "close": [], "volume": []}, weekly=daily)
         self.assertEqual(results, [])
 
-    def test_wide_dispersion_rejected(self):
-        """Touches spanning >1% range must reject (was 3% before)."""
-        daily = _build_multiyear(touch_dispersion_pct=1.5)
+    def test_too_wide_for_practical_zone_rejected(self):
+        """Even the practical zone cannot become a loose old-high area."""
+        daily = _build_multiyear(touch_dispersion_pct=8.0)
         results = multiyear_breakout.detect(daily={"open": [], "high": [], "low": [], "close": [], "volume": []}, weekly=daily)
         self.assertEqual(results, [])
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import date
 from typing import Iterable
 
@@ -234,11 +235,13 @@ class DataLoader:
         universe_name: str = "nifty500",
     ) -> int:
         """Fetch Dhan marketfeed OHLC in batches and append today's rows."""
+        dhan_client.raise_if_rate_limited()
         if symbols_df is None:
             symbols_df = universe.load_universe_profile(universe_name)
         today = date.today().isoformat()
         total = 0
-        for chunk in _chunks(symbols_df.to_dict("records"), 800):
+        sleep_seconds = max(0.0, float(settings.DHAN_MARKETFEED_BATCH_SLEEP_SECONDS))
+        for batch_index, chunk in enumerate(_chunks(symbols_df.to_dict("records"), 800)):
             payload_ids = [
                 _security_id_payload(row["security_id"])
                 for row in chunk
@@ -246,12 +249,19 @@ class DataLoader:
             ]
             if not payload_ids:
                 continue
+            if batch_index > 0 and sleep_seconds:
+                time.sleep(sleep_seconds)
             response = dhan_client.dhan_request(
                 "POST",
                 f"{settings.DHAN_BASE_URL}/v2/marketfeed/ohlc",
                 json={"NSE_EQ": payload_ids},
                 timeout=30,
             )
+            if response.status_code == 429:
+                dhan_client.record_rate_limit(response.text)
+                raise dhan_client.DhanRateLimitError(
+                    f"Dhan batch OHLC HTTP 429: {response.text[:200]}"
+                )
             if response.status_code != 200:
                 raise dhan_client.DhanError(
                     f"Dhan batch OHLC HTTP {response.status_code}: {response.text[:200]}"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import threading
@@ -29,6 +30,65 @@ _master_df: pd.DataFrame | None = None
 
 class DhanError(RuntimeError):
     """Raised when a required Dhan request cannot be completed."""
+
+
+class DhanRateLimitError(DhanError):
+    """Raised when Dhan asks the scanner to stop making live requests."""
+
+
+def _rate_limit_cache_path() -> Path:
+    return Path(getattr(settings, "DHAN_RATE_LIMIT_CACHE_PATH", settings.DATA_DIR / "dhan_rate_limit.json"))
+
+
+def record_rate_limit(message: str, *, cooldown_seconds: int | None = None) -> None:
+    """Persist a local cooldown after Dhan returns HTTP 429."""
+    cooldown = int(cooldown_seconds or settings.DHAN_RATE_LIMIT_COOLDOWN_SECONDS)
+    now = datetime.now()
+    payload = {
+        "hit_at": now.isoformat(timespec="seconds"),
+        "blocked_until": (now + timedelta(seconds=cooldown)).isoformat(timespec="seconds"),
+        "message": str(message)[:500],
+    }
+    try:
+        settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        path = _rate_limit_cache_path()
+        tmp_path = Path(f"{path}.tmp")
+        tmp_path.write_text(json.dumps(payload), encoding="utf-8")
+        os.replace(tmp_path, path)
+    except Exception as exc:
+        print(f"[Dhan] Could not write rate-limit cache: {exc}")
+
+
+def active_rate_limit() -> dict[str, str] | None:
+    """Return active local rate-limit state, or None when live calls may resume."""
+    try:
+        path = _rate_limit_cache_path()
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        blocked_until = _parse_cached_datetime(data.get("blocked_until"))
+        if blocked_until is None or datetime.now() >= blocked_until:
+            with contextlib.suppress(OSError):
+                path.unlink()
+            return None
+        return {
+            "hit_at": str(data.get("hit_at") or ""),
+            "blocked_until": blocked_until.isoformat(timespec="seconds"),
+            "message": str(data.get("message") or ""),
+        }
+    except Exception as exc:
+        print(f"[Dhan] Could not read rate-limit cache: {exc}")
+        return None
+
+
+def raise_if_rate_limited() -> None:
+    state = active_rate_limit()
+    if not state:
+        return
+    raise DhanRateLimitError(
+        "Dhan live fetch is cooling down after HTTP 429. "
+        f"Try again after {state['blocked_until']}. Last message: {state['message']}"
+    )
 
 
 def _parse_cached_datetime(value: str | None) -> datetime | None:

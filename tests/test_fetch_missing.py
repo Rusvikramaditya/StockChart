@@ -152,8 +152,9 @@ class ScannerStageWiringTest(unittest.TestCase):
             planned=1, skipped=0, success=0, failed=1,
             failed_symbols=["BBB"], rows_written=0, results=[],
         )
-        with patch("scanner.fetch_missing_for_profile", return_value=fake_summary):
+        with patch("scanner.fetch_missing_for_profile", return_value=fake_summary) as fetch_missing_mock:
             Pipeline(ctx).fetch_missing()
+        self.assertFalse(fetch_missing_mock.call_args.kwargs["require_latest_date"])
         self.assertEqual(ctx.symbols, ["AAA"])
         self.assertEqual(ctx.selected_profile["symbol"].tolist(), ["AAA"])
         # One non-critical error recorded for the dropped symbol

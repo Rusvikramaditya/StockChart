@@ -8,6 +8,7 @@ import contextlib
 import importlib.util
 import math
 import os
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -17,7 +18,7 @@ from typing import Callable, Iterable
 import pandas as pd
 
 from config import settings
-from engine import dashboard, storage, telegram, universe
+from engine import dashboard, dhan_client, storage, telegram, universe
 from engine.chart_gen import generate_pattern_chart
 from engine.chart_payload import build_chart_payload
 from engine.data_loader import DataLoader
@@ -217,7 +218,7 @@ class Pipeline:
             summary = fetch_missing_for_profile(
                 self.ctx.loader.conn,
                 self.ctx.selected_profile,
-                require_latest_date=True,
+                require_latest_date=False,
                 execute=True,
             )
         self.ctx.stats["fetch_missing"] = {
@@ -726,6 +727,15 @@ def _maybe_print_rebalance_reminder(today: date, universe_name: str) -> None:
         )
 
 
+def _validate_live_fetch_scope(universe_name: str, *, skip_fetch: bool, limit: int | None) -> None:
+    if skip_fetch:
+        return
+    try:
+        dhan_client.raise_if_rate_limited()
+    except dhan_client.DhanRateLimitError as exc:
+        raise PipelineError(str(exc)) from exc
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the NSE pattern scanner pipeline.")
     parser.add_argument("--universe", default="nifty500", help="Universe profile to scan.")
@@ -765,10 +775,16 @@ def main(argv: list[str] | None = None) -> int:
         universe_name = "all_nse_equity"
     dry_run = bool(args.dry_run)
     _maybe_print_rebalance_reminder(date.today(), universe_name)
+    skip_fetch = bool(args.skip_fetch or dry_run)
+    try:
+        _validate_live_fetch_scope(universe_name, skip_fetch=skip_fetch, limit=args.limit)
+    except PipelineError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
     ctx = PipelineContext(
         universe_name=universe_name,
         dry_run=dry_run,
-        skip_fetch=bool(args.skip_fetch or dry_run),
+        skip_fetch=skip_fetch,
         fetch_missing=not bool(args.no_fetch_missing),
         stage=args.stage,
         workers=args.workers,

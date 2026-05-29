@@ -5,10 +5,11 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 
-from engine import storage
+from engine import dhan_client, storage
 from engine.data_loader import DataLoader, _as_float
 
 
@@ -112,6 +113,52 @@ class GetRecentCloseStatsTest(unittest.TestCase):
     def test_case_insensitive_symbols(self):
         stats = self.loader.get_recent_close_stats(["alpha"])
         self.assertIn("ALPHA", stats)
+
+
+class FetchTodaysCandlesTest(unittest.TestCase):
+    def test_raises_specific_rate_limit_error_on_dhan_429(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "test.db"
+            rate_path = Path(tmp) / "dhan_rate_limit.json"
+            loader = DataLoader(db_path)
+            profile = pd.DataFrame([{"symbol": "AAA", "security_id": "1"}])
+
+            class Response:
+                status_code = 429
+                text = '{"status":"failed","data":{"1":"Too many requests"}}'
+
+            try:
+                with (
+                    patch.object(dhan_client.settings, "DATA_DIR", Path(tmp)),
+                    patch.object(dhan_client.settings, "DHAN_RATE_LIMIT_CACHE_PATH", rate_path),
+                    patch("engine.data_loader.dhan_client.dhan_request", return_value=Response()),
+                ):
+                    with self.assertRaises(dhan_client.DhanRateLimitError):
+                        loader.fetch_todays_candles(profile)
+                    self.assertTrue(rate_path.exists())
+            finally:
+                loader.close()
+
+    def test_active_rate_limit_blocks_before_dhan_request(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "test.db"
+            rate_path = Path(tmp) / "dhan_rate_limit.json"
+            loader = DataLoader(db_path)
+            profile = pd.DataFrame([{"symbol": "AAA", "security_id": "1"}])
+
+            try:
+                with (
+                    patch.object(dhan_client.settings, "DATA_DIR", Path(tmp)),
+                    patch.object(dhan_client.settings, "DHAN_RATE_LIMIT_CACHE_PATH", rate_path),
+                    patch.object(dhan_client.settings, "DHAN_RATE_LIMIT_COOLDOWN_SECONDS", 900),
+                ):
+                    dhan_client.record_rate_limit("Too many requests")
+                    with patch("engine.data_loader.dhan_client.dhan_request") as request:
+                        with self.assertRaises(dhan_client.DhanRateLimitError):
+                            loader.fetch_todays_candles(profile)
+                    request.assert_not_called()
+            finally:
+                loader.close()
 
 
 if __name__ == "__main__":

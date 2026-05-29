@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from engine import storage, universe
+from engine import dhan_client, storage, universe
 from engine.dedup import deduplicate_results
 from patterns.base import PatternResult
 from scanner import (
@@ -18,6 +18,7 @@ from scanner import (
     PipelineError,
     _generate_weekly_incremental,
     _symbol_chunks as _original_symbol_chunks,
+    _validate_live_fetch_scope,
     parse_args,
     stage,
 )
@@ -199,6 +200,18 @@ class PipelineVerifyPhase6Test(unittest.TestCase):
         weekly.assert_called_once()
         self.assertEqual(ctx.stats["rows_fetched"], 1)
         self.assertEqual(ctx.stats["weekly_incremental"], {"symbols_processed": 1})
+
+    def test_full_all_nse_live_fetch_is_allowed_when_not_cooling_down(self):
+        with patch("scanner.dhan_client.raise_if_rate_limited"):
+            _validate_live_fetch_scope("all_nse_equity", skip_fetch=False, limit=None)
+
+    def test_live_fetch_scope_surfaces_active_dhan_cooldown(self):
+        with patch(
+            "scanner.dhan_client.raise_if_rate_limited",
+            side_effect=dhan_client.DhanRateLimitError("cooling down"),
+        ):
+            with self.assertRaises(PipelineError):
+                _validate_live_fetch_scope("small_mid_liquid", skip_fetch=False, limit=None)
 
     def test_weekly_incremental_generates_without_rebuilding_existing_weeks(self):
         with tempfile.TemporaryDirectory() as tmp:

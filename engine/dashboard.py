@@ -59,7 +59,7 @@ PATTERN_CHART_GUIDE = {
     "High Tight Flag": "The chart should show a very sharp advance followed by a short controlled flag near the highs. It is rare and should not be forced.",
     "Inverse Head & Shoulders": "The left shoulder, deeper head, and right shoulder should be visible below the neckline. The setup only confirms when price clears the neckline.",
     "Supertrend Bullish Flip": "The chart should show price reclaiming the supertrend support line. The support line is the invalidation reference if the flip fails.",
-    "Multi-Year Breakout": "The chart should show a long resistance level that has been tested before. A real breakout needs price and volume to clear that ceiling.",
+    "Multi-Year Breakout": "The chart should show a long resistance line or zone that has been tested before. A real breakout needs price and volume to clear that ceiling.",
 }
 
 

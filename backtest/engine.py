@@ -264,6 +264,14 @@ class _SliceLoader:
     def get_all_active_symbols(self) -> list[str]:
         return list(self.symbols)
 
+    def get_recent_close_stats(
+        self,
+        symbols: list[str],
+        *,
+        ma_periods: tuple[int, ...] = (50, 200),
+    ) -> dict[str, dict[str, float | int | None]]:
+        return self.loader.get_recent_close_stats(symbols, as_of_date=self.as_of_date, ma_periods=ma_periods)
+
 
 class _CachedBacktestLoader:
     """In-memory OHLCV cache for walkforward backtests.
@@ -328,6 +336,41 @@ class _CachedBacktestLoader:
         if frame.empty:
             return frame.copy()
         return frame[frame["date"] <= str(as_of_date)].copy()
+
+    def get_recent_close_stats(
+        self,
+        symbols: list[str],
+        *,
+        as_of_date: str | date | None = None,
+        ma_periods: tuple[int, ...] = (50, 200),
+    ) -> dict[str, dict[str, float | int | None]]:
+        ma_periods = tuple(sorted({int(period) for period in ma_periods if period > 0}))
+        window = max(max(ma_periods) if ma_periods else 0, 2)
+        out: dict[str, dict[str, float | int | None]] = {}
+        cutoff = str(as_of_date) if as_of_date is not None else None
+
+        for symbol in symbols:
+            key = str(symbol).upper()
+            frame = self.daily.get(key)
+            if frame is None or frame.empty:
+                continue
+            if cutoff is not None:
+                frame = frame[frame["date"] <= cutoff]
+            if frame.empty:
+                continue
+            closes = pd.to_numeric(frame["close"], errors="coerce").dropna().tail(window)
+            if closes.empty:
+                continue
+            record: dict[str, float | int | None] = {
+                "latest": float(closes.iloc[-1]),
+                "prior": float(closes.iloc[-2]) if len(closes) >= 2 else None,
+                "bars": int(len(closes)),
+            }
+            for period in ma_periods:
+                recent = closes.tail(period)
+                record[f"ma{period}"] = float(recent.mean()) if not recent.empty else None
+            out[key] = record
+        return out
 
 
 def _normalise_cached_dates(frame: pd.DataFrame, column: str) -> pd.DataFrame:

@@ -14,7 +14,7 @@ import pandas as pd
 
 from backtest import __main__ as backtest_cli
 from backtest.analyze import analyze_reports, parse_report, render_markdown
-from backtest.engine import run_backtest, track_trade_forward
+from backtest.engine import _CachedBacktestLoader, _SliceLoader, run_backtest, track_trade_forward
 from backtest.metrics import BacktestResult
 from backtest.report import render_report, write_report
 from engine.explainer import attach_explanation
@@ -89,6 +89,39 @@ class DataLoaderBacktestSliceTest(unittest.TestCase):
 
         self.assertEqual(days, ["2026-01-01"])
         self.assertEqual(chunk_sizes, [800, 405])
+
+    def test_slice_loader_recent_close_stats_do_not_use_future_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "test.db"
+            conn = storage.connect(db_path)
+            storage.ensure_schema(conn)
+            try:
+                storage.upsert_daily_rows(
+                    conn,
+                    "TEST",
+                    "100",
+                    pd.DataFrame(
+                        [
+                            {"date": "2026-01-01", "open": 99, "high": 101, "low": 98, "close": 100, "volume": 1000},
+                            {"date": "2026-01-02", "open": 101, "high": 103, "low": 100, "close": 102, "volume": 1000},
+                            {"date": "2026-01-03", "open": 199, "high": 201, "low": 198, "close": 200, "volume": 1000},
+                        ]
+                    ),
+                )
+            finally:
+                conn.close()
+
+            source = DataLoader(db_path)
+            try:
+                cached = _CachedBacktestLoader(source, ["TEST"])
+                sliced = _SliceLoader(cached, "2026-01-02", ["TEST"])
+                stats = sliced.get_recent_close_stats(["TEST"], ma_periods=(2,))
+            finally:
+                source.close()
+
+        self.assertEqual(stats["TEST"]["latest"], 102.0)
+        self.assertEqual(stats["TEST"]["prior"], 100.0)
+        self.assertEqual(stats["TEST"]["ma2"], 101.0)
 
 
 class TradeTrackingPhase8Test(unittest.TestCase):

@@ -39,7 +39,7 @@ def test_safe_mode_builds_dry_run_command():
 def test_fetch_no_telegram_mode_keeps_fetch_enabled():
     command, _output_path = build_scan_command(
         {
-            "universe": ["all_nse_equity"],
+            "universe": ["nifty500"],
             "mode": ["fetch_no_telegram"],
             "limit": [""],
             "workers": ["4"],
@@ -51,6 +51,24 @@ def test_fetch_no_telegram_mode_keeps_fetch_enabled():
     assert "--dry-run" not in command
     assert "--no-telegram" in command
     assert "--limit" not in command
+
+
+def test_allows_full_all_nse_live_fetch():
+    command, _output_path = build_scan_command(
+        {
+            "universe": ["all_nse_equity"],
+            "mode": ["fetch_no_telegram"],
+            "limit": [""],
+            "workers": ["4"],
+        },
+        now=NOW,
+    )
+
+    assert command[command.index("--universe") + 1] == "all_nse_equity"
+    assert "--limit" not in command
+    assert "--skip-fetch" not in command
+    assert "--dry-run" not in command
+    assert "--no-telegram" in command
 
 
 def test_live_with_telegram_mode_does_not_force_safety_flags():
@@ -131,6 +149,19 @@ def test_dhan_auth_failure_is_summarized_for_operator():
     assert "Safe dry run" in message
     assert "DHAN_CLIENT_ID" in message
     assert "DHAN_ACCESS_TOKEN" in message
+
+
+def test_dhan_rate_limit_failure_is_summarized_for_operator():
+    stderr = (
+        "engine.dhan_client.DhanError: Dhan batch OHLC HTTP 429: "
+        '{"data":{"805":"Too many requests. Further requests may result in the user being blocked."},"status":"failed"}'
+    )
+
+    message = control.summarize_run_failure(1, "", stderr)
+
+    assert "Dhan rate-limited" in message
+    assert "Wait" in message
+    assert "Safe dry run" in message
 
 
 def test_sync_dhan_env_from_stockscanner_copies_only_dhan_keys(tmp_path):

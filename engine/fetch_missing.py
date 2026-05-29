@@ -163,6 +163,10 @@ async def _fetch_one(
     from_date: str,
     to_date: str,
 ) -> tuple[PlanRow, pd.DataFrame | None, str]:
+    try:
+        dhan_client.raise_if_rate_limited()
+    except dhan_client.DhanRateLimitError as exc:
+        return item, None, str(exc)
     payload = dhan_client.historical_payload(
         security_id=item.security_id,
         exchange_segment=item.exchange_segment,
@@ -182,8 +186,8 @@ async def _fetch_one(
                         return item, None, "empty Dhan response"
                     return item, frame, ""
                 if response.status == 429:
-                    await asyncio.sleep(2 ** attempt)
-                    continue
+                    dhan_client.record_rate_limit(text)
+                    return item, None, f"HTTP 429 rate limit: {text[:200]}"
                 return item, None, f"HTTP {response.status}: {text[:200]}"
         except Exception as exc:  # network / parse / auth
             if attempt == settings.FETCH_RETRY_COUNT - 1:

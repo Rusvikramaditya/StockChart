@@ -45,8 +45,8 @@ PATTERN_101 = {
         "moved above its volatility-adjusted trailing resistance."
     ),
     "Multi-Year Breakout": (
-        "A Multi-Year Breakout happens when price clears a resistance level that "
-        "has capped the stock for years. Long bases can reduce overhead supply."
+        "A Multi-Year Breakout happens when price clears a resistance line or "
+        "zone that has capped the stock for years. Long bases can reduce overhead supply."
     ),
 }
 

@@ -109,6 +109,11 @@ def recent_charts(limit: int = 10) -> list[dict[str, str]]:
 def summarize_run_failure(returncode: int, stdout: str, stderr: str) -> str:
     """Return a concise operator-facing failure message."""
     combined = f"{stdout}\n{stderr}".lower()
+    if "dhan" in combined and ("429" in combined or "too many requests" in combined):
+        return (
+            "Dhan rate-limited the live fetch. Wait before starting another live run, or use Safe dry run / skip live "
+            "fetch for broad universes."
+        )
     if "dhan" in combined and ("401" in combined or "authentication failed" in combined or "token invalid" in combined):
         return (
             "Dhan authentication failed. This run used live fetch mode, so the scanner called Dhan and Dhan rejected "
