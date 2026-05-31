@@ -608,6 +608,7 @@
     }
     @media (max-width: 760px) {
       .glossary-grid { grid-template-columns: 1fr; }
+      .watch-row { grid-template-columns: 1fr; }
     }
 
     .pattern-guide {
@@ -847,6 +848,16 @@
       line-height: 1.1;
     }
 
+    .symbol-link {
+      text-decoration: none;
+      text-underline-offset: 3px;
+    }
+
+    .symbol-link:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
     .pattern {
       margin-top: 8px;
       color: var(--muted);
@@ -906,6 +917,112 @@
       text-overflow: ellipsis;
     }
 
+    .volume-panel {
+      display: grid;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      background: #0d0d0d;
+    }
+
+    .volume-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .volume-panel-title {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .volume-subsection {
+      display: grid;
+      gap: 8px;
+    }
+
+    .volume-subsection + .volume-subsection {
+      padding-top: 10px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .volume-subsection-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .volume-subsection-header strong {
+      color: var(--text);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .volume-panel-date {
+      color: var(--faint);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    .volume-panel-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line-soft);
+    }
+
+    .volume-metric {
+      min-width: 0;
+      padding: 10px;
+      background: #111;
+    }
+
+    .volume-metric span {
+      display: block;
+      color: var(--faint);
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .volume-metric strong {
+      display: block;
+      margin-top: 5px;
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .volume-note {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .volume-note strong {
+      color: var(--text);
+    }
+
+    .volume-note.higher strong,
+    .volume-note.confirm strong {
+      color: #d9fbe7;
+    }
+
+    .volume-note.lower strong {
+      color: #ffd8d8;
+    }
+
+    .volume-note.watch strong {
+      color: #fff0c2;
+    }
+
     .filters {
       display: flex;
       flex-wrap: wrap;
@@ -944,6 +1061,11 @@
     .filter.fail {
       color: #ffd8d8;
       border-color: rgba(239, 68, 68, 0.32);
+    }
+    .filter.watch::before { background: var(--yellow); }
+    .filter.watch {
+      color: #fff0c2;
+      border-color: rgba(224, 180, 0, 0.36);
     }
 
     details {
@@ -1090,6 +1212,61 @@
       border-top: 1px solid var(--line-soft);
     }
 
+    .watch-checklist {
+      display: grid;
+      gap: 0;
+      margin: 0 0 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--line-soft);
+    }
+
+    .watch-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #0f0f0f;
+    }
+
+    .watch-heading strong {
+      color: var(--text);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .watch-heading span {
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .watch-row {
+      display: grid;
+      grid-template-columns: minmax(110px, 150px) minmax(0, 1fr);
+      gap: 12px;
+      padding: 11px 12px;
+      background: #101010;
+      border-left: 3px solid var(--line);
+    }
+
+    .watch-row strong {
+      color: var(--text);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .watch-row span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .watch-row.watch-confirm { border-left-color: var(--green); }
+    .watch-row.watch-watch,
+    .watch-row.watch-trigger { border-left-color: var(--yellow); }
+    .watch-row.watch-risk { border-left-color: var(--red); }
+
     .detail-block h4 {
       margin: 0 0 7px;
       color: var(--accent);
@@ -1199,14 +1376,17 @@
       .result-count { min-width: 0; }
       .result-main { grid-template-columns: 1fr; }
       .score-block { text-align: left; }
-      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric-grid,
+      .volume-panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .volume-note { flex-direction: column; gap: 4px; }
       .section-title { align-items: flex-start; flex-direction: column; }
     }
 
     @media (max-width: 430px) {
       .summary-grid,
       .sector-grid,
-      .metric-grid {
+      .metric-grid,
+      .volume-panel-grid {
         grid-template-columns: 1fr;
       }
       .segments button,
@@ -1234,6 +1414,7 @@
 
     <section class="summary-grid" aria-label="Scan summary">
       <div class="stat"><span class="label">Nifty CMP</span><span class="value">{{ nifty_cmp }}</span></div>
+      <div class="stat"><span class="label">Scan Timeframe</span><span class="value">{{ scan_timeframe }}</span></div>
       <div class="stat"><span class="label">Stocks Scanned</span><span class="value">{{ stocks_scanned }}</span></div>
       <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
@@ -1426,13 +1607,15 @@
       </div>
 
       <details class="filter-glossary">
-        <summary>Filter chip glossary &mdash; what PASS / DRY_UP / FAIL etc. mean</summary>
+        <summary>Filter chip glossary &mdash; plain-English meaning of the chips</summary>
         <div class="glossary-grid">
           <div><strong>Stage 2: PASS</strong><span>Price above rising 50 &amp; 200 MAs (Weinstein Stage 2 uptrend).</span></div>
           <div><strong>Stage 2: FAIL</strong><span>Stock is not in a confirmed uptrend; do not buy breakouts.</span></div>
-          <div><strong>Volume: PASS</strong><span>Today's volume &ge; 1.4x its 50-day average. Breakout volume confirmed.</span></div>
-          <div><strong>Volume: DRY_UP</strong><span>No breakout volume yet, but last 9 days' avg volume is &le; 80% of the 50-day. Constructive base &mdash; sellers exhausted, watch for breakout.</span></div>
-          <div><strong>Volume: FAIL</strong><span>Neither breakout nor dry-up. Noisy / unconvincing base.</span></div>
+          <div><strong>Daily Volume</strong><span>Latest daily volume versus its 50-day average, shown as actual volume / average volume.</span></div>
+          <div><strong>Weekly Volume</strong><span>Latest weekly volume versus its 50-week average for weekly pattern cards.</span></div>
+          <div><strong>Quiet base</strong><span>No breakout volume yet, but recent average volume is &le; 80% of the lookback average. Constructive base, but still needs trigger volume.</span></div>
+          <div><strong>No live volume yet</strong><span>The latest candle has 0 or missing volume. Verify live volume before acting.</span></div>
+          <div><strong>No volume confirmation</strong><span>Neither breakout volume nor constructive dry-up is present on that timeframe.</span></div>
           <div><strong>Sector RS: LEADING</strong><span>Both stock and its sector outperforming Nifty 50 over 63 days.</span></div>
           <div><strong>Sector RS: NEUTRAL</strong><span>Only one of stock or sector is outperforming Nifty.</span></div>
           <div><strong>Sector RS: LAGGING</strong><span>Both stock and sector underperforming Nifty. Strong tailwind absent.</span></div>
@@ -1464,7 +1647,7 @@
               <div class="result-main">
                 <div>
                   <div class="symbol-line">
-                    <span class="symbol">{{ result.symbol }}</span>
+                    <a class="symbol symbol-link" href="{{ result.screener_url }}" target="_blank" rel="noopener noreferrer" title="Open {{ result.symbol }} on Screener">{{ result.symbol }}</a>
                     <span class="tier-pill">{{ result.tier }}</span>
                     <span class="grade-pill grade-{{ result.pattern_grade_class }}" title="Pattern quality grade 0-10 from the detector">{{ result.pattern_grade_label }}</span>
                     <span class="rr-pill rr-{{ result.reward_risk_class }}" title="Reward to risk ratio from the scan-date entry">R:R {{ result.reward_risk_display }}</span>
@@ -1493,9 +1676,59 @@
                 <div class="metric"><span class="label">Stop / R:R</span><span class="value">{{ result.stop_text }} / {{ result.risk_reward }}</span></div>
               </div>
 
+              {% if result.volume_card.available %}
+              <section class="volume-panel" aria-label="{{ result.symbol }} volume context">
+                <div class="volume-panel-header">
+                  <div class="volume-panel-title">Volume Context</div>
+                </div>
+                {% if result.volume_card.primary.available %}
+                <div class="volume-subsection">
+                  <div class="volume-subsection-header">
+                    <strong>{{ result.volume_card.primary.title }}</strong>
+                    <span class="volume-panel-date">{{ result.volume_card.primary.latest_date }}</span>
+                  </div>
+                  <div class="volume-panel-grid">
+                    <div class="volume-metric"><span>{{ result.volume_card.primary.latest_label }}</span><strong>{{ result.volume_card.primary.latest_value }}</strong></div>
+                    <div class="volume-metric"><span>{{ result.volume_card.primary.average_label }}</span><strong>{{ result.volume_card.primary.average_value }}</strong></div>
+                    <div class="volume-metric"><span>{{ result.volume_card.primary.last_5_label }}</span><strong>{{ result.volume_card.primary.last_5_average }}</strong></div>
+                    <div class="volume-metric"><span>{{ result.volume_card.primary.last_5_sequence_label }}</span><strong title="{{ result.volume_card.primary.last_5_values }}">{{ result.volume_card.primary.last_5_values }}</strong></div>
+                  </div>
+                  <div class="volume-note {{ result.volume_card.primary.recent_class }}">
+                    <strong>Recent volume</strong>
+                    <span>{{ result.volume_card.primary.recent_text }}</span>
+                  </div>
+                </div>
+                {% endif %}
+                {% if result.volume_card.daily and result.volume_card.daily.available %}
+                <div class="volume-subsection">
+                  <div class="volume-subsection-header">
+                    <strong>{{ result.volume_card.daily.title }}</strong>
+                    <span class="volume-panel-date">{{ result.volume_card.daily.latest_date }}</span>
+                  </div>
+                  <div class="volume-panel-grid">
+                    <div class="volume-metric"><span>{{ result.volume_card.daily.latest_label }}</span><strong>{{ result.volume_card.daily.latest_value }}</strong></div>
+                    <div class="volume-metric"><span>{{ result.volume_card.daily.average_label }}</span><strong>{{ result.volume_card.daily.average_value }}</strong></div>
+                    <div class="volume-metric"><span>{{ result.volume_card.daily.last_5_label }}</span><strong>{{ result.volume_card.daily.last_5_average }}</strong></div>
+                    <div class="volume-metric"><span>{{ result.volume_card.daily.last_5_sequence_label }}</span><strong title="{{ result.volume_card.daily.last_5_values }}">{{ result.volume_card.daily.last_5_values }}</strong></div>
+                  </div>
+                  <div class="volume-note {{ result.volume_card.daily.recent_class }}">
+                    <strong>Recent daily volume</strong>
+                    <span>{{ result.volume_card.daily.recent_text }}</span>
+                  </div>
+                </div>
+                {% endif %}
+                {% if result.volume_card.king_text %}
+                <div class="volume-note {{ result.volume_card.king_class }}">
+                  <strong>King Candle</strong>
+                  <span>{{ result.volume_card.king_text }}{% if result.volume_card.king_levels %} {{ result.volume_card.king_levels }}{% endif %}</span>
+                </div>
+                {% endif %}
+              </section>
+              {% endif %}
+
               <div class="filters" aria-label="{{ result.symbol }} filters">
                 {% for filter in result.filters %}
-                <span class="filter {{ filter.class_name }}" title="{{ filter.status }}">{{ filter.label }}: {{ filter.status }}</span>
+                <span class="filter {{ filter.class_name }}" title="{{ filter.title }}">{{ filter.display }}</span>
                 {% endfor %}
               </div>
 
@@ -1521,6 +1754,19 @@
                       <p>{{ result.sections.risk }}</p>
                     </div>
                   </div>
+
+                  <section class="watch-checklist" aria-label="{{ result.symbol }} watch checklist">
+                    <div class="watch-heading">
+                      <strong>Watch checklist</strong>
+                      <span>What to wait for before acting</span>
+                    </div>
+                    {% for row in result.watch_checklist %}
+                    <div class="watch-row watch-{{ row.class_name }}">
+                      <strong>{{ row.label }}</strong>
+                      <span>{{ row.text }}</span>
+                    </div>
+                    {% endfor %}
+                  </section>
 
                   {% if result.has_thesis_chart %}
                   <div class="tc-wrap">

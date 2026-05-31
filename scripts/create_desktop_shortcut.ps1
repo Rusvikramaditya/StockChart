@@ -9,6 +9,8 @@
          (recommended; opens localhost:8765 control UI in browser)
       2. "NSE Pattern Finder Scanner.lnk"    -> launch_scanner.ps1
          (CLI scan + auto-open generated dashboard HTML)
+      3. "NSE Past Suggestions.lnk"          -> launch_past_recommendations.ps1
+         (tracks MEDIUM/HIGH/HIGHEST historical suggestions and returns)
 
     Both shortcuts share the same custom candlestick icon. Run this script
     once. Pure ASCII output for PowerShell 5.1 compatibility.
@@ -23,11 +25,13 @@ $ErrorActionPreference = "Stop"
 $ScriptDir          = $PSScriptRoot
 $DashboardLauncher  = Join-Path $ScriptDir "launch_dashboard.ps1"
 $ScannerLauncher    = Join-Path $ScriptDir "launch_scanner.ps1"
+$PastLauncher       = Join-Path $ScriptDir "launch_past_recommendations.ps1"
 $RepoRoot           = Split-Path -Parent $ScriptDir
 $IconPath           = Join-Path $ScriptDir "scanner_icon.ico"
 $Desktop            = [Environment]::GetFolderPath("Desktop")
 $DashboardShortcut  = Join-Path $Desktop "NSE Pattern Finder Dashboard.lnk"
 $ScannerShortcut    = Join-Path $Desktop "NSE Pattern Finder Scanner.lnk"
+$PastShortcut       = Join-Path $Desktop "NSE Past Suggestions.lnk"
 $LegacyShortcut     = Join-Path $Desktop "NSE Pattern Finder.lnk"
 
 # Build custom candlestick icon using System.Drawing
@@ -171,6 +175,9 @@ if (-not $ScannerOnly) {
 if (-not $DashboardOnly) {
     if (New-LauncherShortcut -ShortcutPath $ScannerShortcut -LauncherPath $ScannerLauncher -Description "Run an NSE Pattern Finder scan and open the result dashboard") {
         $created += $ScannerShortcut
+    }
+    if (New-LauncherShortcut -ShortcutPath $PastShortcut -LauncherPath $PastLauncher -Description "Build and open the MEDIUM/HIGH/HIGHEST past suggestions performance dashboard") {
+        $created += $PastShortcut
     }
 }
 

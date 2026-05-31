@@ -32,7 +32,7 @@ from typing import Any
 import numpy as np
 
 from config import settings
-from filters import pocket_pivot, rsi, sector_rs, stage2, volume
+from filters import king_candle, pocket_pivot, rsi, sector_rs, stage2, volume
 from patterns.base import PatternResult
 from patterns.utils import last_finite, moving_average, series
 
@@ -49,8 +49,16 @@ def score_pattern(
     sector_rs_cache: dict,
 ) -> dict:
     stage2_result = stage2.evaluate(daily)
-    volume_result = volume.evaluate(daily)
+    daily_volume_result = volume.evaluate(daily, timeframe="daily")
+    weekly_volume_result = (
+        volume.evaluate(weekly, timeframe="weekly")
+        if weekly
+        else _missing_volume_result("weekly", "weekly OHLCV unavailable")
+    )
+    pattern_timeframe = str(pattern.timeframe or "daily").lower()
+    volume_result = weekly_volume_result if pattern_timeframe == "weekly" else daily_volume_result
     pocket_pivot_result = pocket_pivot.evaluate(daily)
+    king_candle_result = king_candle.evaluate(daily)
     sector_result = sector_rs.evaluate(symbol, daily, sector_rs_cache)
     rsi_result = rsi.evaluate(daily)
     multi_tf_result = _multi_timeframe_alignment(pattern, weekly)
@@ -93,7 +101,9 @@ def score_pattern(
             filters={
                 "stage2": stage2_result,
                 "volume": volume_result,
+                **({"daily_volume": daily_volume_result} if pattern_timeframe == "weekly" else {}),
                 "pocket_pivot": pocket_pivot_result,
+                "king_candle": king_candle_result,
                 "sector_rs": sector_result,
                 "rsi": rsi_result,
                 "multi_tf": multi_tf_result,
@@ -144,7 +154,9 @@ def score_pattern(
         "filters": {
             "stage2": stage2_result,
             "volume": volume_result,
+            **({"daily_volume": daily_volume_result} if pattern_timeframe == "weekly" else {}),
             "pocket_pivot": pocket_pivot_result,
+            "king_candle": king_candle_result,
             "sector_rs": sector_result,
             "market_regime": market_regime_result,
             "rsi": rsi_result,
@@ -407,6 +419,7 @@ def _apply_textbook_filter_caps(
         return tier
     filters = filters or {}
     volume_result = filters.get("volume") or {}
+    daily_volume_result = filters.get("daily_volume") or {}
     pocket_result = filters.get("pocket_pivot") or {}
     stage2_result = filters.get("stage2") or {}
     sector_result = filters.get("sector_rs") or {}
@@ -417,6 +430,12 @@ def _apply_textbook_filter_caps(
     volume_dryup = str(volume_result.get("status", "")).upper() == "DRY_UP"
     if not volume_ok and not volume_dryup:
         tier = _cap_tier(tier, "MEDIUM")
+
+    primary_volume_tf = str((volume_result.get("details") or {}).get("timeframe", "daily")).lower()
+    if primary_volume_tf == "weekly" and daily_volume_result:
+        daily_trigger_ok = bool(daily_volume_result.get("passed")) or bool(pocket_result.get("passed"))
+        if tier == "HIGHEST" and not daily_trigger_ok:
+            tier = "HIGH"
 
     if not bool(stage2_result.get("passed")):
         tier = _cap_tier(tier, "MEDIUM")
@@ -469,11 +488,24 @@ def _demote_tier(tier: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _volume_points(result: dict) -> int:
-    if result["passed"]:
+    if result.get("passed"):
         return settings.CONVICTION_WEIGHTS["volume"]
     if result.get("details", {}).get("base_dry_up"):
         return settings.CONVICTION_WEIGHTS["volume"] // 2
     return 0
+
+
+def _missing_volume_result(timeframe: str, reason: str) -> dict:
+    return {
+        "name": "volume",
+        "passed": False,
+        "status": "UNKNOWN",
+        "details": {
+            "timeframe": timeframe,
+            "reason": reason,
+            "avg_period": int(settings.VOLUME["avg_vol_period"]),
+        },
+    }
 
 
 def _sector_points(result: dict) -> int:

@@ -7,6 +7,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import quote
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -43,6 +44,7 @@ BREAKDOWN_LABELS = {
 FILTER_LABELS = {
     "stage2": "Stage 2",
     "volume": "Volume",
+    "daily_volume": "Daily Volume",
     "pocket_pivot": "Pocket Pivot",
     "sector_rs": "Sector RS",
     "market_regime": "Regime",
@@ -60,6 +62,7 @@ PATTERN_CHART_GUIDE = {
     "Inverse Head & Shoulders": "The left shoulder, deeper head, and right shoulder should be visible below the neckline. The setup only confirms when price clears the neckline.",
     "Supertrend Bullish Flip": "The chart should show price reclaiming the supertrend support line. The support line is the invalidation reference if the flip fails.",
     "Multi-Year Breakout": "The chart should show a long resistance line or zone that has been tested before. A real breakout needs price and volume to clear that ceiling.",
+    "Weekly Breakout": "The chart should show price clearing a weekly resistance line or descending trendline. Daily candles are confirmation, not the source of the setup.",
 }
 
 
@@ -163,6 +166,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "generated_at": generated_at,
+        "scan_timeframe": str(context.get("scan_timeframe") or "daily").title(),
         "market_regime": market_regime,
         "nifty_cmp": _fmt_money(_coalesce(context.get("nifty_cmp"), market_regime["details"].get("nifty_close"))),
         "stocks_scanned": stocks_scanned,
@@ -211,6 +215,7 @@ def _normalize_market_regime(regime: dict[str, Any]) -> dict[str, Any]:
 
 def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
     pattern_result = item.get("pattern_result")
+    symbol = str(item.get("symbol") or "UNKNOWN").upper()
     pattern = str(_coalesce(item.get("pattern"), _field(pattern_result, "pattern"), "Pattern"))
     pivot = _number(_coalesce(item.get("pivot"), _field(pattern_result, "pivot")))
     entry = _number(_coalesce(item.get("entry_price"), pivot))
@@ -221,6 +226,8 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
     explanation = str(_coalesce(item.get("explanation"), _field(pattern_result, "explanation"), ""))
     sections = _build_sections(pattern, explanation, item, entry, target, stop_loss)
     filters = _normalize_filters(item.get("filters") or {})
+    volume_card = _build_volume_card(item.get("filters") or {})
+    watch_checklist = _build_watch_checklist(item, entry, target, stop_loss)
     breakdown = _normalize_breakdown(item.get("breakdown") or {})
     all_patterns = _pattern_names(item.get("all_patterns") or item.get("patterns") or [])
     chart_src = _chart_data_uri(item.get("chart_data_uri") or item.get("chart_path"))
@@ -229,7 +236,8 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
     reward_risk = _number(_coalesce(item.get("reward_risk"), (item.get("breakdown") or {}).get("reward_risk")))
 
     return {
-        "symbol": str(item.get("symbol") or "UNKNOWN").upper(),
+        "symbol": symbol,
+        "screener_url": _screener_url(symbol),
         "cmp": _fmt_money(_coalesce(item.get("cmp"), item.get("current_price"), _filter_detail(item, "stage2", "close"))),
         "pattern": pattern,
         "status": str(_coalesce(item.get("status"), _field(pattern_result, "status"), "")),
@@ -257,6 +265,8 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "stacked_count": _int(item.get("stacked_count") or item.get("stack_count") or len(all_patterns) or 1, default=1),
         "all_patterns": all_patterns,
         "filters": filters,
+        "volume_card": volume_card,
+        "watch_checklist": watch_checklist,
         "breakdown": breakdown,
         "sections": sections,
         "chart_guide": PATTERN_CHART_GUIDE.get(pattern, "Read the chart from pattern structure first, then entry, target, stop, and invalidation."),
@@ -327,7 +337,10 @@ def _rr_class(rr: float | None) -> str:
 def _normalize_filters(filters: dict[str, Any]) -> list[dict[str, Any]]:
     normalized = []
     for key, label in FILTER_LABELS.items():
+        if key == "daily_volume" and key not in filters:
+            continue
         value = filters.get(key) or {}
+        label = _filter_label(key, label, value)
         if key == "market_regime":
             status = str(value.get("verdict") or value.get("status") or "UNKNOWN")
             passed = _int(value.get("score"), default=0) >= 3
@@ -337,16 +350,340 @@ def _normalize_filters(filters: dict[str, Any]) -> list[dict[str, Any]]:
         else:
             status = str(value.get("status") or "UNKNOWN")
             passed = bool(value.get("passed"))
+        summary = _filter_summary(key, value)
+        display_status = _filter_plain_status(key, status, value, passed)
+        class_name = _filter_class_name(key, status, value, passed)
+        display = f"{label}: {display_status}" + (f" - {summary}" if summary else "")
         normalized.append(
             {
                 "key": key,
                 "label": label,
                 "status": status,
+                "display_status": display_status,
+                "summary": summary,
+                "display": display,
+                "title": _filter_title(label, status, value),
                 "passed": passed,
-                "class_name": "pass" if passed else "fail",
+                "class_name": class_name,
             }
         )
     return normalized
+
+
+def _filter_label(key: str, default: str, value: dict[str, Any]) -> str:
+    if key == "volume":
+        timeframe = str((value.get("details") or {}).get("timeframe") or "").lower()
+        if timeframe == "weekly":
+            return "Weekly Volume"
+        if timeframe == "daily":
+            return "Daily Volume"
+    return default
+
+
+def _filter_summary(key: str, value: dict[str, Any]) -> str:
+    if key not in {"volume", "daily_volume"}:
+        return ""
+    details = value.get("details") or {}
+    ratio = _number(details.get("breakout_volume_ratio"))
+    latest = _number(details.get("latest_volume"))
+    avg = _number(details.get("avg_volume") or details.get("avg_50d_volume") or details.get("avg_50w_volume"))
+    if ratio is None or latest is None or avg is None:
+        return ""
+    return f"{ratio:.2f}x ({_fmt_volume(latest)} / {_fmt_volume(avg)} avg)"
+
+
+def _filter_title(label: str, status: str, value: dict[str, Any]) -> str:
+    details = value.get("details") or {}
+    parts = [f"{label}: {status}"]
+    summary = _filter_summary("volume", value)
+    if summary:
+        parts.append(summary)
+    if "base_dry_up_ratio" in details:
+        parts.append(f"Base dry-up ratio {_fmt_number(details.get('base_dry_up_ratio'))}x")
+    reason = details.get("reason")
+    if reason:
+        parts.append(str(reason))
+    return " | ".join(parts)
+
+
+def _filter_plain_status(key: str, status: str, value: dict[str, Any], passed: bool) -> str:
+    text = str(status or "UNKNOWN").upper()
+    details = value.get("details") or {}
+    if key in {"volume", "daily_volume"}:
+        latest = _number(details.get("latest_volume"))
+        if latest == 0:
+            return "No live volume yet"
+        if passed:
+            return "Breakout volume confirmed"
+        if text == "DRY_UP":
+            return "Quiet base; wait for trigger volume"
+        return "No volume confirmation yet"
+    if key == "pocket_pivot":
+        if passed:
+            return "Strong buying candle"
+        if text == "NO_UP_CLOSE":
+            return "No strong buying candle today"
+        if text == "INSUFFICIENT_DATA":
+            return "Not enough data"
+        return "Buying candle not strong enough"
+    if key == "sector_rs":
+        if text == "LEADING":
+            return "Sector leading"
+        if text == "NEUTRAL":
+            return "Sector neutral"
+        if text == "LAGGING":
+            return "Sector lagging"
+    if key == "market_regime":
+        if "UPTREND" in text or "BULL" in text:
+            return "Market supportive"
+        if "BEAR" in text:
+            return "Market weak; be selective"
+        if "NEUTRAL" in text:
+            return "Market mixed; be selective"
+    if key == "rsi":
+        if text == "HEALTHY":
+            return "Momentum healthy"
+        if "OVERBOUGHT" in text:
+            return "Extended; wait for cooling"
+        if "DIVERGENCE" in text:
+            return "Momentum divergence"
+    if key == "multi_tf":
+        if text == "ALIGNED":
+            return "Daily and weekly aligned"
+        if "DIVERG" in text:
+            return "Daily and weekly disagree"
+    if key == "stage2":
+        if passed:
+            return "Uptrend intact"
+        return "Not in confirmed uptrend"
+    return text.replace("_", " ").title()
+
+
+def _filter_class_name(key: str, status: str, value: dict[str, Any], passed: bool) -> str:
+    text = str(status or "").upper()
+    details = value.get("details") or {}
+    if passed:
+        return "pass"
+    if key in {"volume", "daily_volume"} and (text == "DRY_UP" or _number(details.get("latest_volume")) == 0):
+        return "watch"
+    if key == "pocket_pivot" and text in {"NO_UP_CLOSE", "INSUFFICIENT_DATA"}:
+        return "watch"
+    if key == "sector_rs" and text in {"NEUTRAL", "UNKNOWN"}:
+        return "watch"
+    if key == "market_regime" and "NEUTRAL" in text:
+        return "watch"
+    if key == "rsi" and "OVERBOUGHT" in text:
+        return "watch"
+    return "fail"
+
+
+def _build_volume_card(filters: dict[str, Any]) -> dict[str, Any]:
+    primary = filters.get("volume") or _daily_volume_filter(filters) or {}
+    daily = _daily_volume_filter(filters)
+    primary_section = _volume_section(primary)
+    daily_section = None
+    if primary_section.get("timeframe_key") == "weekly" and daily:
+        daily_section = _volume_section(daily, title="Daily Volume Snapshot")
+
+    return {
+        "available": bool(primary_section.get("available") or (daily_section or {}).get("available")),
+        "primary": primary_section,
+        "daily": daily_section,
+        "king_text": _king_candle_text(filters.get("king_candle") or {}),
+        "king_levels": _king_candle_levels(filters.get("king_candle") or {}),
+        "king_class": _king_candle_class(filters.get("king_candle") or {}),
+    }
+
+
+def _volume_section(result: dict[str, Any], *, title: str | None = None) -> dict[str, Any]:
+    details = result.get("details") or {}
+    timeframe = str(details.get("timeframe") or "daily").lower()
+    avg_period = _int(details.get("avg_period"), default=50)
+    latest = _number(details.get("latest_volume"))
+    avg = _volume_average(details, timeframe)
+    last_5_avg = _number(details.get("last_5_avg_volume"))
+    last_5_ratio = _number(details.get("last_5_vs_avg_ratio"))
+    if (last_5_ratio is None or last_5_ratio <= 0) and avg and last_5_avg is not None:
+        last_5_ratio = last_5_avg / avg
+    direction = str(details.get("recent_volume_direction") or "unknown")
+    latest_date = str(details.get("latest_volume_date") or "latest candle")
+    latest_label = "Today volume" if details.get("latest_volume_is_today") else "Latest candle volume"
+    avg_suffix = "W" if timeframe == "weekly" else "D"
+    period_name = "weekly" if avg_suffix == "W" else "daily"
+    average_label = f"{avg_period}{avg_suffix} avg"
+    last_5_values = [_fmt_volume(value) for value in details.get("last_5_volumes") or []]
+
+    return {
+        "available": bool(result),
+        "title": title or ("Weekly Volume" if timeframe == "weekly" else "Daily Volume"),
+        "timeframe_key": timeframe,
+        "timeframe": timeframe.title(),
+        "latest_label": latest_label,
+        "latest_date": latest_date,
+        "latest_value": _fmt_volume(latest),
+        "average_label": average_label,
+        "average_value": _fmt_volume(avg),
+        "last_5_label": f"5-{'week' if avg_suffix == 'W' else 'day'} avg",
+        "last_5_sequence_label": f"Last 5 {period_name} volumes",
+        "last_5_values": " / ".join(last_5_values) if last_5_values else "N/A",
+        "last_5_average": _fmt_volume(last_5_avg),
+        "recent_text": _recent_volume_text(direction, last_5_ratio, average_label, period_name),
+        "recent_class": _recent_volume_class(direction),
+    }
+
+
+def _volume_average(details: dict[str, Any], timeframe: str) -> float | None:
+    if timeframe == "weekly":
+        return _number(_coalesce(details.get("avg_50w_volume"), details.get("avg_volume")))
+    return _number(_coalesce(details.get("avg_50d_volume"), details.get("avg_volume")))
+
+
+def _daily_volume_filter(filters: dict[str, Any]) -> dict[str, Any] | None:
+    daily = filters.get("daily_volume")
+    if daily:
+        return daily
+    primary = filters.get("volume")
+    if str(((primary or {}).get("details") or {}).get("timeframe") or "").lower() == "daily":
+        return primary
+    return None
+
+
+def _recent_volume_text(direction: str, ratio: float | None, avg_label: str, period_name: str) -> str:
+    if ratio is None or ratio <= 0:
+        return "Recent volume comparison is unavailable."
+    ratio_text = f"{ratio:.2f}x"
+    if direction == "higher":
+        return f"Recent {period_name} volume is higher than average: {ratio_text} above {avg_label}."
+    if direction == "lower":
+        return f"Recent {period_name} volume is lower than average: {ratio_text} of {avg_label}."
+    if direction == "near_average":
+        return f"Recent {period_name} volume is near average: {ratio_text} of {avg_label}."
+    return f"Recent {period_name} volume comparison is unavailable."
+
+
+def _recent_volume_class(direction: str) -> str:
+    if direction == "higher":
+        return "higher"
+    if direction == "lower":
+        return "lower"
+    return "neutral"
+
+
+def _king_candle_text(result: dict[str, Any]) -> str:
+    details = result.get("details") or {}
+    status = str(result.get("status") or "").upper()
+    if details.get("observed"):
+        if status == "CONFIRMED":
+            return "King Candle observed as additional confirmation with follow-through."
+        if status == "PENDING_FOLLOW_THROUGH":
+            return "King Candle observed as additional confirmation; follow-through is pending."
+        if status == "HOLDING_MIDPOINT":
+            return "King Candle observed as additional confirmation; price is holding its midpoint."
+        return "King Candle observed as additional confirmation."
+    return ""
+
+
+def _king_candle_levels(result: dict[str, Any]) -> str:
+    details = result.get("details") or {}
+    if not details.get("observed"):
+        return ""
+    high = _fmt_money(details.get("king_high"))
+    midpoint = _fmt_money(details.get("king_midpoint"))
+    low = _fmt_money(details.get("king_low"))
+    date_text = details.get("candle_date")
+    prefix = f"{date_text}: " if date_text else ""
+    return f"{prefix}High {high}, Mid {midpoint}, Low {low}"
+
+
+def _king_candle_class(result: dict[str, Any]) -> str:
+    status = str(result.get("status") or "").upper()
+    if status in {"CONFIRMED", "HOLDING_MIDPOINT"}:
+        return "confirm"
+    if status == "PENDING_FOLLOW_THROUGH":
+        return "watch"
+    return "neutral"
+
+
+def _build_watch_checklist(
+    item: dict[str, Any],
+    entry: float | None,
+    target: float | None,
+    stop_loss: float | None,
+) -> list[dict[str, str]]:
+    filters = item.get("filters") or {}
+    timeframe = str(item.get("timeframe") or _field(item.get("pattern_result"), "timeframe", "daily")).lower()
+    timeframe_label = "weekly" if timeframe.startswith("week") else "daily"
+    rows = [
+        {
+            "label": "Trigger",
+            "text": (
+                f"Watch for price to close above {_fmt_money(entry)} on the {timeframe_label} chart. "
+                "Avoid chasing if the move is already far above entry."
+            ),
+            "class_name": "trigger",
+        },
+        _watch_volume_row(filters, timeframe_label),
+        {
+            "label": "Invalidation",
+            "text": f"The setup is wrong if price closes below {_fmt_money(stop_loss)}. Target area is {_fmt_money(target)}.",
+            "class_name": "risk",
+        },
+    ]
+    context = _watch_context_row(filters)
+    if context:
+        rows.append(context)
+    return rows
+
+
+def _watch_volume_row(filters: dict[str, Any], timeframe_label: str) -> dict[str, str]:
+    primary = filters.get("volume") or filters.get("daily_volume") or {}
+    details = primary.get("details") or {}
+    status = str(primary.get("status") or "").upper()
+    ratio = _number(details.get("breakout_volume_ratio"))
+    latest = _number(details.get("latest_volume"))
+    avg = _number(details.get("avg_volume") or details.get("avg_50d_volume") or details.get("avg_50w_volume"))
+    ratio_text = "N/A" if ratio is None else f"{ratio:.2f}x"
+    latest_text = _fmt_volume(latest)
+    avg_text = _fmt_volume(avg)
+    if latest == 0:
+        text = f"Latest volume is 0 or missing. Verify live volume before acting; normal average is {avg_text}."
+        class_name = "watch"
+    elif bool(primary.get("passed")):
+        text = f"Volume is confirmed at {ratio_text} of average ({latest_text} vs {avg_text})."
+        class_name = "confirm"
+    elif status == "DRY_UP":
+        text = (
+            f"Volume is quiet on the {timeframe_label} setup. That can be healthy inside a base, "
+            f"but entry needs fresh volume above average ({latest_text} vs {avg_text})."
+        )
+        class_name = "watch"
+    else:
+        text = f"No volume support yet. Wait for expansion above average ({latest_text} vs {avg_text})."
+        class_name = "risk"
+    return {"label": "Volume", "text": text, "class_name": class_name}
+
+
+def _watch_context_row(filters: dict[str, Any]) -> dict[str, str] | None:
+    notes = []
+    regime = filters.get("market_regime") or {}
+    regime_text = str(regime.get("verdict") or regime.get("status") or "").upper()
+    if "BEAR" in regime_text:
+        notes.append("market is weak, so treat as watchlist only or use smaller size")
+    elif "NEUTRAL" in regime_text:
+        notes.append("market is mixed, so wait for clean price confirmation")
+    sector = filters.get("sector_rs") or {}
+    sector_text = str(sector.get("status") or "").upper()
+    if sector_text == "LAGGING":
+        notes.append("sector is lagging Nifty")
+    elif sector_text == "NEUTRAL":
+        notes.append("sector tailwind is only neutral")
+    if not notes:
+        return None
+    return {
+        "label": "Context",
+        "text": "Be selective: " + "; ".join(notes) + ".",
+        "class_name": "watch",
+    }
 
 
 def _supported_pattern_guide() -> list[dict[str, str]]:
@@ -670,6 +1007,10 @@ def _field(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
+def _screener_url(symbol: str) -> str:
+    return f"https://www.screener.in/company/{quote(symbol, safe='')}/"
+
+
 def _coalesce(*values: Any) -> Any:
     for value in values:
         if value is not None:
@@ -768,6 +1109,20 @@ def _fmt_percent(value: Any, *, signed: bool = True) -> str:
     if signed:
         return f"{number:+.2f}%".replace("+0.00", "0.00")
     return f"{number:.1f}%"
+
+
+def _fmt_volume(value: Any) -> str:
+    number = _number(value)
+    if number is None:
+        return "N/A"
+    absolute = abs(number)
+    if absolute >= 10_000_000:
+        return f"{number / 10_000_000:.2f}Cr".rstrip("0").rstrip(".")
+    if absolute >= 100_000:
+        return f"{number / 100_000:.2f}L".rstrip("0").rstrip(".")
+    if absolute >= 1_000:
+        return f"{number / 1_000:.2f}K".rstrip("0").rstrip(".")
+    return f"{number:.0f}"
 
 
 def _fmt_number(value: Any, *, suffix: str = "") -> str:

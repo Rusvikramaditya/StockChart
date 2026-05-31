@@ -271,6 +271,28 @@ class ScorePatternEndToEndTest(unittest.TestCase):
             )
         self.assertLess(result["score"], healthy["score"])
 
+    def test_weekly_pattern_uses_weekly_volume_as_primary_and_keeps_daily_confirmation(self):
+        p = _pattern(name="Weekly Breakout", grade=8.5, pivot=108.0, target=140.0, stop_loss=92.0, timeframe="weekly")
+        daily = _trending_daily(n=260, start=100.0, end=110.0)
+        weekly = _trending_daily(n=80, start=100.0, end=110.0)
+        daily_volume = {"passed": False, "status": "FAIL", "details": {"timeframe": "daily"}}
+        weekly_volume = {"passed": True, "status": "PASS", "details": {"timeframe": "weekly"}}
+
+        def volume_side_effect(data, *, timeframe="daily", avg_period=None):
+            return weekly_volume if timeframe == "weekly" else daily_volume
+
+        with patch("engine.scorer.stage2.evaluate", return_value={"passed": True, "status": "PASS", "details": {"close": 110.0}}), \
+             patch("engine.scorer.volume.evaluate", side_effect=volume_side_effect), \
+             patch("engine.scorer.pocket_pivot.evaluate", return_value={"passed": False, "status": "FAIL", "details": {}}), \
+             patch("engine.scorer.sector_rs.evaluate", return_value={"passed": True, "status": "LEADING", "details": {}}), \
+             patch("engine.scorer.rsi.evaluate", return_value={"name": "rsi", "value": 65.0, "penalty": 0, "status": "HEALTHY", "bearish_divergence": False, "details": {}}):
+            result = scorer.score_pattern("TEST", p, daily, weekly, {"score": 4}, {"sectors": {}})
+
+        self.assertIs(result["filters"]["volume"], weekly_volume)
+        self.assertIs(result["filters"]["daily_volume"], daily_volume)
+        self.assertEqual(result["breakdown"]["volume"], settings.CONVICTION_WEIGHTS["volume"])
+        self.assertEqual(result["tier"], "HIGH")
+
 
 class DedupAndTelegramGateTest(unittest.TestCase):
 
@@ -353,6 +375,63 @@ class DashboardSkipFilterTest(unittest.TestCase):
 
         self.assertEqual(breakdown[0]["key"], "ACTIONABLE_REWARD_RISK_BELOW_FLOOR")
         self.assertEqual(breakdown[0]["label"], "Future reward / risk below 1.5:1")
+
+    def test_dashboard_volume_chip_shows_timeframe_ratio_and_numbers(self):
+        from engine.dashboard import build_dashboard_context
+        ctx = {
+            "generated_at": "2026-05-21",
+            "scan_timeframe": "weekly",
+            "market_regime": {"score": 4, "verdict": "CONFIRMED UPTREND", "checks": {}, "details": {}},
+            "results": [
+                {
+                    "symbol": "VOL",
+                    "pattern": "Weekly Breakout",
+                    "status": "BREAKING OUT",
+                    "timeframe": "weekly",
+                    "tier": "HIGH",
+                    "score": 82,
+                    "pivot": 100,
+                    "entry_price": 102,
+                    "target": 130,
+                    "stop_loss": 90,
+                    "tradable": True,
+                    "filters": {
+                        "volume": {
+                            "passed": True,
+                            "status": "PASS",
+                            "details": {
+                                "timeframe": "weekly",
+                                "latest_volume": 250_000,
+                                "avg_volume": 100_000,
+                                "breakout_volume_ratio": 2.5,
+                            },
+                        },
+                        "daily_volume": {
+                            "passed": False,
+                            "status": "FAIL",
+                            "details": {
+                                "timeframe": "daily",
+                                "latest_volume": 50_000,
+                                "avg_volume": 125_000,
+                                "breakout_volume_ratio": 0.4,
+                            },
+                        },
+                    },
+                    "breakdown": {},
+                    "explanation": "ok",
+                },
+            ],
+            "errors": [],
+        }
+
+        result = build_dashboard_context(ctx)["results"][0]
+        volume_rows = {row["key"]: row for row in result["filters"]}
+
+        self.assertEqual(volume_rows["volume"]["label"], "Weekly Volume")
+        self.assertIn("2.50x", volume_rows["volume"]["display"])
+        self.assertIn("2.50L", volume_rows["volume"]["display"])
+        self.assertEqual(volume_rows["daily_volume"]["label"], "Daily Volume")
+        self.assertIn("0.40x", volume_rows["daily_volume"]["display"])
 
 
 if __name__ == "__main__":

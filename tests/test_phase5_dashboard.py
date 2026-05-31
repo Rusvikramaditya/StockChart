@@ -60,6 +60,7 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn('id="resultSearch"', html)
         self.assertIn("Search setups", html)
         self.assertIn("Open thesis", html)
+        self.assertIn("Watch checklist", html)
         self.assertIn("data-search-text=", html)
         self.assertIn("No setups match the current filters.", html)
         self.assertIn("2 patterns", html)
@@ -68,10 +69,14 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("data:image/png;base64,", html)
         self.assertNotIn("{{", html)
         self.assertNotIn("{%", html)
-        # No CDN or external resource references in src/href attributes.
-        # (URL strings in inlined JS code/comments are allowed.)
-        ext_srcs = re.findall(r'(?:src|href)\s*=\s*["\']https?://', html, re.IGNORECASE)
+        # No external resource loads are allowed. Screener company links are
+        # allowed because they are user-clicked anchors, not dashboard assets.
+        ext_refs = re.findall(r'(src|href)\s*=\s*["\'](https?://[^"\']+)', html, re.IGNORECASE)
+        ext_srcs = [url for attr, url in ext_refs if attr.lower() == "src"]
+        ext_hrefs = [url for attr, url in ext_refs if attr.lower() == "href"]
         self.assertEqual([], ext_srcs, "No external CDN or API resource attributes allowed")
+        self.assertTrue(all(url.startswith("https://www.screener.in/company/") for url in ext_hrefs))
+        self.assertIn('href="https://www.screener.in/company/TESTSTOCK/"', html)
 
         order = [
             "Pattern 101",
@@ -193,8 +198,144 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn('data-tier-count="ALL"', html)
         self.assertIn('data-tier-count="HIGHEST"', html)
         # Glossary explains the chip statuses
-        self.assertIn("DRY_UP", html)
+        self.assertIn("Quiet base", html)
+        self.assertIn("No live volume yet", html)
         self.assertIn("Constructive base", html)
+
+    def test_filter_chips_use_plain_english_and_watch_state(self):
+        context = self._context(Path("missing.png"))
+        scored = context["results"][0]
+        scored["filters"]["volume"] = {
+            "passed": False,
+            "status": "DRY_UP",
+            "details": {
+                "timeframe": "daily",
+                "latest_volume": 0,
+                "avg_volume": 80190,
+                "breakout_volume_ratio": 0.0,
+                "base_dry_up": True,
+                "base_dry_up_ratio": 0.79,
+            },
+        }
+        scored["filters"]["pocket_pivot"] = {
+            "passed": False,
+            "status": "NO_UP_CLOSE",
+            "details": {"latest_volume": 0},
+        }
+        scored["filters"]["sector_rs"] = {"passed": False, "status": "NEUTRAL"}
+        scored["filters"]["market_regime"] = {"score": 1, "verdict": "BEAR"}
+
+        result = build_dashboard_context(context)["results"][0]
+        chips = {row["key"]: row for row in result["filters"]}
+
+        self.assertEqual(chips["volume"]["display"], "Daily Volume: No live volume yet - 0.00x (0 / 80.19K avg)")
+        self.assertEqual(chips["volume"]["class_name"], "watch")
+        self.assertEqual(chips["pocket_pivot"]["display"], "Pocket Pivot: No strong buying candle today")
+        self.assertEqual(chips["pocket_pivot"]["class_name"], "watch")
+        self.assertEqual(chips["sector_rs"]["display"], "Sector RS: Sector neutral")
+        self.assertEqual(chips["sector_rs"]["class_name"], "watch")
+        self.assertEqual(chips["market_regime"]["display"], "Regime: Market weak; be selective")
+        self.assertEqual(chips["market_regime"]["class_name"], "fail")
+        watch_text = " ".join(row["text"] for row in result["watch_checklist"])
+        self.assertIn("Verify live volume before acting", watch_text)
+        self.assertIn("market is weak", watch_text)
+
+    def test_volume_panel_shows_recent_volume_and_king_candle_context(self):
+        context = self._context(Path("missing.png"))
+        scored = context["results"][0]
+        scored["filters"]["volume"] = {
+            "passed": True,
+            "status": "PASS",
+            "details": {
+                "timeframe": "daily",
+                "avg_period": 50,
+                "latest_volume": 250_000,
+                "latest_volume_date": "2026-05-29",
+                "latest_volume_is_today": False,
+                "avg_volume": 100_000,
+                "avg_50d_volume": 100_000,
+                "last_5_volumes": [90_000, 110_000, 125_000, 160_000, 250_000],
+                "last_5_avg_volume": 147_000,
+                "last_5_vs_avg_ratio": 1.47,
+                "recent_volume_direction": "higher",
+                "breakout_volume_ratio": 2.5,
+            },
+        }
+        scored["filters"]["king_candle"] = {
+            "passed": True,
+            "status": "CONFIRMED",
+            "details": {
+                "observed": True,
+                "candle_date": "2026-05-28",
+                "king_high": 106.0,
+                "king_midpoint": 103.25,
+                "king_low": 100.5,
+            },
+        }
+
+        html = render_dashboard(context)
+
+        self.assertIn("Volume Context", html)
+        self.assertIn("Latest candle volume", html)
+        self.assertNotIn("Today volume", html)
+        self.assertIn("50D avg", html)
+        self.assertIn("5-day avg", html)
+        self.assertIn("Last 5 daily volumes", html)
+        self.assertIn("2.50L", html)
+        self.assertIn("Recent daily volume is higher than average: 1.47x above 50D avg.", html)
+        self.assertIn("King Candle observed as additional confirmation", html)
+        self.assertIn("High Rs.106", html)
+
+        scored["filters"]["volume"]["details"]["latest_volume_is_today"] = True
+        self.assertIn("Today volume", render_dashboard(context))
+
+    def test_weekly_volume_panel_keeps_daily_snapshot_separate(self):
+        context = self._context(Path("missing.png"))
+        scored = context["results"][0]
+        scored["timeframe"] = "weekly"
+        scored["filters"]["volume"] = {
+            "passed": True,
+            "status": "PASS",
+            "details": {
+                "timeframe": "weekly",
+                "avg_period": 50,
+                "latest_volume": 1_200_000,
+                "latest_volume_date": "2026-05-29",
+                "avg_volume": 800_000,
+                "avg_50w_volume": 800_000,
+                "last_5_volumes": [700_000, 760_000, 820_000, 900_000, 1_200_000],
+                "last_5_avg_volume": 876_000,
+                "last_5_vs_avg_ratio": 1.1,
+                "recent_volume_direction": "higher",
+            },
+        }
+        scored["filters"]["daily_volume"] = {
+            "passed": False,
+            "status": "FAIL",
+            "details": {
+                "timeframe": "daily",
+                "avg_period": 50,
+                "latest_volume": 120_000,
+                "latest_volume_date": "2026-05-29",
+                "latest_volume_is_today": False,
+                "avg_volume": 200_000,
+                "avg_50d_volume": 200_000,
+                "last_5_volumes": [180_000, 150_000, 140_000, 130_000, 120_000],
+                "last_5_avg_volume": 144_000,
+                "last_5_vs_avg_ratio": 0.72,
+                "recent_volume_direction": "lower",
+            },
+        }
+
+        html = render_dashboard(context)
+
+        self.assertLess(html.index("Weekly Volume"), html.index("Daily Volume Snapshot"))
+        self.assertIn("50W avg", html)
+        self.assertIn("Last 5 weekly volumes", html)
+        self.assertIn("Latest candle volume", html)
+        self.assertIn("50D avg", html)
+        self.assertIn("Last 5 daily volumes", html)
+        self.assertIn("Recent daily volume is lower than average: 0.72x of 50D avg.", html)
 
     def test_normalized_result_carries_sector_metadata(self):
         ctx = self._context(Path("missing.png"))

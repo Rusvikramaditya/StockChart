@@ -101,6 +101,7 @@ def _is_stale_lock() -> bool:
 class PipelineContext:
     universe_name: str = "nifty500"
     universe_path: Path | None = None
+    scan_timeframe: str = "daily"
     scan_date: date = field(default_factory=date.today)
     dry_run: bool = False
     skip_fetch: bool = False
@@ -261,7 +262,7 @@ class Pipeline:
             )
             self.ctx.stats["rows_fetched"] = rows
             _refresh_index_today(self.ctx.loader.conn)
-            if self.ctx.scan_date.weekday() == 4:
+            if self.ctx.scan_date.weekday() == 4 or self.ctx.scan_timeframe in {"weekly", "all"}:
                 self._run_weekly_incremental()
 
     @stage("pre_compute")
@@ -308,7 +309,7 @@ class Pipeline:
 
         if int(self.ctx.workers) <= 1:
             results = [
-                _detect_symbol(symbol, daily, weekly, self.ctx.universe_name)
+                _detect_symbol(symbol, daily, weekly, self.ctx.universe_name, self.ctx.scan_timeframe)
                 for symbol, daily, weekly in prepared
             ]
         else:
@@ -377,6 +378,7 @@ class Pipeline:
             "generated_at": datetime.now(),
             "duration_seconds": sum(self.ctx.stage_timings.values()),
             "stocks_scanned": len(self.ctx.symbols),
+            "scan_timeframe": self.ctx.scan_timeframe,
             "market_regime": self.ctx.market_regime,
             "sector_rs": self.ctx.sector_rs_cache,
             "sector_leaderboard": self.ctx.sector_leaderboard,
@@ -440,7 +442,14 @@ class Pipeline:
         results: list[dict] = []
         with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
             future_to_symbol = {
-                executor.submit(_detect_symbol, symbol, daily, weekly, self.ctx.universe_name): symbol
+                executor.submit(
+                    _detect_symbol,
+                    symbol,
+                    daily,
+                    weekly,
+                    self.ctx.universe_name,
+                    self.ctx.scan_timeframe,
+                ): symbol
                 for symbol, daily, weekly in prepared
             }
             processed: set[concurrent.futures.Future] = set()
@@ -564,12 +573,22 @@ class Pipeline:
         )
 
 
-def _detect_symbol(symbol: str, daily: dict, weekly: dict | None = None, universe_name: str = "nifty500") -> dict:
+def _detect_symbol(
+    symbol: str,
+    daily: dict,
+    weekly: dict | None = None,
+    universe_name: str = "nifty500",
+    scan_timeframe: str = "daily",
+) -> dict:
     from patterns import get_detectors_for_universe
 
     hits: list[PatternResult] = []
     errors: list[str] = []
-    for detector in get_detectors_for_universe(universe_name, symbol=symbol):
+    for detector in get_detectors_for_universe(
+        universe_name,
+        symbol=symbol,
+        scan_timeframe=scan_timeframe,
+    ):
         try:
             found = detector(daily, weekly or {})
             if found:
@@ -739,6 +758,12 @@ def _validate_live_fetch_scope(universe_name: str, *, skip_fetch: bool, limit: i
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the NSE pattern scanner pipeline.")
     parser.add_argument("--universe", default="nifty500", help="Universe profile to scan.")
+    parser.add_argument(
+        "--scan-timeframe",
+        choices=("daily", "weekly", "all"),
+        default="daily",
+        help="Detector set to run. Daily is the existing default; weekly adds weekly price-action detectors.",
+    )
     parser.add_argument("--skip-fetch", action="store_true", help="Do not fetch today's OHLC from Dhan.")
     parser.add_argument(
         "--no-fetch-missing",
@@ -783,6 +808,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     ctx = PipelineContext(
         universe_name=universe_name,
+        scan_timeframe=args.scan_timeframe,
         dry_run=dry_run,
         skip_fetch=skip_fetch,
         fetch_missing=not bool(args.no_fetch_missing),
@@ -804,6 +830,7 @@ def main(argv: list[str] | None = None) -> int:
         pipeline.close()
 
     print(f"Universe: {ctx.universe_name}")
+    print(f"Scan timeframe: {ctx.scan_timeframe}")
     print(f"Symbols selected: {len(ctx.symbols)}")
     print(f"Pattern hits: {len(ctx.raw_hits)}")
     print(f"Scored results: {len(ctx.scored_results)}")

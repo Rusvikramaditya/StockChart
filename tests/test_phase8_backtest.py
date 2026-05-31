@@ -363,6 +363,19 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
         self.assertIn("patterns.double_bottom", modules("small_mid_liquid"))
         self.assertEqual(modules("watchlist"), all_modules)
 
+        weekly_modules = {
+            detector.__module__
+            for detector in get_detectors_for_universe("nifty500", scan_timeframe="weekly")
+        }
+        self.assertEqual(weekly_modules, {"patterns.weekly_breakout", "patterns.multiyear_breakout"})
+
+        combined_modules = {
+            detector.__module__
+            for detector in get_detectors_for_universe("nifty500", scan_timeframe="all")
+        }
+        self.assertIn("patterns.weekly_breakout", combined_modules)
+        self.assertIn("patterns.flat_base", combined_modules)
+
     def test_all_nse_equity_detector_policy_routes_known_symbols_by_profile(self):
         def fake_profile_symbols(profile: str) -> frozenset[str]:
             return {
@@ -393,9 +406,9 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
             return []
 
         with patch("patterns.get_detectors_for_universe", return_value=[detector]) as resolver:
-            result = _detect_symbol("TEST", {"close": [1.0]}, {}, "small_mid_liquid")
+            result = _detect_symbol("TEST", {"close": [1.0]}, {}, "small_mid_liquid", "weekly")
 
-        resolver.assert_called_once_with("small_mid_liquid", symbol="TEST")
+        resolver.assert_called_once_with("small_mid_liquid", symbol="TEST", scan_timeframe="weekly")
         self.assertEqual(called, ["ran"])
         self.assertEqual(result["errors"], [])
 
@@ -583,7 +596,7 @@ class QualityScorePhase8bTest(unittest.TestCase):
             )
 
         explanation = attach_explanation(scored)["explanation"]
-        self.assertIn("Volume: 0/10 (NO_VOLUME)", explanation)
+        self.assertIn("Daily volume: 0/10 (NO_VOLUME)", explanation)
         self.assertIn("Market regime: disabled (CONFIRMED UPTREND)", explanation)
         self.assertNotIn("/0", explanation)
 

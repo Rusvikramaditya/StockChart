@@ -357,6 +357,31 @@ SUPERTREND = {
     "max_stop_distance_pct": 10.0,
 }
 
+WEEKLY_BREAKOUT = {
+    # Swing/positional price-action scan on weekly bars. This is separate
+    # from daily detectors: weekly finds the structure, daily filters time
+    # the entry after scoring.
+    "lookback_weeks": 78,
+    "min_bars": 40,
+    "within_breakout_pct": 3.0,
+    "max_breakout_extension_pct": 12.0,
+    "max_stop_distance_pct": 18.0,
+    "stop_lookback_weeks": 10,
+    # Horizontal base / resistance breakout.
+    "resistance_tolerance_pct": 3.0,
+    "max_touch_range_pct": 5.0,
+    "min_resistance_touches": 2,
+    "min_touch_spread_fraction": 0.20,
+    # Descending trendline reversal breakout.
+    "trendline_tolerance_pct": 4.0,
+    "min_trendline_touches": 2,
+    "min_trendline_separation_weeks": 8,
+    "trendline_anchor_exclusion_weeks": 4,
+    "min_prior_decline_pct": 18.0,
+    # Weekly volume confirmation.
+    "volume_surge_ratio": 1.4,
+}
+
 MULTIYEAR_BREAKOUT = {
     "min_years": 2,
     # Practical long-base scan window. The old detector effectively looked
@@ -413,6 +438,17 @@ STAGE2 = {
 VOLUME = {
     "breakout_vol_ratio": 1.4,
     "avg_vol_period": 50,
+}
+
+KING_CANDLE = {
+    "lookback_bars": 10,
+    "confirmation_bars": 3,
+    "min_body_pct": 65.0,
+    "min_close_position_pct": 75.0,
+    "min_range_vs_prior": 1.8,
+    "min_body_vs_prior": 2.5,
+    "min_volume_ratio": 1.4,
+    "max_range_pct_of_price": 10.0,
 }
 
 POCKET_PIVOT = {
@@ -508,4 +544,4 @@ PROCESS_WORKERS = 8
 STOCK_TIMEOUT_SECONDS = 30
 TELEGRAM_MIN_CONVICTION = 70
 TELEGRAM_ALLOWED_TIERS = {"HIGHEST", "HIGH"}
-TELEGRAM_MAX_ALERTS = 5
+TELEGRAM_MAX_ALERTS = 9

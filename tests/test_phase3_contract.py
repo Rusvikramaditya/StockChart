@@ -19,6 +19,7 @@ class Phase3ContractTest(unittest.TestCase):
     def test_synthetic_filters_are_testable(self):
         close = np.linspace(100.0, 210.0, 260)
         daily = {
+            "date": np.arange("2025-01-01", "2025-09-18", dtype="datetime64[D]"),
             "open": close - 1.0,
             "high": close + 2.0,
             "low": close - 2.0,
@@ -26,7 +27,11 @@ class Phase3ContractTest(unittest.TestCase):
             "volume": np.array([100000.0] * 259 + [180000.0]),
         }
         self.assertTrue(stage2.evaluate(daily)["passed"])
-        self.assertTrue(volume.evaluate(daily)["passed"])
+        volume_result = volume.evaluate(daily)
+        self.assertTrue(volume_result["passed"])
+        self.assertEqual(volume_result["details"]["latest_volume"], 180000)
+        self.assertEqual(volume_result["details"]["last_5_volumes"], [100000, 100000, 100000, 100000, 180000])
+        self.assertEqual(volume_result["details"]["recent_volume_direction"], "higher")
         self.assertIsNotNone(rsi.evaluate(daily)["value"])
 
         pattern = PatternResult(

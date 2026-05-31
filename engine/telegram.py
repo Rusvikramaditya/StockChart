@@ -117,7 +117,7 @@ def format_alert(scored: dict[str, Any]) -> str:
         (
             "Filters: "
             f"Stage2 {_check(filters.get('stage2', {}).get('passed'))} | "
-            f"Volume {_check(filters.get('volume', {}).get('passed'))} | "
+            f"{_volume_filter_text(filters.get('volume', {}))} | "
             f"Sector {_status(filters.get('sector_rs', {}).get('status'))} | "
             f"Regime {_status(filters.get('market_regime', {}).get('verdict'))} | "
             f"RSI {_esc(filters.get('rsi', {}).get('status', 'UNKNOWN'))}"
@@ -150,6 +150,34 @@ def format_chart_caption(scored: dict[str, Any]) -> str:
     if stack_count > 1:
         caption += "\nStacked: " + _stacked_pattern_text(scored, stack_count)
     return _trim_caption(caption)
+
+
+def _volume_filter_text(result: dict[str, Any]) -> str:
+    details = result.get("details") or {}
+    timeframe = str(details.get("timeframe") or "daily").lower()
+    label = "WVol" if timeframe == "weekly" else "DVol"
+    ratio = details.get("breakout_volume_ratio")
+    latest = details.get("latest_volume")
+    avg = details.get("avg_volume") or details.get("avg_50d_volume") or details.get("avg_50w_volume")
+    check = _check(result.get("passed"))
+    if ratio is None or latest is None or avg is None:
+        return f"{label} {check}"
+    return f"{label} {check} {_fmt(ratio)}x ({_fmt_volume(latest)}/{_fmt_volume(avg)})"
+
+
+def _fmt_volume(value: Any) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "NA"
+    absolute = abs(number)
+    if absolute >= 10_000_000:
+        return f"{number / 10_000_000:.2f}Cr".rstrip("0").rstrip(".")
+    if absolute >= 100_000:
+        return f"{number / 100_000:.2f}L".rstrip("0").rstrip(".")
+    if absolute >= 1_000:
+        return f"{number / 1_000:.2f}K".rstrip("0").rstrip(".")
+    return f"{number:.0f}"
 
 
 def send_daily_summary(

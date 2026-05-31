@@ -159,6 +159,8 @@ class PipelineVerifyPhase6Test(unittest.TestCase):
             "--dry-run",
             "--workers",
             "1",
+            "--scan-timeframe",
+            "weekly",
             "--fetch-all-data",
             "--check-rebalance",
             "--refresh-universe",
@@ -172,6 +174,7 @@ class PipelineVerifyPhase6Test(unittest.TestCase):
         self.assertEqual(args.stage, "detect")
         self.assertTrue(args.dry_run)
         self.assertEqual(args.workers, 1)
+        self.assertEqual(args.scan_timeframe, "weekly")
         self.assertTrue(args.fetch_all_data)
         self.assertTrue(args.check_rebalance)
         self.assertTrue(args.refresh_universe)
@@ -199,6 +202,29 @@ class PipelineVerifyPhase6Test(unittest.TestCase):
 
         weekly.assert_called_once()
         self.assertEqual(ctx.stats["rows_fetched"], 1)
+        self.assertEqual(ctx.stats["weekly_incremental"], {"symbols_processed": 1})
+
+    def test_weekly_scan_fetch_refreshes_weekly_incremental_before_friday(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = storage.connect(Path(tmp) / "test.db")
+            storage.ensure_schema(conn)
+            try:
+                loader = _FakeLoader(conn)
+                ctx = PipelineContext(
+                    loader=loader,
+                    universe_name="watchlist",
+                    scan_timeframe="weekly",
+                    scan_date=pd.Timestamp("2026-05-20").date(),
+                )
+                ctx.selected_profile = loader.get_universe_profile("watchlist")
+                pipeline = Pipeline(ctx)
+
+                with patch("scanner._generate_weekly_incremental", return_value={"symbols_processed": 1}) as weekly:
+                    pipeline.fetch()
+            finally:
+                conn.close()
+
+        weekly.assert_called_once()
         self.assertEqual(ctx.stats["weekly_incremental"], {"symbols_processed": 1})
 
     def test_full_all_nse_live_fetch_is_allowed_when_not_cooling_down(self):
@@ -285,6 +311,23 @@ class PipelineTelegramChartPhase6Test(unittest.TestCase):
         self.assertEqual(Path(send_mock.call_args.args[1]), fallback_path)
         self.assertEqual(ctx.errors[0]["stage"], "chart_screenshot")
         self.assertEqual(scored["chart_path"], str(fallback_path))
+
+    def test_alert_cap_matches_dashboard_suggestion_count(self):
+        ctx = PipelineContext(loader=_FakeLoader(None))
+        ctx.scored_results = [
+            _scored(f"TEST{idx}", "Ascending Triangle", 75)
+            for idx in range(10)
+        ]
+        pipeline = Pipeline(ctx)
+
+        with (
+            patch.object(pipeline, "_alert_chart_path", return_value=None),
+            patch("scanner.telegram.send_alert", return_value=True) as send_mock,
+        ):
+            sent = pipeline._send_alerts()
+
+        self.assertEqual(sent, 9)
+        self.assertEqual(send_mock.call_count, 9)
 
     def test_output_records_failed_telegram_summary(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -27,6 +27,7 @@ def test_safe_mode_builds_dry_run_command():
 
     assert "scanner.py" in command
     assert command[command.index("--universe") + 1] == "nifty500"
+    assert command[command.index("--scan-timeframe") + 1] == "daily"
     assert command[command.index("--limit") + 1] == "25"
     assert command[command.index("--workers") + 1] == "8"
     assert "--min-liquidity" in command
@@ -86,6 +87,21 @@ def test_live_with_telegram_mode_does_not_force_safety_flags():
     assert "--no-telegram" not in command
 
 
+def test_weekly_scan_timeframe_is_whitelisted_and_names_output():
+    command, output_path = build_scan_command(
+        {
+            "universe": ["watchlist"],
+            "mode": ["safe"],
+            "workers": ["2"],
+            "scan_timeframe": ["weekly"],
+        },
+        now=NOW,
+    )
+
+    assert command[command.index("--scan-timeframe") + 1] == "weekly"
+    assert output_path.name == "control_20260520_174500_watchlist_weekly.html"
+
+
 @pytest.mark.parametrize(
     "form",
     [
@@ -93,6 +109,7 @@ def test_live_with_telegram_mode_does_not_force_safety_flags():
         {"universe": ["nifty500"], "mode": ["bad"], "workers": ["8"]},
         {"universe": ["nifty500"], "mode": ["safe"], "workers": ["0"]},
         {"universe": ["nifty500"], "mode": ["safe"], "workers": ["99"]},
+        {"universe": ["nifty500"], "mode": ["safe"], "workers": ["8"], "scan_timeframe": ["monthly"]},
         {"universe": ["nifty500"], "mode": ["safe"], "workers": ["8"], "limit": ["0"]},
     ],
 )
@@ -113,7 +130,10 @@ def test_control_page_explains_fields_and_chart_locations():
     assert "Verify Dhan auth" in html
     assert "Verify Telegram" in html
     assert "Resolve Telegram Chat ID" in html
+    assert "Past Suggestions" in html
     assert "Which stock list to scan" in html
+    assert "Scan timeframe" in html
+    assert "Weekly is for larger swing setups" in html
     assert "Chart approval gallery" in html
 
 

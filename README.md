@@ -1,6 +1,6 @@
 # Pattern Finder
 
-Local NSE pattern scanner for daily chart-pattern discovery, broad-universe data refresh, HTML dashboard output, and optional Telegram alerts.
+Local NSE pattern scanner for daily chart-pattern discovery, weekly breakout scanning, broad-universe data refresh, HTML dashboard output, and optional Telegram alerts.
 
 ## Current Status
 
@@ -75,6 +75,20 @@ Require liquidity pass for tradable alerts:
 
 ```powershell
 python scanner.py --universe small_mid_liquid --min-liquidity
+```
+
+## Weekly Scan
+
+Weekly mode keeps the daily scanner intact and runs weekly price-action detectors instead:
+
+```powershell
+python scanner.py --universe small_mid_liquid --scan-timeframe weekly --no-telegram
+```
+
+Use both detector sets when you want one dashboard with daily and weekly candidates:
+
+```powershell
+python scanner.py --universe watchlist --scan-timeframe all --skip-fetch --dry-run --no-telegram
 ```
 
 ## Broad Universe Refresh

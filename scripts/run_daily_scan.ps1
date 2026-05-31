@@ -39,8 +39,15 @@ if ($NoTelegram) {
 "RepoRoot: $RepoRoot" | Out-File -FilePath $LogPath -Encoding utf8 -Append
 "Command: $PythonExe $($ScannerArgs -join ' ')" | Out-File -FilePath $LogPath -Encoding utf8 -Append
 
-& $PythonExe @ScannerArgs *>&1 | Tee-Object -FilePath $LogPath -Append
-$ExitCode = $LASTEXITCODE
+# PowerShell 5.1 can turn native stderr into NativeCommandError when ErrorActionPreference is Stop.
+$PreviousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    & $PythonExe @ScannerArgs *>&1 | Tee-Object -FilePath $LogPath -Append
+    $ExitCode = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $PreviousErrorActionPreference
+}
 
 "[$(Get-Date -Format o)] Scanner exit code: $ExitCode" | Out-File -FilePath $LogPath -Encoding utf8 -Append
 

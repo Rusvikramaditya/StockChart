@@ -16,6 +16,8 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
+from engine import past_reports_dashboard
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = BASE_DIR / "output"
@@ -24,6 +26,7 @@ DOCS_DIR = BASE_DIR / "docs"
 STOCKSCANNER_ENV_PATH = BASE_DIR.parent / "StockScanner" / ".env"
 UNIVERSES = ("nifty500", "all_nse_equity", "small_mid_liquid", "watchlist", "recent_listings")
 MODES = ("safe", "fetch_no_telegram", "live_with_telegram")
+SCAN_TIMEFRAMES = ("daily", "weekly", "all")
 DHAN_ENV_KEYS = ("DHAN_CLIENT_ID", "DHAN_ACCESS_TOKEN", "DHAN_PIN", "DHAN_TOTP_SECRET")
 MAX_LIMIT = 5000
 MAX_WORKERS = 16
@@ -40,10 +43,15 @@ def build_scan_command(form: dict[str, list[str]], *, now: datetime | None = Non
     if mode not in MODES:
         raise ValueError(f"Unsupported run mode: {mode}")
 
+    scan_timeframe = _field(form, "scan_timeframe", "daily")
+    if scan_timeframe not in SCAN_TIMEFRAMES:
+        raise ValueError(f"Unsupported scan timeframe: {scan_timeframe}")
+
     workers = _int_field(form, "workers", default=8, minimum=1, maximum=MAX_WORKERS)
     limit_value = _optional_int_field(form, "limit", minimum=1, maximum=MAX_LIMIT)
     timestamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
-    output_path = OUTPUT_DIR / f"control_{timestamp}_{universe}.html"
+    suffix = "" if scan_timeframe == "daily" else f"_{scan_timeframe}"
+    output_path = OUTPUT_DIR / f"control_{timestamp}_{universe}{suffix}.html"
 
     command = [
         sys.executable,
@@ -52,6 +60,8 @@ def build_scan_command(form: dict[str, list[str]], *, now: datetime | None = Non
         universe,
         "--workers",
         str(workers),
+        "--scan-timeframe",
+        scan_timeframe,
         "--output",
         str(output_path),
     ]
@@ -104,6 +114,11 @@ def recent_charts(limit: int = 10) -> list[dict[str, str]]:
             }
         )
     return charts
+
+
+def build_past_recommendations_dashboard(*, days: int = 60) -> Path:
+    """Create the MEDIUM/HIGH/HIGHEST past suggestions dashboard."""
+    return past_reports_dashboard.write_dashboard(default_days=days, output_dir=OUTPUT_DIR)
 
 
 def summarize_run_failure(returncode: int, stdout: str, stderr: str) -> str:
@@ -377,6 +392,9 @@ class ControlHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/verify":
             self._run_verify()
             return
+        if parsed.path == "/api/past-recommendations":
+            self._build_past_recommendations()
+            return
         if parsed.path == "/api/import-dhan":
             self._import_dhan()
             return
@@ -464,6 +482,22 @@ class ControlHandler(BaseHTTPRequestHandler):
                 "stderr": result.stderr,
             },
             status=HTTPStatus.OK if result.returncode == 0 else HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
+
+    def _build_past_recommendations(self) -> None:
+        try:
+            form = self._read_form()
+            days = _int_field(form, "days", default=60, minimum=1, maximum=365)
+            path = build_past_recommendations_dashboard(days=days)
+        except Exception as exc:
+            self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        self._send_json(
+            {
+                "ok": True,
+                "dashboard": f"/output/{path.name}",
+                "reports": recent_reports(),
+            }
         )
 
     def _import_dhan(self) -> None:
@@ -828,6 +862,15 @@ def _render_index() -> str:
               <span class="mode-warning" id="modeWarning">Live fetch calls Dhan. If DHAN_CLIENT_ID or DHAN_ACCESS_TOKEN is expired or wrong, this will fail with HTTP 401. Use Safe dry run to scan existing local data.</span>
             </label>
             <label>
+              <span class="field-label">Scan timeframe <span class="help" tabindex="0" data-tip="Daily keeps the existing detector set. Weekly scans weekly price-action breakouts. All runs both detector sets.">?</span></span>
+              <select name="scan_timeframe">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="all">Daily + weekly</option>
+              </select>
+              <span class="field-note">Daily is unchanged. Weekly is for larger swing setups.</span>
+            </label>
+            <label>
               <span class="field-label">Limit <span class="help" tabindex="0" data-tip="Optional cap on selected symbols. Use 1-25 to test quickly. Leave blank to scan the full selected universe.">?</span></span>
               <input name="limit" type="number" min="1" max="{MAX_LIMIT}" placeholder="Blank = full universe">
               <span class="field-note">Blank means full universe.</span>
@@ -845,6 +888,7 @@ def _render_index() -> str:
           <div class="actions">
             <button type="submit" class="primary" id="runButton" title="Run scanner.py with the selected parameters.">Run scanner</button>
             <button type="button" id="verifyButton" title="Run setup\\06_verify_data.py and show the coverage table.">Verify data</button>
+            <button type="button" id="pastButton" title="Build a performance dashboard from saved MEDIUM, HIGH, and HIGHEST report cards.">Past Suggestions</button>
             <button type="button" id="importDhanButton" title="Copy Dhan auth keys from A:\\VibeCoding\\ProductIdeas\\StockScanner\\.env without displaying secrets.">Import StockScanner Dhan</button>
             <button type="button" id="verifyDhanButton" title="Verify Dhan PIN/TOTP auth and cache a refreshed token if Dhan accepts it.">Verify Dhan auth</button>
             <button type="button" id="verifyTelegramButton" title="Verify Telegram bot token and configured chat target without displaying secrets.">Verify Telegram</button>
@@ -890,6 +934,7 @@ def _render_index() -> str:
     const form = document.getElementById("scanForm");
     const runButton = document.getElementById("runButton");
     const verifyButton = document.getElementById("verifyButton");
+    const pastButton = document.getElementById("pastButton");
     const importDhanButton = document.getElementById("importDhanButton");
     const verifyDhanButton = document.getElementById("verifyDhanButton");
     const verifyTelegramButton = document.getElementById("verifyTelegramButton");
@@ -904,6 +949,7 @@ def _render_index() -> str:
     function setBusy(isBusy) {{
       runButton.disabled = isBusy;
       verifyButton.disabled = isBusy;
+      pastButton.disabled = isBusy;
       importDhanButton.disabled = isBusy;
       verifyDhanButton.disabled = isBusy;
       verifyTelegramButton.disabled = isBusy;
@@ -993,6 +1039,29 @@ def _render_index() -> str:
         setStatus(payload.ok ? "Data verification passed." : "Data verification failed.", payload.ok ? "ok" : "fail");
       }} catch (error) {{
         setStatus("Verify request failed.", "fail");
+        logBox.textContent = String(error);
+      }} finally {{
+        setBusy(false);
+      }}
+    }});
+
+    pastButton.addEventListener("click", async () => {{
+      setBusy(true);
+      setStatus("Building past recommendation dashboard...");
+      logBox.textContent = "Reading saved MEDIUM/HIGH/HIGHEST report cards...";
+      try {{
+        const response = await fetch("/api/past-recommendations", {{ method: "POST", body: new URLSearchParams({{ days: "60" }}) }});
+        const payload = await response.json();
+        if (payload.ok && payload.dashboard) {{
+          setStatus(`Past dashboard ready. <a class="dashboard-link" href="${{payload.dashboard}}" target="_blank">Open past recommendations</a>`, "ok");
+          logBox.textContent = "Built from saved reports in output. Use the Days selector inside the dashboard to switch windows.";
+          renderReports(payload.reports);
+        }} else {{
+          setStatus(payload.error || "Past dashboard failed.", "fail");
+          logBox.textContent = payload.error || "Unknown error.";
+        }}
+      }} catch (error) {{
+        setStatus("Past dashboard request failed.", "fail");
         logBox.textContent = String(error);
       }} finally {{
         setBusy(false);

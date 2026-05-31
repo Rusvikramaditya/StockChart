@@ -48,6 +48,10 @@ PATTERN_101 = {
         "A Multi-Year Breakout happens when price clears a resistance line or "
         "zone that has capped the stock for years. Long bases can reduce overhead supply."
     ),
+    "Weekly Breakout": (
+        "A Weekly Breakout forms when the weekly chart clears a major resistance "
+        "or descending trendline. It is a larger swing setup; daily action is used for timing."
+    ),
 }
 
 
@@ -83,13 +87,13 @@ def _stock_specific(symbol: str, scored: dict, filters: dict) -> str:
     sector = filters["sector_rs"]
     rsi = filters["rsi"]
     entry = _entry_price(scored)
+    volume_text = _volume_sentence(volume)
     return (
         f"{symbol} triggered {pattern.pattern} on the {pattern.timeframe} chart. "
         f"Detector detail: {pattern.explanation} Pivot is Rs.{pattern.pivot}, "
         f"scan-date entry is Rs.{entry}, "
         f"target is Rs.{pattern.target}, and stop is Rs.{pattern.stop_loss}. "
-        f"Stage 2 is {stage['status']}; volume is {volume['status']} with "
-        f"{volume.get('details', {}).get('breakout_volume_ratio', 0)}x breakout volume; "
+        f"Stage 2 is {stage['status']}; {volume_text}; "
         f"pocket pivot is {pocket.get('status', 'UNKNOWN')}; "
         f"sector RS is {sector['status']} versus Nifty; RSI is {rsi['value']} ({rsi['status']})."
     )
@@ -109,7 +113,7 @@ def _action_plan(scored: dict, rr: dict) -> str:
 def _risk_note(pattern: PatternResult, filters: dict) -> str:
     warnings = [f"The setup is invalid if price closes below Rs.{pattern.stop_loss}."]
     if not filters["volume"]["passed"]:
-        warnings.append("Breakout volume is not confirmed yet; a low-volume breakout can fail.")
+        warnings.append("Primary breakout volume is not confirmed yet; a low-volume breakout can fail.")
     if filters["rsi"]["bearish_divergence"]:
         warnings.append("RSI bearish divergence is present and reduces conviction.")
     if filters["market_regime"].get("score", 0) <= 1:
@@ -128,12 +132,31 @@ def _breakdown(scored: dict, breakdown: dict, filters: dict) -> str:
         f"Conviction: {scored['score']}/100 {scored['tier']}\n"
         f"{line('Pattern quality', 'pattern', 'quality gate')}\n"
         f"{line('Stage 2 uptrend', 'stage2', filters['stage2']['status'])}\n"
-        f"{line('Volume', 'volume', filters['volume']['status'])}\n"
+        f"{line(_volume_label(filters['volume']), 'volume', filters['volume']['status'])}\n"
         f"{line('Sector RS', 'sector_rs', filters['sector_rs']['status'])}\n"
         f"{line('Market regime', 'market_regime', filters['market_regime']['verdict'])}\n"
         f"{line('Multi-timeframe', 'multi_tf', filters['multi_tf']['status'])}\n"
         f"RSI adjustment: {breakdown['rsi_adjustment']}"
     )
+
+
+def _volume_sentence(result: dict) -> str:
+    label = _volume_label(result).lower()
+    details = result.get("details", {})
+    ratio = details.get("breakout_volume_ratio")
+    latest = details.get("latest_volume")
+    avg = details.get("avg_volume") or details.get("avg_50d_volume") or details.get("avg_50w_volume")
+    if ratio is None or latest is None or avg is None:
+        return f"{label} is {result.get('status', 'UNKNOWN')}"
+    return (
+        f"{label} is {result.get('status', 'UNKNOWN')} at {ratio}x "
+        f"({int(latest):,} latest vs {int(avg):,} average)"
+    )
+
+
+def _volume_label(result: dict) -> str:
+    timeframe = str((result.get("details") or {}).get("timeframe") or "daily").lower()
+    return "Weekly volume" if timeframe == "weekly" else "Daily volume"
 
 
 def _risk_reward(scored: dict) -> dict:
