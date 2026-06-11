@@ -132,6 +132,11 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         results.append(normalized)
     skip_breakdown = _build_skip_breakdown(skip_reasons, skipped_samples)
     results.sort(key=lambda item: (TIER_ORDER.index(item["tier"]) if item["tier"] in TIER_ORDER else 99, -item["score"]))
+    radar = [
+        _normalize_radar_item(item, sector_by_symbol, tier_by_sector)
+        for item in _list(context, "momentum_radar", "radar_results")
+    ]
+    radar.sort(key=lambda item: (-item["score"], item["symbol"]))
     sectors = _normalize_sectors(context.get("sector_rs") or context.get("sector_cache") or context.get("sectors") or {})
     sector_leaderboard = _normalize_leaderboard(context.get("sector_leaderboard") or {})
     errors = [_normalize_error(item) for item in _list(context, "errors", "failed_stages")]
@@ -173,6 +178,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "duration": duration,
         "results": results,
         "tier_groups": tier_groups,
+        "momentum_radar": radar,
         "skipped_count": skipped_count,
         "skip_breakdown": skip_breakdown,
         "sectors": sectors,
@@ -181,10 +187,57 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "pattern_guide": _supported_pattern_guide(),
         "summary": {
             "hit_count": len(results),
+            "radar_count": len(radar),
             "alert_count": alerts_sent,
             "error_count": len(errors),
             "highest_count": len([item for item in results if item["tier"] == "HIGHEST"]),
         },
+    }
+
+
+def _normalize_radar_item(item: dict[str, Any], sector_by_symbol: dict[str, str], tier_by_sector: dict[str, str]) -> dict[str, Any]:
+    symbol = str(item.get("symbol") or "UNKNOWN").upper()
+    score = _number(item.get("score")) or 0.0
+    sector = str(item.get("sector") or sector_by_symbol.get(symbol) or "NIFTY 50")
+    sector_tier = str(item.get("sector_tier") or tier_by_sector.get(sector) or "UNKNOWN")
+    resistance = _number(item.get("weekly_resistance"))
+    distance = _number(item.get("weekly_resistance_distance_pct"))
+    extension = _number(item.get("weekly_resistance_extension_pct"))
+    if resistance is None:
+        weekly_level = "N/A"
+    elif extension is not None:
+        weekly_level = f"{_fmt_money(resistance)} (+{extension:.2f}%)"
+    elif distance is not None:
+        weekly_level = f"{_fmt_money(resistance)} (-{distance:.2f}%)"
+    else:
+        weekly_level = _fmt_money(resistance)
+
+    reasons = [str(value) for value in item.get("reasons") or [] if str(value).strip()]
+    notes = [str(value) for value in item.get("watch_notes") or [] if str(value).strip()]
+    return {
+        "symbol": symbol,
+        "screener_url": _screener_url(symbol),
+        "company_name": str(item.get("company_name") or ""),
+        "score": score,
+        "score_display": _fmt_number(score),
+        "score_class": _radar_score_class(score),
+        "status": str(item.get("status") or "Momentum watch"),
+        "action": str(item.get("action") or "WATCH ONLY"),
+        "cmp": _fmt_money(item.get("cmp")),
+        "latest_date": str(item.get("latest_date") or ""),
+        "from_52w_high": _fmt_percent(item.get("from_52w_high_pct"), signed=False),
+        "one_day": _fmt_percent(item.get("one_day_change_pct")),
+        "return_20d": _fmt_percent(item.get("return_20d_pct")),
+        "daily_volume": _fmt_ratio(item.get("daily_volume_ratio")),
+        "weekly_volume": _fmt_ratio(item.get("weekly_volume_ratio")),
+        "weekly_level": weekly_level,
+        "stage2_status": str(item.get("stage2_status") or "UNKNOWN"),
+        "sector": sector,
+        "sector_tier": sector_tier,
+        "sector_tier_class": sector_tier.lower(),
+        "reasons": reasons[:4],
+        "notes": notes[:3],
+        "primary_note": notes[0] if notes else "Watch for a clean trigger.",
     }
 
 
@@ -1123,6 +1176,21 @@ def _fmt_volume(value: Any) -> str:
     if absolute >= 1_000:
         return f"{number / 1_000:.2f}K".rstrip("0").rstrip(".")
     return f"{number:.0f}"
+
+
+def _fmt_ratio(value: Any) -> str:
+    number = _number(value)
+    if number is None:
+        return "N/A"
+    return f"{number:.2f}x"
+
+
+def _radar_score_class(score: float) -> str:
+    if score >= 85:
+        return "strong"
+    if score >= 70:
+        return "watch"
+    return "early"
 
 
 def _fmt_number(value: Any, *, suffix: str = "") -> str:

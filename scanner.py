@@ -18,7 +18,7 @@ from typing import Callable, Iterable
 import pandas as pd
 
 from config import settings
-from engine import dashboard, dhan_client, storage, telegram, universe
+from engine import dashboard, dhan_client, momentum_radar, storage, telegram, universe
 from engine.chart_gen import generate_pattern_chart
 from engine.chart_payload import build_chart_payload
 from engine.data_loader import DataLoader
@@ -128,6 +128,7 @@ class PipelineContext:
     weekly_arrays: dict[str, dict] = field(default_factory=dict)
     raw_hits: list[dict] = field(default_factory=list)
     scored_results: list[dict] = field(default_factory=list)
+    momentum_radar: list[dict] = field(default_factory=list)
     errors: list[dict] = field(default_factory=list)
     stage_timings: dict[str, float] = field(default_factory=dict)
     stats: dict = field(default_factory=dict)
@@ -354,6 +355,8 @@ class Pipeline:
 
         self.ctx.scored_results = deduplicate_results(scored_results)
         self.ctx.stats["scored_results"] = len(self.ctx.scored_results)
+        self.ctx.momentum_radar = self._build_momentum_radar(company_names)
+        self.ctx.stats["momentum_radar"] = len(self.ctx.momentum_radar)
 
     @stage("output")
     def output(self) -> None:
@@ -383,6 +386,7 @@ class Pipeline:
             "sector_rs": self.ctx.sector_rs_cache,
             "sector_leaderboard": self.ctx.sector_leaderboard,
             "results": self.ctx.scored_results,
+            "momentum_radar": self.ctx.momentum_radar,
             "errors": self.ctx.errors,
             "alerts_sent": self.ctx.alerts_sent,
         }
@@ -392,6 +396,45 @@ class Pipeline:
     def close(self) -> None:
         if self.ctx.loader is not None:
             self.ctx.loader.close()
+
+    def _build_momentum_radar(self, company_names: dict[str, str]) -> list[dict]:
+        assert self.ctx.loader is not None
+        actionable_symbols = {
+            str(item.get("symbol", "")).upper()
+            for item in self.ctx.scored_results
+            if str(item.get("tier", "")).upper() != "SKIP" and bool(item.get("tradable", True))
+        }
+        skip_reason_by_symbol: dict[str, str] = {}
+        for item in self.ctx.scored_results:
+            symbol = str(item.get("symbol", "")).upper()
+            reason = item.get("skip_reason")
+            if symbol and reason and symbol not in skip_reason_by_symbol:
+                skip_reason_by_symbol[symbol] = str(reason)
+
+        rows: list[dict] = []
+        for symbol in self.ctx.symbols:
+            symbol = str(symbol).upper()
+            if symbol in actionable_symbols:
+                continue
+            daily = self.ctx.daily_arrays.get(symbol)
+            weekly = self.ctx.weekly_arrays.get(symbol)
+            if daily is None:
+                daily = self.ctx.loader.get_stock_daily_arrays(symbol)
+            if weekly is None:
+                weekly = self.ctx.loader.get_stock_weekly_arrays(symbol)
+            radar = momentum_radar.evaluate(
+                symbol,
+                daily,
+                weekly,
+                company_name=company_names.get(symbol, symbol),
+                skip_reason=skip_reason_by_symbol.get(symbol),
+            )
+            if radar is not None:
+                rows.append(radar)
+
+        rows.sort(key=lambda item: (-float(item.get("score") or 0.0), str(item.get("symbol") or "")))
+        limit = int(settings.MOMENTUM_RADAR.get("max_results", 30))
+        return rows[:limit]
 
     def _verify_output_path(self) -> None:
         target = self.ctx.output_path or settings.OUTPUT_DIR / "_scanner_write_probe.tmp"

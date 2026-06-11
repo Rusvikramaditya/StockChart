@@ -363,6 +363,41 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("scanner did not produce tradable pattern cards", html)
         self.assertIn('id="resultSearch"', html)
 
+    def test_momentum_radar_renders_watch_only_names_separately(self):
+        context = self._context(Path("missing.png"))
+        context["momentum_radar"] = [
+            {
+                "symbol": "HSCL",
+                "company_name": "Himadri Speciality Chemical",
+                "score": 96.0,
+                "status": "Momentum surge",
+                "action": "WATCH ONLY",
+                "cmp": 685.05,
+                "latest_date": "2026-06-05",
+                "from_52w_high_pct": 1.86,
+                "one_day_change_pct": 6.71,
+                "return_20d_pct": 19.4,
+                "daily_volume_ratio": 2.72,
+                "weekly_volume_ratio": 4.76,
+                "weekly_resistance": 654.45,
+                "weekly_resistance_extension_pct": 4.68,
+                "stage2_status": "PASS",
+                "reasons": ["daily volume surge", "weekly volume surge"],
+                "watch_notes": ["Weekly invalidation is wide; wait for a tighter base"],
+            }
+        ]
+
+        normalized = build_dashboard_context(context)
+        html = render_dashboard(context)
+
+        self.assertEqual(normalized["summary"]["hit_count"], 1)
+        self.assertEqual(normalized["summary"]["radar_count"], 1)
+        self.assertIn("Momentum Radar", html)
+        self.assertIn("WATCH ONLY", html)
+        self.assertIn("HSCL", html)
+        self.assertIn("Weekly invalidation is wide", html)
+        self.assertIn('href="https://www.screener.in/company/HSCL/"', html)
+
     def _context(self, chart_path: Path) -> dict:
         pattern = PatternResult(
             pattern="Ascending Triangle",
