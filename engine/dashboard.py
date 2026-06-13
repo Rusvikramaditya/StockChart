@@ -145,6 +145,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
     early_watchlist.sort(key=lambda item: (item["distance_sort"], -item["score"], item["symbol"]))
     setup_watchlist.sort(key=lambda item: (-item["watch_score"], -item["pattern_grade_sort"], item["distance_sort"], item["symbol"]))
     setup_watchlist = setup_watchlist[:SETUP_WATCHLIST_LIMIT]
+    entry_decisions = _build_entry_decisions(results, setup_watchlist)
     radar = [
         _normalize_radar_item(item, sector_by_symbol, tier_by_sector)
         for item in _list(context, "momentum_radar", "radar_results")
@@ -199,6 +200,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "duration": duration,
         "results": results,
         "tier_groups": tier_groups,
+        "entry_decisions": entry_decisions,
         "early_watchlist": early_watchlist,
         "setup_watchlist": setup_watchlist,
         "momentum_radar": radar,
@@ -212,6 +214,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "pattern_guide": _supported_pattern_guide(),
         "summary": {
             "hit_count": len(results),
+            "entry_decision_count": len(entry_decisions),
             "early_watch_count": len(early_watchlist),
             "setup_watch_count": len(setup_watchlist),
             "radar_count": len(radar),
@@ -322,6 +325,84 @@ def _trigger_distance_pct(latest: float | None, trigger: float | None) -> float 
     if latest is None or trigger is None or latest <= 0:
         return None
     return max(0.0, (trigger / latest - 1.0) * 100.0)
+
+
+def _build_entry_decisions(results: list[dict[str, Any]], setup_watchlist: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = [_entry_decision_from_result(item) for item in results]
+    rows.extend(_entry_decision_from_setup_watch(item) for item in setup_watchlist)
+    rows = [row for row in rows if row is not None]
+    rows.sort(key=lambda item: (item["rank"], -item["score_sort"], item["symbol"]))
+    return rows[:60]
+
+
+def _entry_decision_from_result(item: dict[str, Any]) -> dict[str, Any] | None:
+    symbol = str(item.get("symbol") or "").upper()
+    if not symbol:
+        return None
+    latest = _number(_coalesce(item.get("scan_close"), item.get("entry_price")))
+    trigger = _number(_coalesce(item.get("trigger_price"), item.get("entry_price"), item.get("technical_pivot"), item.get("pivot")))
+    entry_triggered = bool(item.get("entry_triggered"))
+    tradable = bool(item.get("tradable", True))
+    if tradable and entry_triggered:
+        decision = "ENTER NOW"
+        enter_at = _fmt_money(_coalesce(latest, item.get("entry_price")))
+        rank = 0
+        reason = "Entry trigger is already cleared."
+        css = "enter-now"
+    elif tradable:
+        decision = "ENTER ABOVE"
+        enter_at = _fmt_money(trigger)
+        rank = 1
+        reason = "Do not enter before price clears this trigger."
+        css = "enter-above"
+    else:
+        decision = "DO NOT ENTER"
+        enter_at = "No entry"
+        rank = 2
+        reason = "Not actionable from current setup."
+        css = "no-entry"
+    return {
+        "symbol": symbol,
+        "screener_url": item["screener_url"],
+        "decision": decision,
+        "decision_class": css,
+        "enter_at": enter_at,
+        "latest_text": _fmt_money(latest),
+        "stop_text": item["stop_text"],
+        "target_text": item["target_text"],
+        "reward_risk_display": item["reward_risk_display"],
+        "reward_risk_class": item["reward_risk_class"],
+        "pattern": item["pattern"],
+        "timeframe_tag": str(item.get("timeframe") or "daily").title(),
+        "conviction": _tracker_conviction_label(item.get("tier"), item.get("score")),
+        "reason": reason,
+        "rank": rank,
+        "score_sort": int(item.get("score") or 0),
+    }
+
+
+def _entry_decision_from_setup_watch(item: dict[str, Any]) -> dict[str, Any] | None:
+    symbol = str(item.get("symbol") or "").upper()
+    if not symbol:
+        return None
+    return {
+        "symbol": symbol,
+        "screener_url": item["screener_url"],
+        "decision": "DO NOT ENTER",
+        "decision_class": "no-entry",
+        "enter_at": "No entry",
+        "latest_text": item["latest_text"],
+        "stop_text": item["stop_text"],
+        "target_text": item["target_text"],
+        "reward_risk_display": item["reward_risk_display"],
+        "reward_risk_class": item["reward_risk_class"],
+        "pattern": item["pattern"],
+        "timeframe_tag": item["timeframe_tag"],
+        "conviction": item["conviction_label"],
+        "reason": f"{item['decision']}: {item['reason']}",
+        "rank": 2,
+        "score_sort": int(item.get("watch_score") or 0),
+    }
 
 
 def _normalize_setup_watch_item(

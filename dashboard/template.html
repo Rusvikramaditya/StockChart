@@ -466,6 +466,57 @@
     .radar-panel {
       margin-bottom: 24px;
     }
+    .entry-decision-panel {
+      margin-bottom: 24px;
+    }
+    .entry-decision-table thead th:nth-child(2),
+    .entry-decision-table thead th:nth-child(3),
+    .entry-decision-table thead th:nth-child(9) {
+      text-align: left;
+    }
+    .entry-decision-table tbody td:nth-child(2),
+    .entry-decision-table tbody td:nth-child(3),
+    .entry-decision-table tbody td:nth-child(9) {
+      text-align: left;
+      font-family: inherit;
+    }
+    .entry-decision {
+      display: inline-block;
+      min-width: 96px;
+      padding: 4px 9px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .entry-decision.enter-now {
+      color: var(--green);
+      background: rgba(38, 166, 154, 0.18);
+      border: 1px solid rgba(38, 166, 154, 0.35);
+    }
+    .entry-decision.enter-above {
+      color: var(--yellow);
+      background: rgba(224, 180, 0, 0.16);
+      border: 1px solid rgba(224, 180, 0, 0.35);
+    }
+    .entry-decision.no-entry {
+      color: var(--red);
+      background: rgba(239, 83, 80, 0.14);
+      border: 1px solid rgba(239, 83, 80, 0.32);
+    }
+    .entry-price {
+      font-weight: 900;
+      color: var(--text);
+    }
+    .entry-reason {
+      min-width: 260px;
+      max-width: 440px;
+      white-space: normal;
+      color: var(--muted);
+      line-height: 1.4;
+    }
     .setup-watch-panel {
       margin-bottom: 24px;
     }
@@ -1694,9 +1745,10 @@
       <div class="stat"><span class="label">Stocks Scanned</span><span class="value">{{ stocks_scanned }}</span></div>
       <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
-      <div class="stat"><span class="label">Early Watchlist</span><span class="value">{{ summary.early_watch_count }}</span></div>
-      <div class="stat"><span class="label">Setup Watchlist</span><span class="value">{{ summary.setup_watch_count }}</span></div>
-      <div class="stat"><span class="label">Momentum Radar</span><span class="value">{{ summary.radar_count }}</span></div>
+      <div class="stat"><span class="label">Entry Decisions</span><span class="value">{{ summary.entry_decision_count }}</span></div>
+      <div class="stat"><span class="label">Trigger Pending</span><span class="value">{{ summary.early_watch_count }}</span></div>
+      <div class="stat"><span class="label">No-Entry Setups</span><span class="value">{{ summary.setup_watch_count }}</span></div>
+      <div class="stat"><span class="label">Research Only</span><span class="value">{{ summary.radar_count }}</span></div>
       <div class="stat"><span class="label">Tracked Signals</span><span class="value">{{ summary.tracker_count }}</span></div>
       <div class="stat" title="Setups filtered out by quality / reward-risk gates"><span class="label">Skipped (low quality)</span><span class="value">{{ skipped_count }}</span></div>
       <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
@@ -1739,12 +1791,63 @@
     </details>
     {% endif %}
 
-    {% if early_watchlist %}
-    <details class="leaderboard-panel early-watch-panel" open aria-label="High-quality early watchlist">
+    {% if entry_decisions %}
+    <details class="leaderboard-panel entry-decision-panel" open aria-label="Entry decision table">
       <summary>
         <div class="leaderboard-title">
-          <h3>High-Quality Early Watchlist</h3>
-          <p class="subline">These setups have high raw conviction but have not crossed the trigger yet. They are early watch names, not enter-now recommendations.</p>
+          <h3>Entry Decision Table</h3>
+          <p class="subline">Read this first: enter now, enter above a price, or do not enter.</p>
+        </div>
+        <div class="leaderboard-summary-chips">
+          <span class="lb-chip neutral">{{ summary.entry_decision_count }} decisions</span>
+        </div>
+      </summary>
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table entry-decision-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Stock</th>
+              <th scope="col">Decision</th>
+              <th scope="col">Enter At</th>
+              <th scope="col">Latest</th>
+              <th scope="col">Stop</th>
+              <th scope="col">Target</th>
+              <th scope="col">R:R</th>
+              <th scope="col">Setup</th>
+              <th scope="col">Why</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in entry_decisions %}
+            <tr>
+              <td><span class="lb-rank">{{ loop.index }}</span></td>
+              <td><a class="symbol-link lb-sector-name" href="{{ item.screener_url }}" target="_blank" rel="noopener noreferrer" title="Open {{ item.symbol }} on Screener">{{ item.symbol }}</a></td>
+              <td><span class="entry-decision {{ item.decision_class }}">{{ item.decision }}</span></td>
+              <td><span class="entry-price">{{ item.enter_at }}</span></td>
+              <td>{{ item.latest_text }}</td>
+              <td>{{ item.stop_text }}</td>
+              <td>{{ item.target_text }}</td>
+              <td><span class="rr-pill rr-{{ item.reward_risk_class }}">{{ item.reward_risk_display }}</span></td>
+              <td>
+                <strong>{{ item.pattern }}</strong><br>
+                <span class="muted">{{ item.timeframe_tag }} | {{ item.conviction }}</span>
+              </td>
+              <td class="entry-reason">{{ item.reason }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+
+    {% if early_watchlist %}
+    <details class="leaderboard-panel early-watch-panel" aria-label="Trigger pending details">
+      <summary>
+        <div class="leaderboard-title">
+          <h3>Trigger Pending Details</h3>
+          <p class="subline">These setups are only entry candidates after price clears the trigger.</p>
         </div>
         <div class="leaderboard-summary-chips">
           <span class="lb-chip neutral">{{ summary.early_watch_count }} waiting</span>
@@ -1799,14 +1902,14 @@
     {% endif %}
 
     {% if setup_watchlist %}
-    <details class="leaderboard-panel setup-watch-panel" open aria-label="Daily and weekly setup watchlist">
+    <details class="leaderboard-panel setup-watch-panel" aria-label="No-entry setup details">
       <summary>
         <div class="leaderboard-title">
-          <h3>Daily + Weekly Setup Watchlist</h3>
-          <p class="subline">Detected setups that still failed an entry gate. Use these as research/watch names, not enter-now recommendations.</p>
+          <h3>No-Entry Setup Details</h3>
+          <p class="subline">Detected daily or weekly setups that are not valid entries now.</p>
         </div>
         <div class="leaderboard-summary-chips">
-          <span class="lb-chip neutral">{{ summary.setup_watch_count }} watch-only</span>
+          <span class="lb-chip neutral">{{ summary.setup_watch_count }} no-entry</span>
         </div>
       </summary>
       <div class="leaderboard-table-wrap">
@@ -1863,13 +1966,14 @@
     {% endif %}
 
     {% if momentum_radar %}
-    <details class="leaderboard-panel radar-panel" open aria-label="Momentum radar">
+    <details class="leaderboard-panel radar-panel" aria-label="Research only">
       <summary>
         <div class="leaderboard-title">
-          <h3>Momentum Radar</h3>
+          <h3>Research Only</h3>
+          <p class="subline">No entry price is generated from this table.</p>
         </div>
         <div class="leaderboard-summary-chips">
-          <span class="lb-chip neutral">{{ summary.radar_count }} watch-only</span>
+          <span class="lb-chip neutral">{{ summary.radar_count }} names</span>
         </div>
       </summary>
       <div class="leaderboard-table-wrap">
