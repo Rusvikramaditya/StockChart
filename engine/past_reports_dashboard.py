@@ -209,7 +209,7 @@ def render_dashboard(
     .stamp strong {{ display: block; margin-top: 4px; font-size: 16px; }}
     .controls {{
       display: grid;
-      grid-template-columns: minmax(240px, 1fr) 150px 170px 150px 170px;
+      grid-template-columns: minmax(240px, 1fr) 150px 170px 150px minmax(230px, 1fr);
       gap: 12px;
       margin: 18px 0;
       padding: 14px;
@@ -229,6 +229,28 @@ def render_dashboard(
       padding: 0 11px;
     }}
     input:focus, select:focus {{ outline: 2px solid rgba(0, 213, 255, 0.25); border-color: var(--cyan); }}
+    .sort-row {{
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }}
+    .clear-sort {{
+      min-height: 40px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0b1018;
+      color: var(--cyan);
+      cursor: pointer;
+      font-weight: 900;
+      white-space: nowrap;
+    }}
+    .clear-sort:hover:not(:disabled) {{ border-color: var(--cyan); }}
+    .clear-sort:disabled {{
+      color: var(--faint);
+      cursor: default;
+      opacity: 0.58;
+    }}
     .stats {{
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -300,7 +322,7 @@ def render_dashboard(
     }}
     .sort-header:hover, .sort-header.active {{ color: var(--text); }}
     .sort-mark {{
-      min-width: 28px;
+      min-width: 42px;
       color: var(--cyan);
       font-size: 10px;
       font-weight: 900;
@@ -383,26 +405,29 @@ def render_dashboard(
         </select>
       </label>
       <label>Sort
-        <select id="sort">
-          <option value="date_desc">Newest first</option>
-          <option value="date_asc">Oldest first</option>
-          <option value="return_desc">Best % change</option>
-          <option value="return_asc">Worst % change</option>
-          <option value="symbol_asc">Stock A-Z</option>
-          <option value="symbol_desc">Stock Z-A</option>
-          <option value="sector_asc">Sector A-Z</option>
-          <option value="sector_desc">Sector Z-A</option>
-          <option value="tier_desc">Highest tier first</option>
-          <option value="tier_asc">Medium tier first</option>
-          <option value="pattern_asc">Pattern A-Z</option>
-          <option value="pattern_desc">Pattern Z-A</option>
-          <option value="price_desc">Price then high-low</option>
-          <option value="price_asc">Price then low-high</option>
-          <option value="cmp_desc">CMP high-low</option>
-          <option value="cmp_asc">CMP low-high</option>
-          <option value="mentions_desc">Most mentions</option>
-          <option value="mentions_asc">Fewest mentions</option>
-        </select>
+        <div class="sort-row">
+          <select id="sort">
+            <option value="date_desc">Newest first</option>
+            <option value="date_asc">Oldest first</option>
+            <option value="return_desc">Best % change</option>
+            <option value="return_asc">Worst % change</option>
+            <option value="symbol_asc">Stock A-Z</option>
+            <option value="symbol_desc">Stock Z-A</option>
+            <option value="sector_asc">Sector A-Z</option>
+            <option value="sector_desc">Sector Z-A</option>
+            <option value="tier_desc">Highest tier first</option>
+            <option value="tier_asc">Medium tier first</option>
+            <option value="pattern_asc">Pattern A-Z</option>
+            <option value="pattern_desc">Pattern Z-A</option>
+            <option value="price_desc">Price then high-low</option>
+            <option value="price_asc">Price then low-high</option>
+            <option value="cmp_desc">CMP high-low</option>
+            <option value="cmp_asc">CMP low-high</option>
+            <option value="mentions_desc">Most mentions</option>
+            <option value="mentions_asc">Fewest mentions</option>
+          </select>
+          <button id="clearSort" class="clear-sort" type="button">Clear Sorting</button>
+        </div>
       </label>
     </section>
 
@@ -454,10 +479,32 @@ def render_dashboard(
       sector: document.getElementById("sector"),
       tier: document.getElementById("tier"),
       sort: document.getElementById("sort"),
+      clearSort: document.getElementById("clearSort"),
     }};
     controls.days.value = "{int(default_days)}";
     controls.tier.value = "high_plus_highest";
     const sortButtons = Array.from(document.querySelectorAll(".sort-header"));
+    const sortDefinitions = {{
+      date_desc: {{ key: "recommendedAt", type: "date", direction: "desc", label: "Recommended" }},
+      date_asc: {{ key: "recommendedAt", type: "date", direction: "asc", label: "Recommended" }},
+      return_desc: {{ key: "changePct", type: "number", direction: "desc", label: "% Change" }},
+      return_asc: {{ key: "changePct", type: "number", direction: "asc", label: "% Change" }},
+      symbol_asc: {{ key: "symbol", type: "text", direction: "asc", label: "Stock" }},
+      symbol_desc: {{ key: "symbol", type: "text", direction: "desc", label: "Stock" }},
+      sector_asc: {{ key: "sector", type: "text", direction: "asc", label: "Sector" }},
+      sector_desc: {{ key: "sector", type: "text", direction: "desc", label: "Sector" }},
+      tier_desc: {{ key: "tier", type: "tier", direction: "desc", label: "Tier" }},
+      tier_asc: {{ key: "tier", type: "tier", direction: "asc", label: "Tier" }},
+      pattern_asc: {{ key: "pattern", type: "text", direction: "asc", label: "Pattern" }},
+      pattern_desc: {{ key: "pattern", type: "text", direction: "desc", label: "Pattern" }},
+      price_desc: {{ key: "priceThen", type: "number", direction: "desc", label: "Price then" }},
+      price_asc: {{ key: "priceThen", type: "number", direction: "asc", label: "Price then" }},
+      cmp_desc: {{ key: "cmpToday", type: "number", direction: "desc", label: "CMP today" }},
+      cmp_asc: {{ key: "cmpToday", type: "number", direction: "asc", label: "CMP today" }},
+      mentions_desc: {{ key: "mentions", type: "number", direction: "desc", label: "Mentions" }},
+      mentions_asc: {{ key: "mentions", type: "number", direction: "asc", label: "Mentions" }},
+    }};
+    let sortStack = [];
 
     const el = {{
       rows: document.getElementById("rows"),
@@ -502,61 +549,69 @@ def render_dashboard(
       return direction === "asc" ? result : -result;
     }}
 
-    function numberCompare(a, b, key, direction) {{
-      const av = pct(a[key]);
-      const bv = pct(b[key]);
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      return direction === "asc" ? av - bv : bv - av;
-    }}
-
-    function dateCompare(a, b, direction) {{
-      const av = new Date(a.recommendedAt).getTime();
-      const bv = new Date(b.recommendedAt).getTime();
-      return direction === "asc" ? av - bv : bv - av;
-    }}
-
     function tierValue(row) {{
       return row.tier === "HIGHEST" ? 3 : row.tier === "HIGH" ? 2 : row.tier === "MEDIUM" ? 1 : 0;
     }}
 
+    function sortFromValue(value) {{
+      const definition = sortDefinitions[value] || sortDefinitions.date_desc;
+      return {{ id: value, ...definition }};
+    }}
+
+    function sortValue(row, sort) {{
+      if (sort.type === "tier") return tierValue(row);
+      if (sort.type === "date") {{
+        const value = new Date(row[sort.key]).getTime();
+        return Number.isFinite(value) ? value : null;
+      }}
+      if (sort.type === "number") return pct(row[sort.key]);
+      return String(row[sort.key] ?? "").toLowerCase();
+    }}
+
+    function compareBySort(a, b, sort) {{
+      const av = sortValue(a, sort);
+      const bv = sortValue(b, sort);
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      let result = 0;
+      if (typeof av === "string" || typeof bv === "string") {{
+        result = String(av).localeCompare(String(bv));
+      }} else if (av < bv) {{
+        result = -1;
+      }} else if (av > bv) {{
+        result = 1;
+      }}
+      return sort.direction === "asc" ? result : -result;
+    }}
+
     function sortRows(rows) {{
-      const sort = controls.sort.value;
+      const activeSorts = sortStack.length ? sortStack : [sortFromValue(controls.sort.value)];
       rows.sort((a, b) => {{
-        if (sort === "return_desc") return numberCompare(a, b, "changePct", "desc");
-        if (sort === "return_asc") return numberCompare(a, b, "changePct", "asc");
-        if (sort === "symbol" || sort === "symbol_asc") return textCompare(a, b, "symbol", "asc");
-        if (sort === "symbol_desc") return textCompare(a, b, "symbol", "desc");
-        if (sort === "sector_asc") return textCompare(a, b, "sector", "asc");
-        if (sort === "sector_desc") return textCompare(a, b, "sector", "desc");
-        if (sort === "tier_desc") return tierValue(b) - tierValue(a) || textCompare(a, b, "symbol", "asc");
-        if (sort === "tier_asc") return tierValue(a) - tierValue(b) || textCompare(a, b, "symbol", "asc");
-        if (sort === "pattern_asc") return textCompare(a, b, "pattern", "asc");
-        if (sort === "pattern_desc") return textCompare(a, b, "pattern", "desc");
-        if (sort === "price_desc") return numberCompare(a, b, "priceThen", "desc");
-        if (sort === "price_asc") return numberCompare(a, b, "priceThen", "asc");
-        if (sort === "cmp_desc") return numberCompare(a, b, "cmpToday", "desc");
-        if (sort === "cmp_asc") return numberCompare(a, b, "cmpToday", "asc");
-        if (sort === "mentions_desc") return numberCompare(a, b, "mentions", "desc");
-        if (sort === "mentions_asc") return numberCompare(a, b, "mentions", "asc");
-        if (sort === "date_asc") return dateCompare(a, b, "asc");
-        return dateCompare(a, b, "desc");
+        for (const sort of activeSorts) {{
+          const result = compareBySort(a, b, sort);
+          if (result !== 0) return result;
+        }}
+        return textCompare(a, b, "symbol", "asc");
       }});
       return rows;
     }}
 
     function updateSortHeaders() {{
-      const current = controls.sort.value;
+      const displaySorts = sortStack.length ? sortStack : [sortFromValue(controls.sort.value)];
       for (const button of sortButtons) {{
-        const ascending = current === button.dataset.sortAsc;
-        const descending = current === button.dataset.sortDesc;
-        const active = ascending || descending;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-pressed", active ? "true" : "false");
+        const primary = button.dataset.sortDefault || button.dataset.sortDesc || button.dataset.sortAsc;
+        const buttonSort = sortFromValue(primary);
+        const sortIndex = displaySorts.findIndex((sort) => sort.key === buttonSort.key);
+        const activeSort = sortIndex >= 0 ? displaySorts[sortIndex] : null;
+        button.classList.toggle("active", Boolean(activeSort));
+        button.setAttribute("aria-pressed", activeSort ? "true" : "false");
         const mark = button.querySelector("[data-sort-mark]");
-        if (mark) mark.textContent = active ? (ascending ? "ASC" : "DESC") : "";
+        if (mark) {{
+          mark.textContent = activeSort ? `${{sortStack.length ? `${{sortIndex + 1}} ` : ""}}${{activeSort.direction.toUpperCase()}}` : "";
+        }}
       }}
+      controls.clearSort.disabled = sortStack.length === 0 && controls.sort.value === "date_desc";
     }}
 
     function groupedRows() {{
@@ -637,16 +692,35 @@ def render_dashboard(
       el.average.textContent = avg == null ? "N/A" : `${{avg >= 0 ? "+" : ""}}${{avg.toFixed(2)}}%`;
       el.best.textContent = best == null ? "N/A" : `${{best >= 0 ? "+" : ""}}${{best.toFixed(2)}}%`;
       updateSortHeaders();
-      el.hint.textContent = controls.days.value === "all" ? "Showing earliest recommendation per stock" : `Showing earliest recommendation per stock in last ${{controls.days.value}} days`;
+      const baseHint = controls.days.value === "all" ? "Showing earliest recommendation per stock" : `Showing earliest recommendation per stock in last ${{controls.days.value}} days`;
+      const sortHint = sortStack.length ? ` | Sort: ${{sortStack.map((sort, index) => `${{index + 1}}. ${{sort.label}} ${{sort.direction.toUpperCase()}}`).join(", ")}}` : "";
+      el.hint.textContent = `${{baseHint}}${{sortHint}}`;
     }}
 
     populateSectorOptions();
-    for (const control of Object.values(controls)) control.addEventListener("input", render);
+    for (const control of [controls.search, controls.days, controls.sector, controls.tier]) control.addEventListener("input", render);
+    controls.sort.addEventListener("input", () => {{
+      sortStack = [];
+      render();
+    }});
+    controls.clearSort.addEventListener("click", () => {{
+      sortStack = [];
+      controls.sort.value = "date_desc";
+      render();
+    }});
     for (const button of sortButtons) {{
       button.addEventListener("click", () => {{
         const primary = button.dataset.sortDefault || button.dataset.sortDesc || button.dataset.sortAsc;
         const alternate = primary === button.dataset.sortAsc ? button.dataset.sortDesc : button.dataset.sortAsc;
-        controls.sort.value = controls.sort.value === primary && alternate ? alternate : primary;
+        const primarySort = sortFromValue(primary);
+        const sortIndex = sortStack.findIndex((sort) => sort.key === primarySort.key);
+        if (sortIndex >= 0) {{
+          const current = sortStack[sortIndex];
+          const next = current.id === primary && alternate ? alternate : primary;
+          sortStack[sortIndex] = sortFromValue(next);
+        }} else {{
+          sortStack.push(primarySort);
+        }}
         render();
       }});
     }}

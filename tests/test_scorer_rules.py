@@ -38,13 +38,14 @@ def _pattern(
     grade: float | None = 5.5,
     extra: dict | None = None,
     timeframe: str = "daily",
+    status: str = "BREAKING OUT",
 ) -> PatternResult:
     payload = dict(extra or {})
     if grade is not None and "pattern_quality_score" not in payload:
         payload["pattern_quality_score"] = grade
     return PatternResult(
         pattern=name,
-        status="BREAKING OUT",
+        status=status,
         pivot=pivot,
         target=target,
         stop_loss=stop_loss,
@@ -207,10 +208,23 @@ class ScorePatternEndToEndTest(unittest.TestCase):
 
     def test_textbook_pattern_stays_highest(self):
         """Grade 8 + RR 2.0 + clean filters -> HIGHEST."""
-        p = _pattern(grade=8.5, pivot=120.0, target=180.0, stop_loss=108.0)
+        p = _pattern(grade=8.5, pivot=100.0, target=150.0, stop_loss=100.0)
         result = self._run(p)
         self.assertEqual(result["tier"], "HIGHEST")
         self.assertTrue(result["tradable"])
+        self.assertTrue(result["entry_triggered"])
+        self.assertEqual(result["entry_state"], "TRIGGERED")
+
+    def test_untriggered_setup_caps_at_medium_until_entry_clears(self):
+        """A clean setup near the pivot is watch-only until price triggers."""
+        p = _pattern(grade=8.5, pivot=120.0, target=180.0, stop_loss=108.0, status="PIVOT READY")
+        result = self._run(p)
+        self.assertEqual(result["tier"], "MEDIUM")
+        self.assertTrue(result["tradable"])
+        self.assertFalse(result["entry_triggered"])
+        self.assertEqual(result["entry_state"], "WAIT_FOR_TRIGGER")
+        self.assertEqual(result["trigger_price"], 120.0)
+        self.assertFalse(telegram.should_send_alert(result))
 
     def test_scan_date_entry_rejects_late_breakout(self):
         """Once price is far above pivot, R:R must be judged from scan close."""

@@ -118,6 +118,9 @@ def score_pattern(
         "technical_pivot": pattern.pivot,
         "entry_price": trade_plan["entry"],
         "entry_basis": trade_plan["entry_basis"],
+        "entry_triggered": trade_plan["entry_triggered"],
+        "entry_state": trade_plan["entry_state"],
+        "trigger_price": trade_plan["trigger_price"],
         "scan_close": trade_plan["scan_close"],
         "breakout_age_bars": trade_plan["breakout_age_bars"],
         "target_hit_since_breakout": trade_plan["target_hit_since_breakout"],
@@ -138,6 +141,9 @@ def score_pattern(
             "pattern_confidence": pattern.confidence,
             "entry_price": trade_plan["entry"],
             "entry_basis": trade_plan["entry_basis"],
+            "entry_triggered": trade_plan["entry_triggered"],
+            "entry_state": trade_plan["entry_state"],
+            "trigger_price": trade_plan["trigger_price"],
             "technical_pivot": pattern.pivot,
             "scan_close": trade_plan["scan_close"],
             "breakout_age_bars": trade_plan["breakout_age_bars"],
@@ -246,7 +252,8 @@ def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = 
 
     entry = technical_pivot
     entry_basis = "pivot"
-    if latest_close is not None and current_pivot is not None and latest_close > current_pivot:
+    entry_triggered = latest_close is not None and current_pivot is not None and latest_close > current_pivot
+    if entry_triggered:
         entry = latest_close
         entry_basis = "scan_close"
 
@@ -271,6 +278,9 @@ def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = 
     return {
         "entry": None if entry is None else round(entry, 2),
         "entry_basis": entry_basis,
+        "entry_triggered": bool(entry_triggered),
+        "entry_state": "TRIGGERED" if entry_triggered else "WAIT_FOR_TRIGGER",
+        "trigger_price": None if current_pivot is None else round(current_pivot, 2),
         "scan_close": None if latest_close is None else round(latest_close, 2),
         "reward_risk": None if reward_risk is None else round(reward_risk, 4),
         "stop_distance_pct": stop_distance_pct,
@@ -418,6 +428,9 @@ def _apply_textbook_filter_caps(
     if filters is None:
         return tier
     filters = filters or {}
+    if trade_plan is not None and not bool(trade_plan.get("entry_triggered")):
+        tier = _cap_tier(tier, "MEDIUM")
+
     volume_result = filters.get("volume") or {}
     daily_volume_result = filters.get("daily_volume") or {}
     pocket_result = filters.get("pocket_pivot") or {}

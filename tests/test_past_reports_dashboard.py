@@ -228,6 +228,7 @@ def test_render_dashboard_has_day_tier_search_controls():
     assert '"screenerUrl": "https://www.screener.in/company/ABC/"' in html
     assert 'class="sort-header"' in html
     assert 'data-sort-default="return_desc"' in html
+    assert 'id="clearSort"' in html
     assert "% Change" in html
     assert "Avg % change" in html
     assert "Best % change" in html
@@ -242,6 +243,9 @@ def test_render_dashboard_has_day_tier_search_controls():
     assert 'href="${esc(row.reportHref)}"' in html
     assert "populateSectorOptions" in html
     assert "updateSortHeaders" in html
+    assert "let sortStack = [];" in html
+    assert "sortStack.push(primarySort);" in html
+    assert 'controls.clearSort.addEventListener("click"' in html
 
 
 def _report_html(

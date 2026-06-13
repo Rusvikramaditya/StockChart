@@ -26,7 +26,7 @@ def deduplicate_results(scored_results: Iterable[dict]) -> list[dict]:
             groups[symbol].append(item)
 
     consolidated = [_merge_symbol(symbol, items) for symbol, items in groups.items()]
-    return sorted(consolidated, key=lambda item: (-int(item.get("score", 0)), item["symbol"]))
+    return sorted(consolidated, key=lambda item: (_tier_rank(item), -int(item.get("score", 0)), item["symbol"]))
 
 
 def dedup_results(scored_results: Iterable[dict]) -> list[dict]:
@@ -36,7 +36,7 @@ def dedup_results(scored_results: Iterable[dict]) -> list[dict]:
 
 
 def _merge_symbol(symbol: str, items: list[dict]) -> dict:
-    primary = max(items, key=lambda item: int(item.get("score", 0)))
+    primary = min(items, key=lambda item: (_tier_rank(item), -int(item.get("score", 0))))
     merged = dict(primary)
     merged["symbol"] = symbol
 
@@ -81,6 +81,14 @@ def _lower_tier(left: str, right: str) -> str:
     if right not in TIER_ORDER:
         right = "SKIP"
     return left if TIER_ORDER.index(left) >= TIER_ORDER.index(right) else right
+
+
+def _tier_rank(item: dict) -> int:
+    score = int(item.get("score", 0))
+    tier = str(item.get("tier") or conviction_tier(score)).upper()
+    if tier not in TIER_ORDER:
+        tier = "SKIP"
+    return TIER_ORDER.index(tier)
 
 
 def _unique_patterns(primary: dict, items: list[dict]) -> list[str]:

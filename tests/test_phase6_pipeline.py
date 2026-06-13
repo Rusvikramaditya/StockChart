@@ -69,6 +69,23 @@ class DedupPhase6Test(unittest.TestCase):
         self.assertEqual(by_symbol["SINGLE"]["score"], 70)
         self.assertEqual(by_symbol["SINGLE"]["stack_bonus"], 0)
 
+    def test_dedup_prefers_triggered_higher_tier_over_untriggered_raw_score(self):
+        watch = _scored("TEST", "Clean Watch Setup", 95, target=160.0)
+        watch["tier"] = "MEDIUM"
+        watch["entry_state"] = "WAIT_FOR_TRIGGER"
+        triggered = _scored("TEST", "Triggered Breakout", 72, target=125.0)
+        triggered["tier"] = "HIGH"
+        triggered["entry_state"] = "TRIGGERED"
+
+        merged = deduplicate_results([watch, triggered])
+
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["pattern"], "Triggered Breakout")
+        self.assertEqual(merged[0]["individual_score"], 72)
+        self.assertEqual(merged[0]["score"], 72)
+        self.assertEqual(merged[0]["tier"], "HIGH")
+        self.assertEqual(merged[0]["all_patterns"], ["Triggered Breakout", "Clean Watch Setup"])
+
     def test_dedup_keeps_separate_symbols(self):
         merged = deduplicate_results([
             _scored("AAA", "Ascending Triangle", 80),
