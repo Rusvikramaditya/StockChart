@@ -10,6 +10,7 @@ from datetime import date, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from config import settings
 from engine import storage
@@ -54,6 +55,7 @@ class PastPick:
             "daysAgo": max(0, (as_of - self.recommended_at.date()).days),
             "reportName": self.report_name,
             "reportHref": self.report_href,
+            "screenerUrl": _screener_url(self.symbol),
             "priceThen": self.price_then,
             "priceThenText": _money(self.price_then),
             "cmpToday": self.cmp_today,
@@ -108,6 +110,7 @@ def collect_picks(
         if report_dt.date().toordinal() < cutoff:
             continue
         rows.extend(_parse_report(path, report_dt, output_root=output_root))
+    rows = _earliest_rows_by_symbol(rows)
 
     symbols = sorted({str(row["symbol"]).upper() for row in rows if row.get("symbol")})
     latest = _latest_closes(symbols, db_path=Path(db_path))
@@ -304,7 +307,9 @@ def render_dashboard(
     }}
     td {{ padding: 12px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }}
     tbody tr:hover {{ background: rgba(0, 213, 255, 0.045); }}
-    .sym strong {{ display: block; font-size: 14px; }}
+    .sym strong,
+    .stock-link {{ display: block; color: var(--text); font-size: 14px; font-weight: 900; text-decoration: none; }}
+    .stock-link:hover {{ color: var(--cyan); text-decoration: underline; text-underline-offset: 3px; }}
     .sym span {{ display: block; margin-top: 3px; color: var(--faint); font-size: 12px; }}
     .pill {{
       display: inline-flex;
@@ -342,7 +347,7 @@ def render_dashboard(
       <div>
         <p class="eyebrow">Past report performance</p>
         <h1>Past Suggestions Performance</h1>
-        <p class="subline">Tracks saved MEDIUM, HIGH, and HIGHEST scanner cards, compares suggestion-time price with latest local database CMP, and groups repeated appearances by stock and pattern inside the selected window.</p>
+        <p class="subline">Tracks saved MEDIUM, HIGH, and HIGHEST scanner cards, compares suggestion-time price with latest local database CMP, and keeps the earliest recommendation for each stock inside the selected window.</p>
       </div>
       <div class="stamp">
         <span>Generated</span>
@@ -370,6 +375,7 @@ def render_dashboard(
       </label>
       <label>Tier
         <select id="tier">
+          <option value="high_plus_highest" selected>High + Highest</option>
           <option value="all">Medium + High + Highest</option>
           <option value="HIGHEST">Highest only</option>
           <option value="HIGH">High only</option>
@@ -450,6 +456,7 @@ def render_dashboard(
       sort: document.getElementById("sort"),
     }};
     controls.days.value = "{int(default_days)}";
+    controls.tier.value = "high_plus_highest";
     const sortButtons = Array.from(document.querySelectorAll(".sort-header"));
 
     const el = {{
@@ -560,22 +567,22 @@ def render_dashboard(
       const filtered = rawRows.filter((row) => {{
         if (dayLimit !== "all" && Number(row.daysAgo) > Number(dayLimit)) return false;
         if (sector !== "all" && row.sector !== sector) return false;
-        if (tier !== "all" && row.tier !== tier) return false;
+        if (tier === "high_plus_highest") {{
+          if (row.tier !== "HIGH" && row.tier !== "HIGHEST") return false;
+        }} else if (tier !== "all" && row.tier !== tier) return false;
         if (!query) return true;
         return [row.symbol, row.companyName, row.sector, row.pattern, row.timeframe].join(" ").toLowerCase().includes(query);
       }}).sort((a, b) => new Date(a.recommendedAt) - new Date(b.recommendedAt));
 
       const groups = new Map();
       for (const row of filtered) {{
-        const key = `${{row.symbol}}|${{row.pattern}}`;
+        const key = row.symbol;
         if (!groups.has(key)) {{
           groups.set(key, {{ ...row, mentions: 1, latestDate: row.recommendedDate }});
         }} else {{
           const existing = groups.get(key);
           existing.mentions += 1;
           existing.latestDate = row.recommendedDate;
-          if (row.tier === "HIGHEST") existing.tier = "HIGHEST";
-          else if (row.tier === "HIGH" && existing.tier !== "HIGHEST") existing.tier = "HIGH";
           if ((!existing.sector || existing.sector === "UNKNOWN") && row.sector) existing.sector = row.sector;
         }}
       }}
@@ -605,7 +612,7 @@ def render_dashboard(
         const tierClass = row.tier === "HIGHEST" ? "tier-highest" : row.tier === "HIGH" ? "tier-high" : "tier-medium";
         const levels = `Entry ${{row.entryText}}<br>Target ${{row.targetText}}<br>Stop ${{row.stopText}}`;
         return `<tr>
-          <td class="sym"><strong>${{esc(row.symbol)}}</strong><span>${{esc(row.companyName)}}</span></td>
+          <td class="sym"><a class="stock-link" href="${{esc(row.screenerUrl)}}" target="_blank" rel="noopener noreferrer">${{esc(row.symbol)}}</a><span>${{esc(row.companyName)}}</span></td>
           <td>${{esc(row.sector || "UNKNOWN")}}</td>
           <td><span class="pill ${{tierClass}}">${{esc(row.tier)}}</span></td>
           <td>${{esc(row.pattern)}}<br><span class="hint">${{esc(row.timeframe)}}</span></td>
@@ -630,7 +637,7 @@ def render_dashboard(
       el.average.textContent = avg == null ? "N/A" : `${{avg >= 0 ? "+" : ""}}${{avg.toFixed(2)}}%`;
       el.best.textContent = best == null ? "N/A" : `${{best >= 0 ? "+" : ""}}${{best.toFixed(2)}}%`;
       updateSortHeaders();
-      el.hint.textContent = controls.days.value === "all" ? "Showing all loaded report cards" : `Showing first mention per stock + pattern in last ${{controls.days.value}} days`;
+      el.hint.textContent = controls.days.value === "all" ? "Showing earliest recommendation per stock" : `Showing earliest recommendation per stock in last ${{controls.days.value}} days`;
     }}
 
     populateSectorOptions();
@@ -654,6 +661,27 @@ def _parse_report(path: Path, report_dt: datetime, *, output_root: Path) -> list
     parser = _ReportParser(report_dt=report_dt, report_path=path, output_root=output_root)
     parser.feed(path.read_text(encoding="utf-8", errors="ignore"))
     return parser.rows
+
+
+def _earliest_rows_by_symbol(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    earliest: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").upper()
+        if not symbol:
+            continue
+        row["symbol"] = symbol
+        current = earliest.get(symbol)
+        if current is None or _row_order_key(row) < _row_order_key(current):
+            earliest[symbol] = row
+    return list(earliest.values())
+
+
+def _row_order_key(row: dict[str, Any]) -> tuple[datetime, str, str]:
+    return (
+        row["recommended_at"],
+        str(row.get("report_name") or ""),
+        str(row.get("pattern") or ""),
+    )
 
 
 class _ReportParser(HTMLParser):
@@ -686,7 +714,7 @@ class _ReportParser(HTMLParser):
             return
         if self.current is None:
             return
-        if tag == "span" and "symbol" in classes:
+        if tag in {"span", "a"} and "symbol" in classes:
             self._begin_capture("symbol")
         elif tag == "div" and "metric" in classes:
             self.in_metric = True
@@ -714,7 +742,7 @@ class _ReportParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if self.current is None:
             return
-        if self.capture and tag in {"span", "script"}:
+        if self.capture and tag in {"span", "a", "script"}:
             value = html.unescape("".join(self.capture_parts)).strip()
             if self.capture == "metric_label":
                 self.metric_label = value
@@ -781,7 +809,15 @@ class _ReportParser(HTMLParser):
             rel = self.report_path.relative_to(self.output_root).as_posix()
         except ValueError:
             rel = self.report_path.name
-        return f"/output/{rel}"
+        return _quote_href_path(rel)
+
+
+def _screener_url(symbol: str) -> str:
+    return f"https://www.screener.in/company/{quote(str(symbol).upper(), safe='')}/"
+
+
+def _quote_href_path(path: str) -> str:
+    return "/".join(quote(part) for part in str(path).replace("\\", "/").split("/"))
 
 
 def _latest_closes(symbols: list[str], *, db_path: Path) -> dict[str, dict[str, Any]]:

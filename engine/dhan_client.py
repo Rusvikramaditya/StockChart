@@ -36,6 +36,15 @@ class DhanRateLimitError(DhanError):
     """Raised when Dhan asks the scanner to stop making live requests."""
 
 
+class DhanDataNotSubscribedError(DhanError):
+    """Raised when the Dhan account lacks paid market-data entitlement."""
+
+
+def is_data_not_subscribed_message(message: str) -> bool:
+    text = str(message or "").lower()
+    return "data apis not subscribed" in text or '"806"' in text or "'806'" in text
+
+
 def _rate_limit_cache_path() -> Path:
     return Path(getattr(settings, "DHAN_RATE_LIMIT_CACHE_PATH", settings.DATA_DIR / "dhan_rate_limit.json"))
 
@@ -494,7 +503,10 @@ def fetch_historical_sync(
         timeout=timeout,
     )
     if response.status_code != 200:
-        raise DhanError(f"Dhan historical HTTP {response.status_code}: {response.text[:200]}")
+        message = f"Dhan historical HTTP {response.status_code}: {response.text[:200]}"
+        if is_data_not_subscribed_message(response.text):
+            raise DhanDataNotSubscribedError(message)
+        raise DhanError(message)
     return parse_historical_response(response.json())
 
 

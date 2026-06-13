@@ -28,6 +28,19 @@ def _load_rebalance_module():
 
 
 class RebalancePhase7Test(unittest.TestCase):
+    def test_normalize_nifty_csv_drops_dummy_placeholder_rows(self):
+        module = _load_rebalance_module()
+        normalized = module._normalize_nifty_csv(
+            pd.DataFrame(
+                [
+                    {"Symbol": "KEEP", "Company Name": "Keep Ltd", "Industry": "Financial Services"},
+                    {"Symbol": "DUMMYVEDL1", "Company Name": "Dummy Vedanta Ltd. 1", "Industry": "Metals"},
+                ]
+            )
+        )
+
+        self.assertEqual(normalized["Symbol"].tolist(), ["KEEP"])
+
     def test_rebalance_refreshes_broad_nifty_sector_and_liquidity_profiles(self):
         module = _load_rebalance_module()
         with tempfile.TemporaryDirectory() as tmp:

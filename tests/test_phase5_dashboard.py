@@ -182,6 +182,7 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn('data-sector="NIFTY IT"', html, "Result card missing data-sector")
         self.assertIn('data-sector-tier="LEADING"', html, "Result card missing data-sector-tier")
         self.assertIn("NIFTY IT | LEADING", html, "Sector chip not rendered on card")
+        self.assertIn("Hot Sector", html, "Hot sector badge missing for leading sector")
         # Leaderboard panel itself
         self.assertIn("Sector Leaderboard", html)
         self.assertIn("lb-leading", html)
@@ -397,6 +398,59 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("HSCL", html)
         self.assertIn("Weekly invalidation is wide", html)
         self.assertIn('href="https://www.screener.in/company/HSCL/"', html)
+
+    def test_signal_tracker_renders_lifecycle_table_separately(self):
+        context = self._context(Path("missing.png"))
+        context["signal_tracker"] = [
+            {
+                "symbol": "OLD",
+                "pattern": "Flat Base",
+                "signal_date": "2026-06-09",
+                "timeframe": "daily",
+                "tier": "HIGH",
+                "score": 84,
+                "cmp": 100,
+                "latest_close": 104,
+                "latest_date": "2026-06-10",
+                "change_pct": 4.0,
+                "entry_price": 100,
+                "target": 120,
+                "stop_loss": 94,
+                "days_since_signal": 1,
+                "status": "Still Valid",
+                "status_class": "valid",
+                "fresh_state": "Not fresh today",
+                "fresh_class": "stale",
+                "original_conviction": "HIGH 84",
+                "current_conviction": "Still valid",
+                "trigger_state": "Triggered",
+                "trigger_price": 100,
+                "trigger_note": "Price is above the entry trigger.",
+                "entry_decision": "Hold if already in",
+                "decision_reason": "The old trade remains valid, but it is not a new signal today.",
+                "current_reward_risk": 1.6,
+                "reason": "No fresh card today; latest close remains above the original entry and stop.",
+            }
+        ]
+
+        normalized = build_dashboard_context(context)
+        html = render_dashboard(context)
+
+        self.assertEqual(normalized["summary"]["tracker_count"], 1)
+        self.assertEqual(normalized["summary"]["tracker_prior_count"], 1)
+        self.assertEqual(normalized["summary"]["tracker_today_count"], 0)
+        self.assertIn("30-Day Trade Decision Tracker", html)
+        self.assertIn("Trigger means price crosses or closes above Entry", html)
+        self.assertIn("Original Conviction", html)
+        self.assertIn("Current Conviction", html)
+        self.assertIn("Entry Decision", html)
+        self.assertIn("HIGH 84", html)
+        self.assertIn("Still valid", html)
+        self.assertIn("Hold if already in", html)
+        self.assertIn("Trigger Rs.100", html)
+        self.assertIn("Not fresh today", html)
+        self.assertIn("No fresh card today", html)
+        self.assertIn('href="https://www.screener.in/company/OLD/"', html)
 
     def _context(self, chart_path: Path) -> dict:
         pattern = PatternResult(

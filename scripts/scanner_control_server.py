@@ -16,10 +16,13 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 from engine import past_reports_dashboard
 
 
-BASE_DIR = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = BASE_DIR / "output"
 CHARTS_DIR = OUTPUT_DIR / "charts"
 DOCS_DIR = BASE_DIR / "docs"
@@ -128,6 +131,11 @@ def summarize_run_failure(returncode: int, stdout: str, stderr: str) -> str:
         return (
             "Dhan rate-limited the live fetch. Wait before starting another live run, or use Safe dry run / skip live "
             "fetch for broad universes."
+        )
+    if "dhan" in combined and ("data apis not subscribed" in combined or "\"806\"" in combined or "'806'" in combined):
+        return (
+            "Dhan market-data APIs are not subscribed for this account. The scanner can use EOD bhavcopy/yfinance "
+            "fallback for daily scans; only live market-hour scans need paid Dhan market data."
         )
     if "dhan" in combined and ("401" in combined or "authentication failed" in combined or "token invalid" in combined):
         return (
@@ -859,7 +867,7 @@ def _render_index() -> str:
                 <option value="live_with_telegram">Live fetch + Telegram</option>
               </select>
               <span class="field-note">Use safe dry run first unless you want live data fetch.</span>
-              <span class="mode-warning" id="modeWarning">Live fetch calls Dhan. If DHAN_CLIENT_ID or DHAN_ACCESS_TOKEN is expired or wrong, this will fail with HTTP 401. Use Safe dry run to scan existing local data.</span>
+              <span class="mode-warning" id="modeWarning">Live fetch may call Dhan for market-hour data. Daily EOD scans can fall back to bhavcopy/yfinance when paid Dhan market data is unavailable.</span>
             </label>
             <label>
               <span class="field-label">Scan timeframe <span class="help" tabindex="0" data-tip="Daily keeps the existing detector set. Weekly scans weekly price-action breakouts. All runs both detector sets.">?</span></span>
@@ -883,7 +891,7 @@ def _render_index() -> str:
           </div>
           <div class="checks">
             <label class="check"><input type="checkbox" name="min_liquidity"> <span>Require liquidity pass</span> <span class="help" tabindex="0" data-tip="Requires the scanner liquidity profile to pass before a setup is treated as tradable. It does not create or force patterns.">?</span></label>
-            <label class="check"><input type="checkbox" name="skip_backfill"> <span>Skip historical backfill</span> <span class="help" tabindex="0" data-tip="By default the scanner backfills missing or stale daily OHLCV from Dhan before the scan, so detectors always see fresh data. Tick this only when you've already run the historical fetch script manually and want to save API quota.">?</span></label>
+            <label class="check"><input type="checkbox" name="skip_backfill"> <span>Skip EOD catch-up</span> <span class="help" tabindex="0" data-tip="By default the scanner catches up missing completed daily candles from official bhavcopy data, then yfinance if needed. Tick this only when you want to use the local DB exactly as-is.">?</span></label>
           </div>
           <div class="actions">
             <button type="submit" class="primary" id="runButton" title="Run scanner.py with the selected parameters.">Run scanner</button>

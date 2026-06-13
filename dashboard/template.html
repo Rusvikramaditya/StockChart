@@ -218,6 +218,18 @@
       font-size: 15px;
     }
 
+    .data-warnings {
+      margin: -8px 0 22px;
+    }
+
+    .data-warning-list {
+      margin: 0;
+      padding: 12px 18px 14px 34px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
     .score-pill,
     .tier-pill,
     .stack-pill {
@@ -504,8 +516,142 @@
       letter-spacing: 0.05em;
     }
 
+    .signal-tracker-panel {
+      margin-bottom: 24px;
+    }
+    .signal-tracker-table thead th:first-child,
+    .signal-tracker-table thead th:nth-child(2),
+    .signal-tracker-table thead th:nth-child(3),
+    .signal-tracker-table thead th:nth-child(4),
+    .signal-tracker-table thead th:nth-child(5),
+    .signal-tracker-table thead th:nth-child(6),
+    .signal-tracker-table thead th:nth-child(7),
+    .signal-tracker-table thead th:nth-child(11) {
+      text-align: left;
+    }
+    .signal-tracker-table tbody td:first-child,
+    .signal-tracker-table tbody td:nth-child(2),
+    .signal-tracker-table tbody td:nth-child(3),
+    .signal-tracker-table tbody td:nth-child(4),
+    .signal-tracker-table tbody td:nth-child(5),
+    .signal-tracker-table tbody td:nth-child(6),
+    .signal-tracker-table tbody td:nth-child(7),
+    .signal-tracker-table tbody td.tracker-reason {
+      text-align: left;
+      font-family: inherit;
+    }
+    .tracker-status,
+    .tracker-fresh,
+    .tracker-pill,
+    .tracker-decision {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line-soft);
+      background: #181818;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .tracker-status.valid { color: var(--green); border-color: rgba(34, 197, 94, 0.42); background: rgba(34, 197, 94, 0.11); }
+    .tracker-status.target { color: var(--blue); border-color: rgba(56, 189, 248, 0.42); background: rgba(56, 189, 248, 0.12); }
+    .tracker-status.invalid { color: var(--red); border-color: rgba(239, 68, 68, 0.44); background: rgba(239, 68, 68, 0.12); }
+    .tracker-status.watch,
+    .tracker-status.review { color: var(--yellow); border-color: rgba(250, 204, 21, 0.42); background: rgba(250, 204, 21, 0.10); }
+    .tracker-status.missing { color: var(--muted); }
+    .tracker-fresh.fresh { color: var(--green); border-color: rgba(34, 197, 94, 0.36); background: rgba(34, 197, 94, 0.09); }
+    .tracker-fresh.stale { color: var(--muted); }
+    .tracker-pill.highest,
+    .tracker-pill.high,
+    .tracker-pill.enter,
+    .tracker-decision.enter { color: var(--green); border-color: rgba(34, 197, 94, 0.42); background: rgba(34, 197, 94, 0.11); }
+    .tracker-pill.medium,
+    .tracker-pill.watch,
+    .tracker-pill.review,
+    .tracker-decision.wait,
+    .tracker-decision.review { color: var(--yellow); border-color: rgba(250, 204, 21, 0.42); background: rgba(250, 204, 21, 0.10); }
+    .tracker-pill.valid,
+    .tracker-decision.hold { color: var(--teal); border-color: rgba(45, 212, 191, 0.38); background: rgba(45, 212, 191, 0.10); }
+    .tracker-pill.target,
+    .tracker-decision.book { color: var(--blue); border-color: rgba(56, 189, 248, 0.42); background: rgba(56, 189, 248, 0.12); }
+    .tracker-pill.invalid,
+    .tracker-decision.avoid,
+    .tracker-decision.no-entry { color: var(--red); border-color: rgba(239, 68, 68, 0.44); background: rgba(239, 68, 68, 0.12); }
+    .tracker-pill.missing,
+    .tracker-pill.unknown,
+    .tracker-decision.missing { color: var(--muted); }
+    .signal-tracker-panel:not(.show-today) .tracker-today-row { display: none; }
+    .tracker-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      user-select: none;
+    }
+    .tracker-toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+    }
+    .tracker-hidden-note {
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      background: #0f0f0f;
+    }
+    .tracker-date {
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-weight: 800;
+    }
+    .tracker-age {
+      color: var(--faint);
+      font-size: 10px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      white-space: nowrap;
+    }
+    .tracker-note {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+      max-width: 280px;
+      white-space: normal;
+    }
+    .tracker-levels {
+      display: grid;
+      gap: 2px;
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .tracker-levels span {
+      color: var(--faint);
+      margin-right: 5px;
+    }
+    .tracker-reason {
+      min-width: 280px;
+      max-width: 460px;
+      white-space: normal;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
     /* Sector chip on result cards */
-    .sector-pill {
+    .sector-pill,
+    .hot-sector-pill {
       display: inline-block;
       font-size: 10px;
       font-weight: 700;
@@ -521,6 +667,7 @@
     .sector-pill.sector-tier-neutral { color: var(--yellow); border-color: rgba(224, 180, 0, 0.4); background: rgba(224, 180, 0, 0.10); }
     .sector-pill.sector-tier-lagging { color: var(--red); border-color: rgba(239, 83, 80, 0.4); background: rgba(239, 83, 80, 0.10); }
     .sector-pill.sector-tier-unknown { color: var(--muted); }
+    .hot-sector-pill { color: var(--green); border-color: rgba(38, 166, 154, 0.55); background: rgba(38, 166, 154, 0.16); }
 
     /* Pattern grade + R:R chips on result cards */
     .grade-pill, .rr-pill {
@@ -1473,14 +1620,33 @@
     <section class="summary-grid" aria-label="Scan summary">
       <div class="stat"><span class="label">Nifty CMP</span><span class="value">{{ nifty_cmp }}</span></div>
       <div class="stat"><span class="label">Scan Timeframe</span><span class="value">{{ scan_timeframe }}</span></div>
+      <div class="stat"><span class="label">Data As Of</span><span class="value">{{ data_status.data_as_of }}</span></div>
+      <div class="stat"><span class="label">Data Source</span><span class="value" title="{{ data_status.source_label }}">{{ data_status.source_label }}</span></div>
+      <div class="stat"><span class="label">Rows Updated</span><span class="value">{{ data_status.rows_written }}</span></div>
+      <div class="stat"><span class="label">Catch-up Days</span><span class="value">{{ data_status.caught_up_days_count }}/{{ data_status.missing_days_count }}</span></div>
       <div class="stat"><span class="label">Stocks Scanned</span><span class="value">{{ stocks_scanned }}</span></div>
       <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
       <div class="stat"><span class="label">Momentum Radar</span><span class="value">{{ summary.radar_count }}</span></div>
+      <div class="stat"><span class="label">Tracked Signals</span><span class="value">{{ summary.tracker_count }}</span></div>
       <div class="stat" title="Setups filtered out by quality / reward-risk gates"><span class="label">Skipped (low quality)</span><span class="value">{{ skipped_count }}</span></div>
       <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
       <div class="stat"><span class="label">Errors</span><span class="value">{{ summary.error_count }}</span></div>
     </section>
+
+    {% if data_status.warnings %}
+    <section class="panel data-warnings" aria-label="Data warnings">
+      <div class="panel-head">
+        <h3>Data Warnings</h3>
+        <span class="score-pill">{{ data_status.symbols_current }} current / {{ data_status.symbols_stale }} stale</span>
+      </div>
+      <ul class="data-warning-list">
+        {% for warning in data_status.warnings %}
+        <li>{{ warning }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
 
     {% if skip_breakdown %}
     <details class="skip-breakdown" aria-label="Skipped setups breakdown">
@@ -1559,6 +1725,77 @@
                 </div>
               </td>
               <td class="radar-notes" title="{{ item.notes|join(' | ') }}">{{ item.primary_note }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+
+    {% if signal_tracker %}
+    <details class="leaderboard-panel signal-tracker-panel" open aria-label="30-day signal tracker">
+      <summary>
+        <div class="leaderboard-title">
+          <h3>30-Day Trade Decision Tracker</h3>
+          <p class="subline">Trigger means price crosses or closes above Entry. Original conviction is the signal-day score; current conviction and decision use the latest candle versus entry, target, and stop.</p>
+        </div>
+        <div class="leaderboard-summary-chips">
+          <span class="lb-chip neutral">{{ summary.tracker_prior_count }} past</span>
+          <span class="lb-chip neutral">{{ summary.tracker_today_count }} today hidden</span>
+          <label class="tracker-toggle" for="trackerIncludeToday">
+            <input id="trackerIncludeToday" type="checkbox">
+            Include today
+          </label>
+        </div>
+      </summary>
+      {% if summary.tracker_today_count %}
+      <div class="tracker-hidden-note">Same-day fresh cards are hidden here by default so this table stays focused on follow-up decisions. Use Include today to compare today's signals too.</div>
+      {% endif %}
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table signal-tracker-table">
+          <thead>
+            <tr>
+              <th scope="col">Signal</th>
+              <th scope="col">Symbol</th>
+              <th scope="col">Pattern</th>
+              <th scope="col">Original Conviction</th>
+              <th scope="col">Current Conviction</th>
+              <th scope="col">Trigger</th>
+              <th scope="col">Entry Decision</th>
+              <th scope="col">Latest</th>
+              <th scope="col">Move</th>
+              <th scope="col">Levels</th>
+              <th scope="col">Why</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in signal_tracker %}
+            <tr class="{{ item.row_class }}">
+              <td><span class="tracker-date">{{ item.signal_date }}</span><br><span class="tracker-age">{{ item.days_since_signal }}d ago</span></td>
+              <td><a class="symbol-link lb-sector-name" href="{{ item.screener_url }}" target="_blank" rel="noopener noreferrer" title="Open {{ item.symbol }} on Screener">{{ item.symbol }}</a></td>
+              <td>{{ item.pattern }}<br><span class="tracker-age">{{ item.timeframe }}</span></td>
+              <td><span class="tracker-pill {{ item.original_conviction_class }}">{{ item.original_conviction }}</span><br><span class="tracker-age">Then {{ item.signal_price }}</span></td>
+              <td><span class="tracker-pill {{ item.current_conviction_class }}">{{ item.current_conviction }}</span><br><span class="tracker-age">{{ item.fresh_state }}</span></td>
+              <td>
+                <span class="tracker-pill {{ item.trigger_class }}">{{ item.trigger_state }}</span>
+                <br><span class="tracker-age">Trigger {{ item.trigger_price_text }}</span>
+                <div class="tracker-note">{{ item.trigger_note }}</div>
+              </td>
+              <td>
+                <span class="tracker-decision {{ item.decision_class }}">{{ item.entry_decision }}</span>
+                <div class="tracker-note">{{ item.decision_reason }}</div>
+              </td>
+              <td>{{ item.latest_close }}<br><span class="tracker-age">{{ item.latest_date }}</span><br><span class="tracker-age">R:R now {{ item.current_reward_risk }}</span></td>
+              <td>{{ item.change_pct }}</td>
+              <td>
+                <div class="tracker-levels">
+                  <div><span>E</span>{{ item.entry_text }}</div>
+                  <div><span>T</span>{{ item.target_text }}</div>
+                  <div><span>S</span>{{ item.stop_text }}</div>
+                </div>
+              </td>
+              <td class="tracker-reason">{{ item.reason }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -1774,6 +2011,9 @@
                     <span class="grade-pill grade-{{ result.pattern_grade_class }}" title="Pattern quality grade 0-10 from the detector">{{ result.pattern_grade_label }}</span>
                     <span class="rr-pill rr-{{ result.reward_risk_class }}" title="Reward to risk ratio from the scan-date entry">R:R {{ result.reward_risk_display }}</span>
                     <span class="sector-pill sector-tier-{{ result.sector_tier_class }}" title="Sector momentum tier">{{ result.sector }} | {{ result.sector_tier }}</span>
+                    {% if result.sector_tier == "LEADING" %}
+                    <span class="hot-sector-pill" title="Existing sector leaderboard marks this sector as leading">Hot Sector</span>
+                    {% endif %}
                     {% if result.stacked_count > 1 %}
                     <span class="stack-pill">{{ result.stacked_count }} patterns</span>
                     {% endif %}
@@ -2009,9 +2249,17 @@
     const allCards = Array.from(document.querySelectorAll("[data-tier-card]"));
     const totalCards = allCards.length;
     const tierCountSpans = Array.from(document.querySelectorAll("[data-tier-count]"));
+    const trackerPanel = document.querySelector(".signal-tracker-panel");
+    const trackerIncludeToday = document.getElementById("trackerIncludeToday");
     let activeTier = "ALL";
     let activePattern = "";
     let activeSector = "";
+
+    if (trackerPanel && trackerIncludeToday) {
+      trackerIncludeToday.addEventListener("change", () => {
+        trackerPanel.classList.toggle("show-today", trackerIncludeToday.checked);
+      });
+    }
 
     // Leading-sector set: derived from the leaderboard table at the top.
     // Row order in that table is already rank-ascending, so the first K rows

@@ -119,6 +119,7 @@ def test_collect_picks_reads_medium_high_and_highest_report_cards(tmp_path):
     assert pick.tier == "HIGHEST"
     assert pick.pattern == "Weekly Breakout"
     assert pick.timeframe == "weekly"
+    assert pick.report_href == "control_20260501_101500_watchlist.html"
     assert pick.price_then == 100
     assert pick.cmp_today == 125
     assert pick.cmp_date == "2026-05-29"
@@ -127,6 +128,70 @@ def test_collect_picks_reads_medium_high_and_highest_report_cards(tmp_path):
     assert medium.pattern == "Flat Base"
     assert medium.price_then == 80
     assert medium.cmp_today == 92
+
+
+def test_collect_picks_keeps_earliest_recommendation_per_stock(tmp_path):
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    first_report = output_dir / "scan_20260501_101500_watchlist.html"
+    first_report.write_text(
+        _report_html(
+            symbol="CPPLUS",
+            company="Aditya Infotech Ltd.",
+            tier="HIGH",
+            sector="Capital Goods",
+            pattern="Base Breakout",
+            timeframe="Daily",
+            cmp_text="Rs.100",
+            entry="102",
+            target="130",
+            stop="92",
+        ),
+        encoding="utf-8",
+    )
+    later_report = output_dir / "scan_20260510_101500_watchlist.html"
+    later_report.write_text(
+        _report_html(
+            symbol="CPPLUS",
+            company="Aditya Infotech Ltd.",
+            tier="HIGHEST",
+            sector="Capital Goods",
+            pattern="Bull Flag",
+            timeframe="Daily",
+            cmp_text="Rs.120",
+            entry="122",
+            target="150",
+            stop="110",
+        ),
+        encoding="utf-8",
+    )
+    db_path = tmp_path / "test.db"
+    conn = storage.connect(db_path)
+    storage.ensure_schema(conn)
+    try:
+        storage.upsert_daily_rows(
+            conn,
+            "CPPLUS",
+            "544000",
+            pd.DataFrame(
+                [
+                    {"date": "2026-05-29", "open": 140, "high": 146, "low": 139, "close": 145, "volume": 1000},
+                ]
+            ),
+        )
+    finally:
+        conn.close()
+
+    picks = past_reports_dashboard.collect_picks(output_dir=output_dir, db_path=db_path, max_days=60, now=NOW)
+
+    assert len(picks) == 1
+    pick = picks[0]
+    assert pick.symbol == "CPPLUS"
+    assert pick.tier == "HIGH"
+    assert pick.pattern == "Base Breakout"
+    assert pick.report_href == "scan_20260501_101500_watchlist.html"
+    assert pick.price_then == 100
+    assert pick.cmp_today == 145
 
 
 def test_render_dashboard_has_day_tier_search_controls():
@@ -139,7 +204,7 @@ def test_render_dashboard_has_day_tier_search_controls():
         timeframe="daily",
         recommended_at=datetime(2026, 5, 1, 10, 15),
         report_name="scan_20260501_101500.html",
-        report_href="/output/scan_20260501_101500.html",
+        report_href="scan_20260501_101500.html",
         price_then=100,
         cmp_today=112,
         cmp_date="2026-05-29",
@@ -160,6 +225,7 @@ def test_render_dashboard_has_day_tier_search_controls():
     assert '"priceThenText": "Rs.100"' in html
     assert '"cmpTodayText": "Rs.112"' in html
     assert '"changePctText": "+12.00%"' in html
+    assert '"screenerUrl": "https://www.screener.in/company/ABC/"' in html
     assert 'class="sort-header"' in html
     assert 'data-sort-default="return_desc"' in html
     assert "% Change" in html
@@ -169,7 +235,11 @@ def test_render_dashboard_has_day_tier_search_controls():
     assert "HIGHEST success" in html
     assert "HIGH success" in html
     assert "MEDIUM success" in html
+    assert '<option value="high_plus_highest" selected>High + Highest</option>' in html
     assert '<option value="MEDIUM">Medium only</option>' in html
+    assert 'controls.tier.value = "high_plus_highest";' in html
+    assert 'class="stock-link"' in html
+    assert 'href="${esc(row.reportHref)}"' in html
     assert "populateSectorOptions" in html
     assert "updateSortHeaders" in html
 

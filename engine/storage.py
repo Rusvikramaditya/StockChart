@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 import pandas as pd
 
@@ -67,6 +67,39 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             volume INTEGER,
             PRIMARY KEY (index_name, date)
         );
+
+        CREATE TABLE IF NOT EXISTS sent_alerts (
+            symbol TEXT,
+            pattern TEXT,
+            signal_date TEXT,
+            sent_at TEXT,
+            PRIMARY KEY (symbol, pattern, signal_date)
+        );
+
+        CREATE TABLE IF NOT EXISTS signal_history (
+            symbol TEXT NOT NULL,
+            pattern TEXT NOT NULL,
+            signal_date TEXT NOT NULL,
+            timeframe TEXT,
+            tier TEXT,
+            score INTEGER,
+            status TEXT,
+            company_name TEXT,
+            sector TEXT,
+            cmp REAL,
+            entry_price REAL,
+            target REAL,
+            stop_loss REAL,
+            first_seen_at TEXT NOT NULL,
+            last_seen_at TEXT NOT NULL,
+            PRIMARY KEY (symbol, pattern, signal_date)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_signal_history_date
+        ON signal_history(signal_date);
+
+        CREATE INDEX IF NOT EXISTS idx_signal_history_symbol
+        ON signal_history(symbol);
         """
     )
     conn.commit()
@@ -175,3 +208,156 @@ def upsert_weekly_rows(conn: sqlite3.Connection, symbol: str, df: pd.DataFrame) 
 def query_frame(conn: sqlite3.Connection, sql: str, params: Iterable = ()) -> pd.DataFrame:
     return pd.read_sql_query(sql, conn, params=tuple(params))
 
+
+def alert_was_sent(conn: sqlite3.Connection, symbol: str, pattern: str, signal_date: str) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM sent_alerts
+        WHERE symbol = ? AND pattern = ? AND signal_date = ?
+        LIMIT 1
+        """,
+        (symbol.upper(), str(pattern), str(signal_date)),
+    ).fetchone()
+    return row is not None
+
+
+def record_alert_sent(conn: sqlite3.Connection, symbol: str, pattern: str, signal_date: str, sent_at: str) -> None:
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO sent_alerts
+        (symbol, pattern, signal_date, sent_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (symbol.upper(), str(pattern), str(signal_date), str(sent_at)),
+    )
+    conn.commit()
+
+
+def record_signal_history(conn: sqlite3.Connection, rows: Iterable[dict[str, Any]]) -> int:
+    """Upsert visible report signals into the durable signal ledger."""
+    prepared = []
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        pattern = str(row.get("pattern") or "").strip()
+        signal_date = str(row.get("signal_date") or "").strip()
+        seen_at = str(row.get("seen_at") or "").strip()
+        if not symbol or not pattern or not signal_date or not seen_at:
+            continue
+        prepared.append(
+            (
+                symbol,
+                pattern,
+                signal_date,
+                _optional_text(row.get("timeframe")),
+                _optional_text(row.get("tier")),
+                _optional_int(row.get("score")),
+                _optional_text(row.get("status")),
+                _optional_text(row.get("company_name")),
+                _optional_text(row.get("sector")),
+                _optional_float(row.get("cmp")),
+                _optional_float(row.get("entry_price")),
+                _optional_float(row.get("target")),
+                _optional_float(row.get("stop_loss")),
+                seen_at,
+                seen_at,
+            )
+        )
+    if not prepared:
+        return 0
+    conn.executemany(
+        """
+        INSERT INTO signal_history
+        (symbol, pattern, signal_date, timeframe, tier, score, status, company_name,
+         sector, cmp, entry_price, target, stop_loss, first_seen_at, last_seen_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(symbol, pattern, signal_date) DO UPDATE SET
+            timeframe = excluded.timeframe,
+            tier = excluded.tier,
+            score = excluded.score,
+            status = excluded.status,
+            company_name = excluded.company_name,
+            sector = excluded.sector,
+            cmp = excluded.cmp,
+            entry_price = excluded.entry_price,
+            target = excluded.target,
+            stop_loss = excluded.stop_loss,
+            last_seen_at = excluded.last_seen_at
+        """,
+        prepared,
+    )
+    conn.commit()
+    return len(prepared)
+
+
+def fetch_recent_signal_history(
+    conn: sqlite3.Connection,
+    *,
+    since_date: str,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    frame = query_frame(
+        conn,
+        """
+        SELECT symbol, pattern, signal_date, timeframe, tier, score, status,
+               company_name, sector, cmp, entry_price, target, stop_loss,
+               first_seen_at, last_seen_at
+        FROM signal_history
+        WHERE signal_date >= ?
+        ORDER BY signal_date DESC, symbol ASC, pattern ASC
+        LIMIT ?
+        """,
+        (str(since_date), int(limit)),
+    )
+    return frame.to_dict("records")
+
+
+def fetch_daily_rows_since(
+    conn: sqlite3.Connection,
+    symbols: Iterable[str],
+    *,
+    since_date: str,
+) -> list[dict[str, Any]]:
+    upper_symbols = sorted({str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()})
+    if not upper_symbols:
+        return []
+    frames = []
+    for start in range(0, len(upper_symbols), 800):
+        batch = upper_symbols[start : start + 800]
+        placeholders = ",".join("?" for _ in batch)
+        frames.append(
+            query_frame(
+                conn,
+                f"""
+                SELECT symbol, date, open, high, low, close, volume
+                FROM ohlcv_daily
+                WHERE symbol IN ({placeholders}) AND date >= ?
+                ORDER BY symbol, date
+                """,
+                [*batch, str(since_date)],
+            )
+        )
+    frame = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    return frame.to_dict("records")
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None

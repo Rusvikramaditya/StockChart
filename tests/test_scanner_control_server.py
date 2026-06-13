@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +14,21 @@ from scripts.scanner_control_server import build_scan_command
 
 
 NOW = datetime(2026, 5, 20, 17, 45, 0)
+
+
+def test_control_server_script_runs_when_invoked_by_path():
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "scanner_control_server.py"
+
+    result = subprocess.run(
+        [sys.executable, str(script_path), "--help"],
+        cwd=script_path.parents[1],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Run the local Pattern Finder control dashboard" in result.stdout
 
 
 def test_safe_mode_builds_dry_run_command():
@@ -125,7 +143,8 @@ def test_control_page_explains_fields_and_chart_locations():
     assert "Recent Chart PNGs" in html
     assert "output\\charts" in html
     assert "data-tip=" in html
-    assert "Live fetch calls Dhan" in html
+    assert "Live fetch may call Dhan" in html
+    assert "Skip EOD catch-up" in html
     assert "Import StockScanner Dhan" in html
     assert "Verify Dhan auth" in html
     assert "Verify Telegram" in html
@@ -169,6 +188,19 @@ def test_dhan_auth_failure_is_summarized_for_operator():
     assert "Safe dry run" in message
     assert "DHAN_CLIENT_ID" in message
     assert "DHAN_ACCESS_TOKEN" in message
+
+
+def test_dhan_subscription_failure_is_summarized_separately():
+    stderr = (
+        "engine.dhan_client.DhanDataNotSubscribedError: Dhan batch OHLC HTTP 401: "
+        '{"data":{"806":"Data APIs not Subscribed"},"status":"failed"}'
+    )
+
+    message = control.summarize_run_failure(1, "", stderr)
+
+    assert "market-data APIs are not subscribed" in message
+    assert "bhavcopy/yfinance" in message
+    assert "authentication failed" not in message.lower()
 
 
 def test_dhan_rate_limit_failure_is_summarized_for_operator():

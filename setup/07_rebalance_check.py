@@ -233,6 +233,7 @@ def _normalize_nifty_csv(frame: pd.DataFrame) -> pd.DataFrame:
     out["Company Name"] = frame[company_col].astype(str).str.strip() if company_col else out["Symbol"]
     out["Industry"] = frame[industry_col].astype(str).str.strip() if industry_col else ""
     out = out[out["Symbol"].ne("") & out["Symbol"].ne("NAN")]
+    out = out[~out["Symbol"].str.startswith("DUMMY")]
     return out.drop_duplicates(subset=["Symbol"]).sort_values("Symbol").reset_index(drop=True)
 
 

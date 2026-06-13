@@ -186,6 +186,7 @@ def send_daily_summary(
     *,
     stocks_scanned: int | None = None,
     total_alerts: int | None = None,
+    data_status: dict[str, Any] | None = None,
     token: str | None = None,
     chat_id: str | None = None,
     timeout: int = 10,
@@ -198,6 +199,7 @@ def send_daily_summary(
         scored_results,
         stocks_scanned=stocks_scanned,
         total_alerts=total_alerts,
+        data_status=data_status,
     )
     return send_alert(
         message,
@@ -216,6 +218,7 @@ def format_daily_summary(
     *,
     stocks_scanned: int | None = None,
     total_alerts: int | None = None,
+    data_status: dict[str, Any] | None = None,
 ) -> str:
     tiers = Counter(str(item.get("tier", "SKIP")) for item in scored_results)
     if total_alerts is None:
@@ -223,22 +226,29 @@ def format_daily_summary(
     scanned = stocks_scanned if stocks_scanned is not None else "N/A"
     verdict = _esc(market_regime.get("verdict", "UNKNOWN"))
     score = market_regime.get("score", "N/A")
-    return "\n".join(
-        [
-            "\U0001F4CA <b>NSE Pattern Scan Summary</b>",
-            f"Market regime: <b>{verdict}</b> ({score}/4)",
-            f"Stocks scanned: {scanned}",
-            f"Pattern hits: {len(scored_results)}",
-            (
-                "Tiers: "
-                f"HIGHEST {tiers.get('HIGHEST', 0)} | "
-                f"HIGH {tiers.get('HIGH', 0)} | "
-                f"MEDIUM {tiers.get('MEDIUM', 0)} | "
-                f"SKIP {tiers.get('SKIP', 0)}"
-            ),
-            f"Telegram alerts: {total_alerts}",
-        ]
-    )
+    lines = [
+        "\U0001F4CA <b>NSE Pattern Scan Summary</b>",
+        f"Market regime: <b>{verdict}</b> ({score}/4)",
+        f"Stocks scanned: {scanned}",
+        f"Pattern hits: {len(scored_results)}",
+        (
+            "Tiers: "
+            f"HIGHEST {tiers.get('HIGHEST', 0)} | "
+            f"HIGH {tiers.get('HIGH', 0)} | "
+            f"MEDIUM {tiers.get('MEDIUM', 0)} | "
+            f"SKIP {tiers.get('SKIP', 0)}"
+        ),
+        f"Telegram alerts: {total_alerts}",
+    ]
+    if data_status:
+        data_as_of = _esc(data_status.get("data_as_of") or "unknown")
+        caught_up = int(data_status.get("caught_up_days_count") or 0)
+        missing = int(data_status.get("missing_days_count") or 0)
+        rows = int(data_status.get("rows_written") or 0)
+        lines.append(f"Data as of: <b>{data_as_of}</b>")
+        if missing:
+            lines.append(f"Catch-up: {caught_up}/{missing} missed day(s), {rows} row(s)")
+    return "\n".join(lines)
 
 
 def _post_with_retries(

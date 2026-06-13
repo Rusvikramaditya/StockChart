@@ -128,11 +128,12 @@ class FetchMissingDryRunTest(unittest.TestCase):
 
 
 class ScannerStageWiringTest(unittest.TestCase):
-    """Verify the scanner's fetch_missing stage drops failed symbols (per-symbol
-    fallback) and records errors without crashing the pipeline."""
+    """Verify the scanner's fetch_missing stage runs EOD catch-up without
+    dropping symbols when external sources cannot fill every row."""
 
-    def test_stage_drops_failed_symbols(self):
+    def test_stage_records_eod_catchup_without_dropping_symbols(self):
         from scanner import Pipeline, PipelineContext
+        from engine.eod_catchup import CatchupSummary
 
         ctx = PipelineContext(universe_name="watchlist")
         ctx.selected_profile = pd.DataFrame(
@@ -148,17 +149,25 @@ class ScannerStageWiringTest(unittest.TestCase):
                 self.conn = object()
 
         ctx.loader = _FakeLoader()
-        fake_summary = fetch_missing.FetchSummary(
-            planned=1, skipped=0, success=0, failed=1,
-            failed_symbols=["BBB"], rows_written=0, results=[],
+        fake_summary = CatchupSummary(
+            target_date="2026-05-21",
+            data_as_of="2026-05-20",
+            missing_days=["2026-05-21"],
+            rows_written=0,
+            source_counts={"local_stale": 1},
+            symbols_current=1,
+            symbols_stale=1,
+            stale_symbols=["BBB"],
+            warnings=["BBB remains stale"],
+            stale=True,
         )
-        with patch("scanner.fetch_missing_for_profile", return_value=fake_summary) as fetch_missing_mock:
+        with patch("scanner.catch_up_daily_eod", return_value=fake_summary) as catchup_mock:
             Pipeline(ctx).fetch_missing()
-        self.assertFalse(fetch_missing_mock.call_args.kwargs["require_latest_date"])
-        self.assertEqual(ctx.symbols, ["AAA"])
-        self.assertEqual(ctx.selected_profile["symbol"].tolist(), ["AAA"])
-        # One non-critical error recorded for the dropped symbol
-        self.assertTrue(any(e["symbol"] == "BBB" and e["stage"] == "fetch_missing" for e in ctx.errors))
+        catchup_mock.assert_called_once()
+        self.assertEqual(ctx.symbols, ["AAA", "BBB"])
+        self.assertEqual(ctx.selected_profile["symbol"].tolist(), ["AAA", "BBB"])
+        self.assertEqual(ctx.stats["fetch_missing"]["source"], "eod_catchup")
+        self.assertTrue(any(e["message"] == "BBB remains stale" for e in ctx.errors))
 
     def test_stage_skipped_on_dry_run(self):
         from scanner import Pipeline, PipelineContext
@@ -169,6 +178,26 @@ class ScannerStageWiringTest(unittest.TestCase):
         Pipeline(ctx).fetch_missing()
         self.assertEqual(ctx.stats.get("fetch_missing"), "skipped")
         self.assertEqual(ctx.symbols, ["AAA"])  # untouched
+
+    def test_skip_fetch_still_runs_eod_catchup(self):
+        from scanner import Pipeline, PipelineContext
+        from engine.eod_catchup import CatchupSummary
+
+        ctx = PipelineContext(universe_name="watchlist", skip_fetch=True)
+        ctx.selected_profile = pd.DataFrame([{"symbol": "AAA", "security_id": "1"}])
+        ctx.symbols = ["AAA"]
+
+        class _FakeLoader:
+            def __init__(self):
+                self.conn = object()
+
+        ctx.loader = _FakeLoader()
+        summary = CatchupSummary(target_date="2026-05-28", data_as_of="2026-05-28", symbols_current=1)
+        with patch("scanner.catch_up_daily_eod", return_value=summary) as catchup_mock:
+            Pipeline(ctx).fetch_missing()
+
+        catchup_mock.assert_called_once()
+        self.assertEqual(ctx.stats["fetch_missing"]["source"], "eod_catchup")
 
     def test_stage_skipped_when_flag_off(self):
         from scanner import Pipeline, PipelineContext

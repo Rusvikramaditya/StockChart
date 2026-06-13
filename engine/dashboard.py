@@ -137,9 +137,17 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         for item in _list(context, "momentum_radar", "radar_results")
     ]
     radar.sort(key=lambda item: (-item["score"], item["symbol"]))
+    signal_tracker = [
+        _normalize_signal_tracker_item(item, sector_by_symbol, tier_by_sector)
+        for item in _list(context, "signal_tracker")
+    ]
+    signal_tracker.sort(key=lambda item: (item["signal_date"], item["symbol"], item["pattern"]), reverse=True)
+    tracker_today_count = len([item for item in signal_tracker if item["same_day"]])
+    tracker_prior_count = len(signal_tracker) - tracker_today_count
     sectors = _normalize_sectors(context.get("sector_rs") or context.get("sector_cache") or context.get("sectors") or {})
     sector_leaderboard = _normalize_leaderboard(context.get("sector_leaderboard") or {})
     errors = [_normalize_error(item) for item in _list(context, "errors", "failed_stages")]
+    data_status = _normalize_data_status(context.get("data_status") or (context.get("stats") or {}).get("data_status") or {})
 
     generated_at = _format_datetime(_coalesce(context.get("generated_at"), context.get("scan_time")))
     duration = _fmt_number(_coalesce(context.get("duration_seconds"), context.get("duration")), suffix="s")
@@ -179,15 +187,20 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "results": results,
         "tier_groups": tier_groups,
         "momentum_radar": radar,
+        "signal_tracker": signal_tracker,
         "skipped_count": skipped_count,
         "skip_breakdown": skip_breakdown,
         "sectors": sectors,
         "sector_leaderboard": sector_leaderboard,
+        "data_status": data_status,
         "errors": errors,
         "pattern_guide": _supported_pattern_guide(),
         "summary": {
             "hit_count": len(results),
             "radar_count": len(radar),
+            "tracker_count": len(signal_tracker),
+            "tracker_prior_count": tracker_prior_count,
+            "tracker_today_count": tracker_today_count,
             "alert_count": alerts_sent,
             "error_count": len(errors),
             "highest_count": len([item for item in results if item["tier"] == "HIGHEST"]),
@@ -238,6 +251,117 @@ def _normalize_radar_item(item: dict[str, Any], sector_by_symbol: dict[str, str]
         "reasons": reasons[:4],
         "notes": notes[:3],
         "primary_note": notes[0] if notes else "Watch for a clean trigger.",
+    }
+
+
+def _normalize_signal_tracker_item(
+    item: dict[str, Any],
+    sector_by_symbol: dict[str, str],
+    tier_by_sector: dict[str, str],
+) -> dict[str, Any]:
+    symbol = str(item.get("symbol") or "UNKNOWN").upper()
+    sector = str(item.get("sector") or sector_by_symbol.get(symbol) or "UNKNOWN")
+    sector_tier = str(item.get("sector_tier") or tier_by_sector.get(sector) or "UNKNOWN")
+    status = str(item.get("status") or "Still Valid")
+    status_class = str(item.get("status_class") or _signal_status_class(status)).lower()
+    fresh_state = str(item.get("fresh_state") or "Not fresh today")
+    fresh_class = str(item.get("fresh_class") or ("fresh" if "fresh" in fresh_state.lower() else "stale"))
+    same_day = bool(item.get("same_day"))
+    original_conviction = str(item.get("original_conviction") or _tracker_conviction_label(item.get("tier"), item.get("score")))
+    current_conviction = str(item.get("current_conviction") or status)
+    trigger_state = str(item.get("trigger_state") or "Waiting for trigger")
+    entry_decision = str(item.get("entry_decision") or "Review manually")
+    return {
+        "symbol": symbol,
+        "company_name": str(item.get("company_name") or ""),
+        "screener_url": _screener_url(symbol),
+        "pattern": str(item.get("pattern") or "Pattern"),
+        "timeframe": str(item.get("timeframe") or "daily").title(),
+        "tier": str(item.get("tier") or "").upper(),
+        "score": _int(item.get("score"), default=0),
+        "signal_date": str(item.get("signal_date") or ""),
+        "days_since_signal": _fmt_number(item.get("days_since_signal")),
+        "same_day": same_day,
+        "row_class": "tracker-today-row" if same_day else "tracker-prior-row",
+        "latest_date": str(item.get("latest_date") or ""),
+        "signal_price": _fmt_money(_coalesce(item.get("cmp"), item.get("signal_price"))),
+        "latest_close": _fmt_money(item.get("latest_close")),
+        "change_pct": _fmt_percent(item.get("change_pct")),
+        "entry_text": _fmt_money(_coalesce(item.get("entry_price"), item.get("entry"))),
+        "target_text": _fmt_money(item.get("target")),
+        "stop_text": _fmt_money(_coalesce(item.get("stop_loss"), item.get("stop"))),
+        "original_conviction": original_conviction,
+        "original_conviction_class": str(item.get("original_conviction_class") or _tracker_tier_class(item.get("tier"))),
+        "current_conviction": current_conviction,
+        "current_conviction_class": str(item.get("current_conviction_class") or status_class),
+        "trigger_price_text": _fmt_money(_coalesce(item.get("trigger_price"), item.get("entry_price"), item.get("entry"))),
+        "trigger_state": trigger_state,
+        "trigger_class": str(item.get("trigger_class") or status_class),
+        "trigger_note": str(item.get("trigger_note") or "Trigger means price crosses or closes above entry."),
+        "entry_decision": entry_decision,
+        "decision_class": str(item.get("decision_class") or _signal_status_class(entry_decision)),
+        "decision_reason": str(item.get("decision_reason") or item.get("reason") or ""),
+        "current_reward_risk": _fmt_number(item.get("current_reward_risk")) + ":1" if _number(item.get("current_reward_risk")) is not None else "N/A",
+        "status": status,
+        "status_class": status_class,
+        "fresh_state": fresh_state,
+        "fresh_class": fresh_class,
+        "reason": str(item.get("reason") or ""),
+        "sector": sector,
+        "sector_tier": sector_tier,
+        "sector_tier_class": sector_tier.lower(),
+    }
+
+
+def _signal_status_class(status: str) -> str:
+    text = str(status or "").lower()
+    if "target" in text:
+        return "target"
+    if "invalid" in text:
+        return "invalid"
+    if "watch" in text:
+        return "watch"
+    if "review" in text:
+        return "review"
+    if "missing" in text:
+        return "missing"
+    return "valid"
+
+
+def _tracker_conviction_label(tier: Any, score: Any) -> str:
+    tier_text = str(tier or "UNKNOWN").upper()
+    score_number = _number(score)
+    if score_number is None:
+        return tier_text
+    return f"{tier_text} {int(score_number)}"
+
+
+def _tracker_tier_class(tier: Any) -> str:
+    tier_text = str(tier or "").upper()
+    if tier_text in {"HIGHEST", "HIGH", "MEDIUM"}:
+        return tier_text.lower()
+    return "unknown"
+
+
+def _normalize_data_status(status: dict[str, Any]) -> dict[str, Any]:
+    source_counts = status.get("source_counts") or {}
+    source_parts = [
+        f"{source} {count}"
+        for source, count in sorted(source_counts.items())
+        if int(count or 0) > 0
+    ]
+    warnings = [str(item) for item in status.get("warnings") or [] if str(item).strip()]
+    return {
+        "target_date": str(status.get("target_date") or ""),
+        "data_as_of": str(status.get("data_as_of") or "Unknown"),
+        "source_label": ", ".join(source_parts) if source_parts else "local",
+        "rows_written": int(status.get("rows_written") or 0),
+        "missing_days_count": int(status.get("missing_days_count") or 0),
+        "caught_up_days_count": int(status.get("caught_up_days_count") or 0),
+        "symbols_current": int(status.get("symbols_current") or 0),
+        "symbols_stale": int(status.get("symbols_stale") or 0),
+        "stale": bool(status.get("stale")),
+        "warnings": warnings,
     }
 
 

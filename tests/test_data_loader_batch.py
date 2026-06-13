@@ -160,6 +160,23 @@ class FetchTodaysCandlesTest(unittest.TestCase):
             finally:
                 loader.close()
 
+    def test_data_api_subscription_error_raises_specific_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "test.db"
+            loader = DataLoader(db_path)
+            profile = pd.DataFrame([{"symbol": "AAA", "security_id": "1"}])
+
+            class Response:
+                status_code = 401
+                text = '{"data":{"806":"Data APIs not Subscribed"},"status":"failed"}'
+
+            try:
+                with patch("engine.data_loader.dhan_client.dhan_request", return_value=Response()):
+                    with self.assertRaises(dhan_client.DhanDataNotSubscribedError):
+                        loader.fetch_todays_candles(profile)
+            finally:
+                loader.close()
+
 
 if __name__ == "__main__":
     unittest.main()

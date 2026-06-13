@@ -18,16 +18,16 @@ from typing import Callable, Iterable
 import pandas as pd
 
 from config import settings
-from engine import dashboard, dhan_client, momentum_radar, storage, telegram, universe
+from engine import dashboard, dhan_client, momentum_radar, signal_tracker, storage, telegram, universe
 from engine.chart_gen import generate_pattern_chart
 from engine.chart_payload import build_chart_payload
 from engine.data_loader import DataLoader
 from engine.dedup import deduplicate_results
+from engine.eod_catchup import catch_up_daily_eod, local_data_status
 from engine.explainer import attach_explanation
 from engine.scorer import score_pattern
 from engine.thesis_chart import export_thesis_chart_png
 from filters.market_regime import compute_market_regime
-from engine.fetch_missing import fetch_missing_for_profile
 from engine.sector_leaderboard import compute_leaderboard, _load_sector_map
 from filters.sector_rs import compute_sector_rs_cache
 from patterns.base import PatternResult
@@ -129,6 +129,7 @@ class PipelineContext:
     raw_hits: list[dict] = field(default_factory=list)
     scored_results: list[dict] = field(default_factory=list)
     momentum_radar: list[dict] = field(default_factory=list)
+    signal_tracker: list[dict] = field(default_factory=list)
     errors: list[dict] = field(default_factory=list)
     stage_timings: dict[str, float] = field(default_factory=dict)
     stats: dict = field(default_factory=dict)
@@ -167,6 +168,9 @@ class Pipeline:
     def __init__(self, ctx: PipelineContext):
         self.ctx = ctx
 
+    def _log_data(self, message: str) -> None:
+        print(f"[data] {message}", flush=True)
+
     def run(self) -> PipelineContext:
         if self.ctx.stage and self.ctx.stage not in STAGE_ORDER:
             raise PipelineError(f"Unsupported stage '{self.ctx.stage}'. Supported: {', '.join(STAGE_ORDER)}")
@@ -202,66 +206,92 @@ class Pipeline:
 
     @stage("fetch_missing", critical=False)
     def fetch_missing(self) -> None:
-        """Backfill missing/stale historical OHLCV before today's-bar fetch.
-
-        On by default; skipped when dry_run, skip_fetch, or fetch_missing flag
-        is off. Failures use per-symbol fallback: failed symbols are dropped
-        from this scan but the pipeline continues with the rest.
-        A filesystem lock prevents two concurrent scanners from writing to
-        the SQLite DB at the same time.
-        """
-        if self.ctx.dry_run or self.ctx.skip_fetch or not self.ctx.fetch_missing:
+        """Catch up completed EOD candles before live/today fetch."""
+        if self.ctx.dry_run or not self.ctx.fetch_missing:
+            reason = "dry run" if self.ctx.dry_run else "disabled by --no-fetch-missing"
+            self._log_data(f"EOD catch-up skipped: {reason}.")
+            if self.ctx.loader is not None:
+                self._record_local_data_status(reason="catch-up skipped")
             self.ctx.stats["fetch_missing"] = "skipped"
             return
         if self.ctx.selected_profile is None:
             raise PipelineError("verify must run before fetch_missing")
         assert self.ctx.loader is not None
+        self._log_data(
+            f"EOD catch-up start: universe={self.ctx.universe_name}, symbols={len(self.ctx.selected_profile)}."
+        )
         with _fetch_lock():
-            summary = fetch_missing_for_profile(
+            summary = catch_up_daily_eod(
                 self.ctx.loader.conn,
                 self.ctx.selected_profile,
-                require_latest_date=False,
-                execute=True,
+                logger=self._log_data,
             )
+        self.ctx.stats["data_status"] = summary.to_dict()
         self.ctx.stats["fetch_missing"] = {
-            "planned": summary.planned,
-            "skipped": summary.skipped,
-            "success": summary.success,
-            "failed": summary.failed,
+            "source": "eod_catchup",
+            "missing_days": len(summary.missing_days),
+            "caught_up_days": len(summary.caught_up_days),
             "rows_written": summary.rows_written,
+            "source_counts": summary.source_counts,
+            "data_as_of": summary.data_as_of,
         }
-        # Per-symbol fallback: drop failed symbols from the scan so detectors
-        # don't read stale/empty rows for them. Non-critical errors go to
-        # the dashboard's errors panel.
-        if summary.failed_symbols:
-            failed_set = {s.upper() for s in summary.failed_symbols}
-            for symbol in summary.failed_symbols:
-                self._record_error(
-                    "fetch_missing",
-                    symbol,
-                    f"Backfill failed; symbol dropped from this scan",
-                    critical=False,
-                )
-            self.ctx.symbols = [s for s in self.ctx.symbols if s.upper() not in failed_set]
-            self.ctx.selected_profile = self.ctx.selected_profile[
-                ~self.ctx.selected_profile["symbol"].astype(str).str.upper().isin(failed_set)
-            ].reset_index(drop=True)
-            self.ctx.stats["symbols_dropped_after_fetch_missing"] = len(failed_set)
+        for warning in summary.warnings:
+            self._record_error("fetch_missing", "-", warning, critical=False)
+        if summary.rows_written:
+            self._run_weekly_incremental(full=True)
 
     @stage("fetch")
     def fetch(self) -> None:
         if self.ctx.dry_run or self.ctx.skip_fetch:
+            reason = "dry run" if self.ctx.dry_run else "disabled by --skip-fetch"
+            self._log_data(f"Dhan live fetch skipped: {reason}.")
             self.ctx.stats["fetch"] = "skipped"
             return
         if self.ctx.selected_profile is None:
             raise PipelineError("verify must run before fetch")
         assert self.ctx.loader is not None
+        self._log_data(
+            f"Dhan live fetch start: universe={self.ctx.universe_name}, symbols={len(self.ctx.selected_profile)}."
+        )
         with _fetch_lock():
-            rows = self.ctx.loader.fetch_todays_candles(
-                self.ctx.selected_profile,
-                universe_name=self.ctx.universe_name,
-            )
+            try:
+                rows = self.ctx.loader.fetch_todays_candles(
+                    self.ctx.selected_profile,
+                    universe_name=self.ctx.universe_name,
+                )
+            except dhan_client.DhanDataNotSubscribedError as exc:
+                self._log_data("Dhan live fetch unavailable: Data APIs not subscribed; using EOD/local data.")
+                self.ctx.stats["fetch"] = {
+                    "source": "dhan",
+                    "status": "not_subscribed",
+                    "fallback": "eod_catchup",
+                }
+                self._record_error(
+                    "fetch",
+                    "-",
+                    "Dhan market data is not subscribed; using EOD/local data instead.",
+                    critical=False,
+                )
+                self._record_local_data_status(reason="Dhan not subscribed fallback")
+                return
+            except dhan_client.DhanRateLimitError as exc:
+                self._log_data(f"Dhan live fetch blocked by rate limit: {exc}")
+                raise
+            except dhan_client.DhanError as exc:
+                self._log_data(f"Dhan live fetch failed: {exc}")
+                raise
             self.ctx.stats["rows_fetched"] = rows
+            self.ctx.stats["fetch"] = {"source": "dhan", "rows_written": rows}
+            self._log_data(f"Dhan live fetch finished: rows_written={rows}.")
+            self._record_local_data_status(reason="after Dhan live fetch")
+            if rows:
+                data_status = dict(self.ctx.stats.get("data_status") or {})
+                source_counts = dict(data_status.get("source_counts") or {})
+                source_counts["dhan"] = source_counts.get("dhan", 0) + rows
+                data_status["source_counts"] = source_counts
+                rows_written = int(data_status.get("rows_written") or 0)
+                data_status["rows_written"] = rows_written + rows
+                self.ctx.stats["data_status"] = data_status
             _refresh_index_today(self.ctx.loader.conn)
             if self.ctx.scan_date.weekday() == 4 or self.ctx.scan_timeframe in {"weekly", "all"}:
                 self._run_weekly_incremental()
@@ -271,6 +301,7 @@ class Pipeline:
         if not self.ctx.symbols:
             raise PipelineError("verify must run before pre_compute")
         assert self.ctx.loader is not None
+        self._exclude_stale_symbols_from_scan()
         sector_map = _load_sector_map()
         sector_symbols = {str(s).upper() for s in sector_map.keys()}
         breadth_universe = sorted(set(self.ctx.symbols) | sector_symbols)
@@ -346,6 +377,7 @@ class Pipeline:
                     self.ctx.sector_rs_cache,
                 )
                 scored["cmp"] = _latest_close(daily)
+                scored["signal_date"] = _latest_date(daily)
                 scored["company_name"] = company_names.get(symbol, symbol)
                 _apply_liquidity(scored, self.ctx.liquidity_profile.get(symbol), self.ctx.min_liquidity)
                 self._attach_chart_payload(scored)
@@ -360,6 +392,7 @@ class Pipeline:
 
     @stage("output")
     def output(self) -> None:
+        generated_at = datetime.now()
         if self.ctx.send_telegram and not self.ctx.dry_run:
             self.ctx.alerts_sent = self._send_alerts()
             summary_sent = telegram.send_daily_summary(
@@ -367,6 +400,7 @@ class Pipeline:
                 self.ctx.scored_results,
                 stocks_scanned=len(self.ctx.symbols),
                 total_alerts=self.ctx.alerts_sent,
+                data_status=self.ctx.stats.get("data_status"),
             )
             self.ctx.stats["telegram_summary_sent"] = summary_sent
             if not summary_sent:
@@ -377,8 +411,12 @@ class Pipeline:
                     critical=False,
                 )
 
+        self._record_current_signals(generated_at)
+        self.ctx.signal_tracker = self._build_signal_tracker(generated_at)
+        self.ctx.stats["signal_tracker"] = len(self.ctx.signal_tracker)
+
         output_context = {
-            "generated_at": datetime.now(),
+            "generated_at": generated_at,
             "duration_seconds": sum(self.ctx.stage_timings.values()),
             "stocks_scanned": len(self.ctx.symbols),
             "scan_timeframe": self.ctx.scan_timeframe,
@@ -387,8 +425,11 @@ class Pipeline:
             "sector_leaderboard": self.ctx.sector_leaderboard,
             "results": self.ctx.scored_results,
             "momentum_radar": self.ctx.momentum_radar,
+            "signal_tracker": self.ctx.signal_tracker,
             "errors": self.ctx.errors,
             "alerts_sent": self.ctx.alerts_sent,
+            "stats": self.ctx.stats,
+            "data_status": self.ctx.stats.get("data_status"),
         }
         self.ctx.dashboard_path = dashboard.write_dashboard(output_context, self.ctx.output_path)
         self.ctx.stats["dashboard_path"] = str(self.ctx.dashboard_path)
@@ -542,6 +583,9 @@ class Pipeline:
     def _send_alerts(self) -> int:
         sent = 0
         max_alerts = int(getattr(settings, "TELEGRAM_MAX_ALERTS", 0) or 0)
+        data_status = self.ctx.stats.get("data_status") or {}
+        data_as_of = str(data_status.get("data_as_of") or "")
+        target_date = str(data_status.get("target_date") or data_as_of)
         for scored in self.ctx.scored_results:
             if max_alerts > 0 and sent >= max_alerts:
                 break
@@ -549,13 +593,31 @@ class Pipeline:
                 continue
             if not _liquidity_allows_alert(scored):
                 continue
+            signal_date = str(scored.get("signal_date") or data_as_of)
+            if target_date and data_as_of and data_as_of < target_date:
+                self.ctx.stats["alerts_suppressed_stale_data"] = (
+                    self.ctx.stats.get("alerts_suppressed_stale_data", 0) + 1
+                )
+                continue
+            if data_as_of and signal_date != data_as_of:
+                self.ctx.stats["alerts_suppressed_stale_symbol"] = (
+                    self.ctx.stats.get("alerts_suppressed_stale_symbol", 0) + 1
+                )
+                continue
+            if self._alert_already_sent(scored, signal_date):
+                self.ctx.stats["alerts_suppressed_duplicate"] = (
+                    self.ctx.stats.get("alerts_suppressed_duplicate", 0) + 1
+                )
+                continue
             chart_path = self._alert_chart_path(scored)
             ok = False
             if chart_path and Path(str(chart_path)).exists():
                 ok = telegram.send_chart_alert(scored, chart_path)
             if not ok:
                 ok = telegram.send_alert(telegram.format_alert(scored))
-            sent += int(ok)
+            if ok:
+                self._record_alert_sent(scored, signal_date)
+                sent += 1
         return sent
 
     def _alert_chart_path(self, scored: dict) -> Path | None:
@@ -597,13 +659,127 @@ class Pipeline:
             self._record_error("chart_fallback", symbol, str(exc), critical=False)
             return None
 
-    def _run_weekly_incremental(self) -> None:
+    def _run_weekly_incremental(self, *, full: bool = False) -> None:
         assert self.ctx.loader is not None
         try:
-            stats = _generate_weekly_incremental(self.ctx.loader.conn)
-            self.ctx.stats["weekly_incremental"] = stats
+            stats = _generate_weekly_incremental(self.ctx.loader.conn, full=full)
+            key = "weekly_rebuild" if full else "weekly_incremental"
+            self.ctx.stats[key] = stats
         except Exception as exc:
             self._record_error("weekly_incremental", "-", str(exc), critical=False)
+
+    def _record_local_data_status(self, *, reason: str = "local status check") -> None:
+        if self.ctx.loader is None:
+            return
+        summary = local_data_status(self.ctx.loader.conn, self.ctx.symbols)
+        sources = ", ".join(
+            f"{source}={count}" for source, count in sorted(summary.source_counts.items())
+        ) or "none"
+        self._log_data(
+            f"Local DB status ({reason}): target={summary.target_date}, "
+            f"data_as_of={summary.data_as_of or 'none'}, min_data_as_of={summary.min_data_as_of or 'none'}, "
+            f"current={summary.symbols_current}, stale={summary.symbols_stale}, sources={sources}."
+        )
+        current = dict(self.ctx.stats.get("data_status") or {})
+        updated = summary.to_dict()
+        if current:
+            source_counts = dict(current.get("source_counts") or {})
+            for source, count in updated.get("source_counts", {}).items():
+                source_counts[source] = max(int(source_counts.get(source, 0) or 0), int(count or 0))
+            updated["source_counts"] = source_counts
+            updated["warnings"] = list(dict.fromkeys([*current.get("warnings", []), *updated.get("warnings", [])]))
+            updated["rows_written"] = int(current.get("rows_written") or 0)
+            updated["missing_days"] = current.get("missing_days", [])
+            updated["missing_days_count"] = int(current.get("missing_days_count") or 0)
+            updated["caught_up_days"] = current.get("caught_up_days", [])
+            updated["caught_up_days_count"] = int(current.get("caught_up_days_count") or 0)
+        self.ctx.stats["data_status"] = updated
+
+    def _exclude_stale_symbols_from_scan(self) -> None:
+        data_status = self.ctx.stats.get("data_status") or {}
+        stale_symbols = {
+            str(symbol).strip().upper()
+            for symbol in data_status.get("stale_symbols", [])
+            if str(symbol).strip()
+        }
+        if not stale_symbols:
+            return
+        before = len(self.ctx.symbols)
+        self.ctx.symbols = [symbol for symbol in self.ctx.symbols if symbol not in stale_symbols]
+        skipped = before - len(self.ctx.symbols)
+        if skipped <= 0:
+            return
+        self.ctx.stats["symbols_skipped_stale"] = skipped
+        self.ctx.stats["stale_symbols_skipped"] = sorted(stale_symbols)[:20]
+        if self.ctx.selected_profile is not None and "symbol" in self.ctx.selected_profile.columns:
+            profile = self.ctx.selected_profile.copy()
+            symbols = profile["symbol"].astype(str).str.strip().str.upper()
+            self.ctx.selected_profile = profile.loc[~symbols.isin(stale_symbols)].reset_index(drop=True)
+        target = str(data_status.get("target_date") or "latest completed EOD")
+        self._log_data(f"Skipping {skipped} stale symbol(s) before detection; no official EOD row for {target}.")
+        self._record_error(
+            "data_status",
+            "-",
+            f"Skipped {skipped} stale symbol(s) before detection; no official EOD row for {target}.",
+            critical=False,
+        )
+        if not self.ctx.symbols:
+            raise PipelineError(f"No current symbols left to scan after stale-data filter for {target}.")
+
+    def _alert_already_sent(self, scored: dict, signal_date: str) -> bool:
+        conn = getattr(self.ctx.loader, "conn", None) if self.ctx.loader is not None else None
+        if conn is None or not signal_date:
+            return False
+        storage.ensure_schema(conn)
+        return storage.alert_was_sent(
+            conn,
+            str(scored.get("symbol") or ""),
+            str(scored.get("pattern") or "Pattern"),
+            signal_date,
+        )
+
+    def _record_alert_sent(self, scored: dict, signal_date: str) -> None:
+        conn = getattr(self.ctx.loader, "conn", None) if self.ctx.loader is not None else None
+        if conn is None or not signal_date:
+            return
+        storage.ensure_schema(conn)
+        storage.record_alert_sent(
+            conn,
+            str(scored.get("symbol") or ""),
+            str(scored.get("pattern") or "Pattern"),
+            signal_date,
+            datetime.now().isoformat(timespec="seconds"),
+        )
+
+    def _record_current_signals(self, generated_at: datetime) -> None:
+        conn = getattr(self.ctx.loader, "conn", None) if self.ctx.loader is not None else None
+        if conn is None:
+            return
+        if self.ctx.dry_run:
+            self.ctx.stats["signals_recorded"] = 0
+            return
+        storage.ensure_schema(conn)
+        data_status = self.ctx.stats.get("data_status") or {}
+        recorded = signal_tracker.record_current_signals(
+            conn,
+            self.ctx.scored_results,
+            generated_at=generated_at,
+            data_as_of=data_status.get("data_as_of"),
+        )
+        self.ctx.stats["signals_recorded"] = recorded
+
+    def _build_signal_tracker(self, generated_at: datetime) -> list[dict]:
+        conn = getattr(self.ctx.loader, "conn", None) if self.ctx.loader is not None else None
+        if conn is None:
+            return []
+        storage.ensure_schema(conn)
+        data_status = self.ctx.stats.get("data_status") or {}
+        return signal_tracker.build_tracker(
+            conn,
+            self.ctx.scored_results,
+            generated_at=generated_at,
+            data_as_of=data_status.get("data_as_of"),
+        )
 
     def _record_error(self, stage_name: str, symbol: str, message: str, *, critical: bool) -> None:
         self.ctx.errors.append(
@@ -711,6 +887,13 @@ def _latest_close(daily: dict) -> float | None:
     return round(float(close[-1]), 2)
 
 
+def _latest_date(daily: dict) -> str:
+    dates = daily.get("date")
+    if dates is None or len(dates) == 0:
+        return ""
+    return str(pd.to_datetime(dates[-1]).date())
+
+
 def _truthy(value: object) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
 
@@ -747,9 +930,9 @@ def _refresh_index_today(conn) -> None:
             pass
 
 
-def _generate_weekly_incremental(conn) -> dict[str, int]:
+def _generate_weekly_incremental(conn, *, full: bool = False) -> dict[str, int]:
     module = _load_setup_module("03_generate_weekly.py", "pattern_finder_generate_weekly")
-    return module.generate_weekly_incremental(conn, full=False)
+    return module.generate_weekly_incremental(conn, full=full)
 
 
 def _run_rebalance_check() -> dict:
@@ -775,6 +958,7 @@ def _load_setup_module(filename: str, module_name: str):
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Cannot load setup module: {path}")
     module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -811,9 +995,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--no-fetch-missing",
         action="store_true",
-        help="Skip the pre-scan historical-backfill stage. By default the scanner "
-        "backfills missing/stale OHLCV from Dhan before scanning so detectors "
-        "always see fresh data.",
+        help="Skip the pre-scan EOD catch-up stage. By default the scanner fills "
+        "missing completed daily candles from bhavcopy/yfinance before scanning.",
     )
     parser.add_argument("--stage", choices=STAGE_ORDER, default=None, help="Run through this stage and stop.")
     parser.add_argument("--dry-run", action="store_true", help="No Dhan fetch and no Telegram sends.")
@@ -877,6 +1060,30 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Symbols selected: {len(ctx.symbols)}")
     print(f"Pattern hits: {len(ctx.raw_hits)}")
     print(f"Scored results: {len(ctx.scored_results)}")
+    data_status = ctx.stats.get("data_status") or {}
+    if data_status:
+        print(f"Data as of: {data_status.get('data_as_of') or 'unknown'}")
+        source_counts = data_status.get("source_counts") or {}
+        if source_counts:
+            print("Data sources: " + ", ".join(f"{key}={value}" for key, value in sorted(source_counts.items())))
+        print(f"Rows updated: {data_status.get('rows_written', 0)}")
+        print(
+            "Catch-up days: "
+            f"{data_status.get('caught_up_days_count', 0)}/"
+            f"{data_status.get('missing_days_count', 0)}"
+        )
+    fetch_status = ctx.stats.get("fetch")
+    if isinstance(fetch_status, dict):
+        if fetch_status.get("status"):
+            print(
+                "Dhan fetch: "
+                f"{fetch_status.get('status')}"
+                + (f" -> {fetch_status.get('fallback')}" if fetch_status.get("fallback") else "")
+            )
+        elif "rows_written" in fetch_status:
+            print(f"Dhan fetch rows: {fetch_status.get('rows_written', 0)}")
+    elif fetch_status:
+        print(f"Dhan fetch: {fetch_status}")
     print(f"Errors: {len(ctx.errors)}")
     if ctx.dashboard_path:
         print(f"Dashboard: {ctx.dashboard_path}")

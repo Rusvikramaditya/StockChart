@@ -263,9 +263,10 @@ class DataLoader:
                     f"Dhan batch OHLC HTTP 429: {response.text[:200]}"
                 )
             if response.status_code != 200:
-                raise dhan_client.DhanError(
-                    f"Dhan batch OHLC HTTP {response.status_code}: {response.text[:200]}"
-                )
+                message = f"Dhan batch OHLC HTTP {response.status_code}: {response.text[:200]}"
+                if dhan_client.is_data_not_subscribed_message(response.text):
+                    raise dhan_client.DhanDataNotSubscribedError(message)
+                raise dhan_client.DhanError(message)
             data = response.json().get("data", {}).get("NSE_EQ", {})
             rows = []
             for row in chunk:

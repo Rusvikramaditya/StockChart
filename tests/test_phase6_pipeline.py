@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +18,7 @@ from scanner import (
     PipelineContext,
     PipelineError,
     _generate_weekly_incremental,
+    _load_setup_module,
     _symbol_chunks as _original_symbol_chunks,
     _validate_live_fetch_scope,
     parse_args,
@@ -181,6 +183,17 @@ class PipelineVerifyPhase6Test(unittest.TestCase):
         self.assertTrue(args.min_liquidity)
         self.assertEqual(args.limit, 5)
 
+    def test_setup_module_loader_registers_module_for_dataclasses(self):
+        module_name = "pattern_finder_rebalance_check_test"
+        sys.modules.pop(module_name, None)
+        try:
+            module = _load_setup_module("07_rebalance_check.py", module_name)
+
+            self.assertIs(sys.modules.get(module_name), module)
+            self.assertEqual(module.RebalanceResult.__module__, module_name)
+        finally:
+            sys.modules.pop(module_name, None)
+
     def test_friday_fetch_triggers_weekly_incremental(self):
         with tempfile.TemporaryDirectory() as tmp:
             conn = storage.connect(Path(tmp) / "test.db")
@@ -226,6 +239,82 @@ class PipelineVerifyPhase6Test(unittest.TestCase):
 
         weekly.assert_called_once()
         self.assertEqual(ctx.stats["weekly_incremental"], {"symbols_processed": 1})
+
+    def test_dhan_subscription_failure_falls_back_without_crashing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = storage.connect(Path(tmp) / "test.db")
+            storage.ensure_schema(conn)
+            storage.upsert_daily_rows(conn, "TEST", "100", _daily_rows(rows=5))
+            try:
+                loader = _FakeLoader(conn)
+                ctx = PipelineContext(loader=loader, universe_name="watchlist")
+                ctx.symbols = ["TEST"]
+                ctx.selected_profile = loader.get_universe_profile("watchlist")
+                pipeline = Pipeline(ctx)
+
+                with patch.object(
+                    loader,
+                    "fetch_todays_candles",
+                    side_effect=dhan_client.DhanDataNotSubscribedError(
+                        'Dhan batch OHLC HTTP 401: {"data":{"806":"Data APIs not Subscribed"}}'
+                    ),
+                ):
+                    pipeline.fetch()
+            finally:
+                conn.close()
+
+        self.assertEqual(ctx.stats["fetch"]["status"], "not_subscribed")
+        self.assertTrue(any(error["stage"] == "fetch" and "not subscribed" in error["message"] for error in ctx.errors))
+        self.assertIn("data_as_of", ctx.stats["data_status"])
+
+    def test_stale_symbols_are_removed_before_detection(self):
+        ctx = PipelineContext(loader=_FakeLoader(None, symbols=["AAA", "BBB", "CCC"]), universe_name="watchlist")
+        ctx.symbols = ["AAA", "BBB", "CCC"]
+        ctx.selected_profile = ctx.loader.get_universe_profile("watchlist")
+        ctx.stats["data_status"] = {
+            "target_date": "2026-06-01",
+            "stale_symbols": ["BBB"],
+        }
+
+        Pipeline(ctx)._exclude_stale_symbols_from_scan()
+
+        self.assertEqual(ctx.symbols, ["AAA", "CCC"])
+        self.assertEqual(ctx.selected_profile["symbol"].tolist(), ["AAA", "CCC"])
+        self.assertEqual(ctx.stats["symbols_skipped_stale"], 1)
+        self.assertTrue(any(error["stage"] == "data_status" for error in ctx.errors))
+
+    def test_eod_catchup_rebuilds_weekly_after_rows_written(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = storage.connect(Path(tmp) / "test.db")
+            storage.ensure_schema(conn)
+            try:
+                loader = _FakeLoader(conn)
+                ctx = PipelineContext(loader=loader, universe_name="watchlist")
+                ctx.symbols = ["TEST"]
+                ctx.selected_profile = loader.get_universe_profile("watchlist")
+                pipeline = Pipeline(ctx)
+                from engine.eod_catchup import CatchupSummary
+
+                summary = CatchupSummary(
+                    target_date="2026-05-28",
+                    data_as_of="2026-05-28",
+                    missing_days=["2026-05-28"],
+                    caught_up_days=["2026-05-28"],
+                    rows_written=1,
+                    source_counts={"bhavcopy": 1},
+                    symbols_current=1,
+                )
+                with (
+                    patch("scanner.catch_up_daily_eod", return_value=summary),
+                    patch("scanner._generate_weekly_incremental", return_value={"weekly_rows_written": 1}) as weekly,
+                ):
+                    pipeline.fetch_missing()
+            finally:
+                conn.close()
+
+        weekly.assert_called_once()
+        self.assertTrue(weekly.call_args.kwargs["full"])
+        self.assertEqual(ctx.stats["weekly_rebuild"], {"weekly_rows_written": 1})
 
     def test_full_all_nse_live_fetch_is_allowed_when_not_cooling_down(self):
         with patch("scanner.dhan_client.raise_if_rate_limited"):
@@ -329,6 +418,35 @@ class PipelineTelegramChartPhase6Test(unittest.TestCase):
         self.assertEqual(sent, 9)
         self.assertEqual(send_mock.call_count, 9)
 
+    def test_alert_dedup_blocks_same_symbol_pattern_signal_date(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = storage.connect(Path(tmp) / "test.db")
+            storage.ensure_schema(conn)
+            try:
+                ctx = PipelineContext(loader=_FakeLoader(conn))
+                scored = _scored("TEST", "Ascending Triangle", 75)
+                scored["signal_date"] = "2026-05-28"
+                ctx.scored_results = [scored]
+                ctx.stats["data_status"] = {
+                    "target_date": "2026-05-28",
+                    "data_as_of": "2026-05-28",
+                }
+                pipeline = Pipeline(ctx)
+
+                with (
+                    patch.object(pipeline, "_alert_chart_path", return_value=None),
+                    patch("scanner.telegram.send_alert", return_value=True) as send_mock,
+                ):
+                    first = pipeline._send_alerts()
+                    second = pipeline._send_alerts()
+            finally:
+                conn.close()
+
+        self.assertEqual(first, 1)
+        self.assertEqual(second, 0)
+        self.assertEqual(send_mock.call_count, 1)
+        self.assertEqual(ctx.stats["alerts_suppressed_duplicate"], 1)
+
     def test_output_records_failed_telegram_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             ctx = PipelineContext(
@@ -346,6 +464,51 @@ class PipelineTelegramChartPhase6Test(unittest.TestCase):
         self.assertFalse(ctx.stats["telegram_summary_sent"])
         self.assertEqual(ctx.errors[0]["stage"], "telegram")
         self.assertIn("TELEGRAM_BOT_TOKEN", ctx.errors[0]["message"])
+
+    def test_output_records_visible_signals_and_renders_tracker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = storage.connect(Path(tmp) / "test.db")
+            storage.ensure_schema(conn)
+            try:
+                storage.upsert_daily_rows(
+                    conn,
+                    "TEST",
+                    "100",
+                    pd.DataFrame(
+                        [
+                            {"date": "2026-06-09", "open": 99, "high": 102, "low": 98, "close": 100, "volume": 1000},
+                            {"date": "2026-06-10", "open": 101, "high": 105, "low": 100, "close": 104, "volume": 1200},
+                        ]
+                    ),
+                )
+                scored = _scored("TEST", "Ascending Triangle", 75)
+                scored["signal_date"] = "2026-06-09"
+                scored["cmp"] = 100
+                scored["entry_price"] = 100
+                ctx = PipelineContext(
+                    loader=_FakeLoader(conn),
+                    output_path=Path(tmp) / "dashboard.html",
+                    send_telegram=False,
+                )
+                ctx.symbols = ["TEST"]
+                ctx.scored_results = [scored]
+                ctx.stats["data_status"] = {"data_as_of": "2026-06-10"}
+                ctx.market_regime = {"score": 4, "verdict": "CONFIRMED UPTREND"}
+
+                Pipeline(ctx).output()
+                rows = storage.fetch_recent_signal_history(conn, since_date="2026-06-01")
+                html = Path(ctx.dashboard_path).read_text(encoding="utf-8")
+            finally:
+                conn.close()
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["symbol"], "TEST")
+        self.assertEqual(ctx.stats["signals_recorded"], 1)
+        self.assertEqual(ctx.stats["signal_tracker"], 1)
+        self.assertIn("30-Day Trade Decision Tracker", html)
+        self.assertIn("Entry Decision", html)
+        self.assertIn("Fresh HIGH 75", html)
+        self.assertIn("Do not chase", html)
 
 
 class _FakeLoader:
