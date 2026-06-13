@@ -466,8 +466,50 @@
     .radar-panel {
       margin-bottom: 24px;
     }
+    .setup-watch-panel {
+      margin-bottom: 24px;
+    }
     .early-watch-panel {
       margin-bottom: 24px;
+    }
+    .setup-watch-table thead th:nth-child(2),
+    .setup-watch-table thead th:nth-child(3),
+    .setup-watch-table thead th:nth-child(4),
+    .setup-watch-table thead th:nth-child(12) {
+      text-align: left;
+    }
+    .setup-watch-table tbody td:nth-child(2),
+    .setup-watch-table tbody td:nth-child(3),
+    .setup-watch-table tbody td:nth-child(4),
+    .setup-watch-table tbody td:nth-child(12) {
+      text-align: left;
+      font-family: inherit;
+    }
+    .setup-watch-table tbody td.setup-watch-reason {
+      min-width: 260px;
+      max-width: 380px;
+      white-space: normal;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .timeframe-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      background: #181818;
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .setup-watch-action {
+      color: var(--yellow);
+      font-weight: 900;
+      font-size: 10px;
+      letter-spacing: 0.05em;
     }
     .early-watch-table thead th:nth-child(2),
     .early-watch-table thead th:nth-child(3),
@@ -1653,6 +1695,7 @@
       <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
       <div class="stat"><span class="label">Early Watchlist</span><span class="value">{{ summary.early_watch_count }}</span></div>
+      <div class="stat"><span class="label">Setup Watchlist</span><span class="value">{{ summary.setup_watch_count }}</span></div>
       <div class="stat"><span class="label">Momentum Radar</span><span class="value">{{ summary.radar_count }}</span></div>
       <div class="stat"><span class="label">Tracked Signals</span><span class="value">{{ summary.tracker_count }}</span></div>
       <div class="stat" title="Setups filtered out by quality / reward-risk gates"><span class="label">Skipped (low quality)</span><span class="value">{{ skipped_count }}</span></div>
@@ -1745,6 +1788,70 @@
                 <span class="early-watch-action">{{ item.action }}</span><br>
                 <strong>{{ item.decision }}</strong><br>
                 {{ item.trigger_note }}
+              </td>
+              <td><span class="sector-pill sector-tier-{{ item.sector_tier_class }}">{{ item.sector }} | {{ item.sector_tier }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+
+    {% if setup_watchlist %}
+    <details class="leaderboard-panel setup-watch-panel" open aria-label="Daily and weekly setup watchlist">
+      <summary>
+        <div class="leaderboard-title">
+          <h3>Daily + Weekly Setup Watchlist</h3>
+          <p class="subline">Detected setups that still failed an entry gate. Use these as research/watch names, not enter-now recommendations.</p>
+        </div>
+        <div class="leaderboard-summary-chips">
+          <span class="lb-chip neutral">{{ summary.setup_watch_count }} watch-only</span>
+        </div>
+      </summary>
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table setup-watch-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Symbol</th>
+              <th scope="col">Timeframe</th>
+              <th scope="col">Pattern</th>
+              <th scope="col">Conviction</th>
+              <th scope="col">Latest</th>
+              <th scope="col">Trigger</th>
+              <th scope="col">Gap</th>
+              <th scope="col">R:R</th>
+              <th scope="col">Target</th>
+              <th scope="col">Stop</th>
+              <th scope="col">Why Not Entry</th>
+              <th scope="col">Sector</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in setup_watchlist %}
+            <tr>
+              <td><span class="lb-rank">{{ loop.index }}</span></td>
+              <td><a class="symbol-link lb-sector-name" href="{{ item.screener_url }}" target="_blank" rel="noopener noreferrer" title="Open {{ item.symbol }} on Screener">{{ item.symbol }}</a></td>
+              <td><span class="timeframe-tag">{{ item.timeframe_tag }}</span></td>
+              <td>
+                <strong>{{ item.pattern }}</strong><br>
+                <span class="muted">{{ item.status }}</span>
+              </td>
+              <td>
+                <span class="radar-score {{ item.conviction_class }}">{{ item.conviction_label }}</span><br>
+                <span class="muted">score {{ item.watch_score_display }} | grade {{ item.pattern_grade_text }}</span>
+              </td>
+              <td>{{ item.latest_text }}</td>
+              <td>{{ item.trigger_text }}</td>
+              <td>{{ item.distance_text }}</td>
+              <td><span class="rr-pill rr-{{ item.reward_risk_class }}">{{ item.reward_risk_display }}</span></td>
+              <td>{{ item.target_text }}</td>
+              <td>{{ item.stop_text }}</td>
+              <td class="setup-watch-reason">
+                <span class="setup-watch-action">{{ item.action }}</span><br>
+                <strong>{{ item.decision }}</strong><br>
+                {{ item.reason }}
               </td>
               <td><span class="sector-pill sector-tier-{{ item.sector_tier_class }}">{{ item.sector }} | {{ item.sector_tier }}</span></td>
             </tr>

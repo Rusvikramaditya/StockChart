@@ -25,6 +25,7 @@ TIER_LABELS = {
     "MEDIUM": "Watchlist quality",
     "SKIP": "Rejected / avoid",
 }
+SETUP_WATCHLIST_LIMIT = 40
 REGIME_CHECK_LABELS = {
     "nifty_above_50ma": "Nifty above 50 MA",
     "nifty_above_200ma": "Nifty above 200 MA",
@@ -106,6 +107,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
     sector_by_symbol = _build_symbol_to_sector(context)
     tier_by_sector = _build_sector_to_tier(context.get("sector_leaderboard") or {})
     results = []
+    setup_watchlist = []
     skipped_count = 0
     skip_reasons: dict[str, int] = {}
     skipped_samples: dict[str, list[str]] = {}
@@ -122,6 +124,9 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
             samples = skipped_samples.setdefault(bucket, [])
             if len(samples) < 8:
                 samples.append(normalized["symbol"])
+            watch_item = _normalize_setup_watch_item(item, normalized, sector_by_symbol, tier_by_sector)
+            if watch_item:
+                setup_watchlist.append(watch_item)
             continue
         symbol = normalized["symbol"]
         sector = sector_by_symbol.get(symbol) or "NIFTY 50"
@@ -138,6 +143,8 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         if _is_early_watch_candidate(item)
     ]
     early_watchlist.sort(key=lambda item: (item["distance_sort"], -item["score"], item["symbol"]))
+    setup_watchlist.sort(key=lambda item: (-item["watch_score"], -item["pattern_grade_sort"], item["distance_sort"], item["symbol"]))
+    setup_watchlist = setup_watchlist[:SETUP_WATCHLIST_LIMIT]
     radar = [
         _normalize_radar_item(item, sector_by_symbol, tier_by_sector)
         for item in _list(context, "momentum_radar", "radar_results")
@@ -193,6 +200,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "results": results,
         "tier_groups": tier_groups,
         "early_watchlist": early_watchlist,
+        "setup_watchlist": setup_watchlist,
         "momentum_radar": radar,
         "signal_tracker": signal_tracker,
         "skipped_count": skipped_count,
@@ -205,6 +213,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "summary": {
             "hit_count": len(results),
             "early_watch_count": len(early_watchlist),
+            "setup_watch_count": len(setup_watchlist),
             "radar_count": len(radar),
             "tracker_count": len(signal_tracker),
             "tracker_prior_count": tracker_prior_count,
@@ -313,6 +322,130 @@ def _trigger_distance_pct(latest: float | None, trigger: float | None) -> float 
     if latest is None or trigger is None or latest <= 0:
         return None
     return max(0.0, (trigger / latest - 1.0) * 100.0)
+
+
+def _normalize_setup_watch_item(
+    item: dict[str, Any],
+    normalized: dict[str, Any],
+    sector_by_symbol: dict[str, str],
+    tier_by_sector: dict[str, str],
+) -> dict[str, Any] | None:
+    watch_score = _watch_conviction_score(item)
+    pattern_grade = _number(normalized.get("pattern_grade"))
+    if not _is_setup_watch_candidate(normalized, watch_score, pattern_grade):
+        return None
+
+    symbol = normalized["symbol"]
+    sector = str(item.get("sector") or sector_by_symbol.get(symbol) or "UNKNOWN")
+    sector_tier = str(item.get("sector_tier") or tier_by_sector.get(sector) or "UNKNOWN")
+    trigger = _number(_coalesce(normalized.get("trigger_price"), normalized.get("entry_price"), normalized.get("technical_pivot"), normalized.get("pivot")))
+    latest = _number(_coalesce(normalized.get("scan_close"), item.get("cmp"), normalized.get("entry_price")))
+    distance = _trigger_distance_pct(latest, trigger)
+    reason_bucket = _skip_reason_bucket(str(normalized.get("skip_reason") or item.get("skip_reason") or "UNKNOWN"))
+    conviction = _watch_conviction_label(watch_score, pattern_grade)
+    action, decision = _setup_watch_action(reason_bucket, normalized)
+    return {
+        "symbol": symbol,
+        "screener_url": normalized["screener_url"],
+        "timeframe_tag": _timeframe_tag(item, normalized),
+        "pattern": _setup_watch_pattern_label(normalized),
+        "status": normalized["status"] or "Detected",
+        "watch_score": watch_score,
+        "watch_score_display": _fmt_number(watch_score),
+        "score_class": _radar_score_class(float(watch_score)),
+        "conviction_label": conviction["label"],
+        "conviction_class": conviction["class_name"],
+        "pattern_grade_text": normalized["pattern_grade_display"],
+        "pattern_grade_sort": -1.0 if pattern_grade is None else pattern_grade,
+        "latest_text": _fmt_money(latest),
+        "trigger_text": _fmt_money(trigger),
+        "distance_text": "N/A" if distance is None else _fmt_percent(distance, signed=False),
+        "distance_sort": 9999.0 if distance is None else max(0.0, distance),
+        "reward_risk_display": normalized["reward_risk_display"],
+        "reward_risk_class": normalized["reward_risk_class"],
+        "target_text": normalized["target_text"],
+        "stop_text": normalized["stop_text"],
+        "reason": _SKIP_REASON_LABELS.get(reason_bucket, reason_bucket.replace("_", " ").title()),
+        "action": action,
+        "decision": decision,
+        "sector": sector,
+        "sector_tier": sector_tier,
+        "sector_tier_class": sector_tier.lower(),
+    }
+
+
+def _is_setup_watch_candidate(
+    normalized: dict[str, Any],
+    watch_score: int,
+    pattern_grade: float | None,
+) -> bool:
+    if str(normalized.get("tier") or "").upper() != "SKIP":
+        return False
+    if not normalized.get("skip_reason"):
+        return False
+    if watch_score >= int(settings.CONVICTION_TIERS["MEDIUM"]):
+        return True
+    return pattern_grade is not None and pattern_grade >= 6.0
+
+
+def _watch_conviction_score(item: dict[str, Any]) -> int:
+    breakdown = item.get("breakdown") or {}
+    score = 0.0
+    for key in ("pattern", "stage2", "volume", "sector_rs", "market_regime", "multi_tf", "rsi_adjustment"):
+        score += _number(breakdown.get(key)) or 0.0
+    if score <= 0:
+        score = _number(item.get("individual_score")) or _number(item.get("score")) or 0.0
+    return int(round(max(0.0, min(100.0, score))))
+
+
+def _watch_conviction_label(score: int, grade: float | None) -> dict[str, str]:
+    if score >= int(settings.CONVICTION_TIERS["HIGH"]) or (grade is not None and grade >= 7.5):
+        return {"label": "HIGH WATCH", "class_name": "strong"}
+    if score >= int(settings.CONVICTION_TIERS["MEDIUM"]) or (grade is not None and grade >= 6.5):
+        return {"label": "MEDIUM WATCH", "class_name": "watch"}
+    return {"label": "LOW WATCH", "class_name": "early"}
+
+
+def _timeframe_tag(item: dict[str, Any], normalized: dict[str, Any]) -> str:
+    tags: list[str] = []
+
+    def add(value: Any) -> None:
+        text = str(value or "").strip().lower()
+        if text.startswith("week") and "Weekly" not in tags:
+            tags.append("Weekly")
+        elif (text.startswith("dail") or text == "day") and "Daily" not in tags:
+            tags.append("Daily")
+
+    add(normalized.get("timeframe"))
+    add(item.get("timeframe"))
+    add(_field(item.get("pattern_result"), "timeframe"))
+    for pattern in item.get("pattern_results") or []:
+        add(_field(pattern, "timeframe"))
+    if "Daily" in tags and "Weekly" in tags:
+        return "Daily + Weekly"
+    return tags[0] if tags else "Daily"
+
+
+def _setup_watch_pattern_label(normalized: dict[str, Any]) -> str:
+    patterns = normalized.get("all_patterns") or []
+    primary = str(normalized.get("pattern") or "Pattern")
+    extras = [name for name in patterns if str(name) != primary]
+    if extras:
+        return f"{primary} + {len(extras)} more"
+    return primary
+
+
+def _setup_watch_action(reason_bucket: str, normalized: dict[str, Any]) -> tuple[str, str]:
+    entry_state = str(normalized.get("entry_state") or "").upper()
+    if reason_bucket in {"MOVE_ALREADY_HAPPENED_TARGET_HIT", "TARGET_ALREADY_REACHED"}:
+        return "DO NOT CHASE", "Watch for a fresh base"
+    if reason_bucket == "STOP_ALREADY_BROKEN":
+        return "AVOID", "Setup invalidated"
+    if reason_bucket in {"REWARD_RISK_BELOW_FLOOR", "ACTIONABLE_REWARD_RISK_BELOW_FLOOR"}:
+        return "WAIT FOR RESET", "Entry is too late"
+    if entry_state == "WAIT_FOR_TRIGGER":
+        return "WAIT FOR TRIGGER", "Do not enter yet"
+    return "WATCH ONLY", "Not an entry signal"
 
 
 def _normalize_signal_tracker_item(

@@ -434,6 +434,90 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("Do not enter yet", html)
         self.assertIn('href="https://www.screener.in/company/EARLY/"', html)
 
+    def test_skipped_daily_weekly_candidate_renders_setup_watchlist(self):
+        context = self._context(Path("missing.png"))
+        weekly = PatternResult(
+            pattern="Weekly Breakout",
+            status="BREAKING OUT",
+            pivot=329.91,
+            target=388.52,
+            stop_loss=300.6,
+            confidence=91.0,
+            explanation="Weekly trendline breakout is visible, but the move is extended.",
+            timeframe="weekly",
+            bars_in_pattern=40,
+            extra={"pattern_quality_score": 7.7},
+        )
+        daily = PatternResult(
+            pattern="Double Bottom",
+            status="PIVOT READY",
+            pivot=102.78,
+            target=122.81,
+            stop_loss=92.76,
+            confidence=68.0,
+            explanation="Daily double bottom is forming below the trigger.",
+            timeframe="daily",
+            bars_in_pattern=60,
+            extra={"pattern_quality_score": 6.4},
+        )
+        skipped = {
+            "symbol": "KRBL",
+            "pattern": weekly.pattern,
+            "status": weekly.status,
+            "pivot": weekly.pivot,
+            "technical_pivot": weekly.pivot,
+            "entry_price": 366.8,
+            "entry_state": "TRIGGERED",
+            "entry_triggered": True,
+            "trigger_price": weekly.pivot,
+            "scan_close": 366.8,
+            "target": weekly.target,
+            "stop_loss": weekly.stop_loss,
+            "timeframe": "weekly",
+            "pattern_result": weekly,
+            "pattern_results": [weekly, daily],
+            "all_patterns": [weekly.pattern, daily.pattern],
+            "score": 0,
+            "tier": "SKIP",
+            "tradable": False,
+            "skip_reason": "MOVE_ALREADY_HAPPENED_TARGET_HIT",
+            "reward_risk": 0.33,
+            "pattern_grade": 7.7,
+            "breakdown": {
+                "pattern": 20,
+                "stage2": 0,
+                "volume": 5,
+                "sector_rs": 0,
+                "market_regime": 0,
+                "multi_tf": 40,
+                "rsi_adjustment": 0,
+            },
+            "filters": {
+                "stage2": {"passed": False, "status": "FAIL"},
+                "volume": {"passed": False, "status": "DRY_UP", "details": {"timeframe": "weekly"}},
+                "sector_rs": {"passed": False, "status": "NEUTRAL"},
+                "market_regime": {"score": 1, "verdict": "BEAR"},
+                "rsi": {"value": 59.0, "status": "HEALTHY"},
+                "multi_tf": {"passed": True, "status": "WEEKLY_PATTERN"},
+            },
+        }
+        context["results"] = [skipped]
+
+        normalized = build_dashboard_context(context)
+        html = render_dashboard(context)
+
+        self.assertEqual(normalized["summary"]["hit_count"], 0)
+        self.assertEqual(normalized["summary"]["setup_watch_count"], 1)
+        self.assertEqual(normalized["setup_watchlist"][0]["symbol"], "KRBL")
+        self.assertEqual(normalized["setup_watchlist"][0]["timeframe_tag"], "Daily + Weekly")
+        self.assertEqual(normalized["setup_watchlist"][0]["conviction_label"], "HIGH WATCH")
+        self.assertIn("Daily + Weekly Setup Watchlist", html)
+        self.assertIn("HIGH WATCH", html)
+        self.assertIn("Daily + Weekly", html)
+        self.assertIn("DO NOT CHASE", html)
+        self.assertIn("Target already hit after breakout", html)
+        self.assertIn('href="https://www.screener.in/company/KRBL/"', html)
+
     def test_signal_tracker_renders_lifecycle_table_separately(self):
         context = self._context(Path("missing.png"))
         context["signal_tracker"] = [
