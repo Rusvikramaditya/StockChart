@@ -93,6 +93,11 @@
       max-width: 720px;
     }
 
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     .regime-badge {
       min-width: 220px;
       padding: 12px 14px;
@@ -460,6 +465,26 @@
 
     .radar-panel {
       margin-bottom: 24px;
+    }
+    .early-watch-panel {
+      margin-bottom: 24px;
+    }
+    .early-watch-table thead th:nth-child(2),
+    .early-watch-table thead th:nth-child(3),
+    .early-watch-table thead th:nth-child(11) {
+      text-align: left;
+    }
+    .early-watch-table tbody td:nth-child(2),
+    .early-watch-table tbody td:nth-child(3),
+    .early-watch-table tbody td:nth-child(11) {
+      text-align: left;
+      font-family: inherit;
+    }
+    .early-watch-action {
+      color: var(--yellow);
+      font-weight: 900;
+      font-size: 10px;
+      letter-spacing: 0.05em;
     }
     .radar-table thead th:nth-child(3),
     .radar-table thead th:nth-child(14),
@@ -1627,6 +1652,7 @@
       <div class="stat"><span class="label">Stocks Scanned</span><span class="value">{{ stocks_scanned }}</span></div>
       <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
+      <div class="stat"><span class="label">Early Watchlist</span><span class="value">{{ summary.early_watch_count }}</span></div>
       <div class="stat"><span class="label">Momentum Radar</span><span class="value">{{ summary.radar_count }}</span></div>
       <div class="stat"><span class="label">Tracked Signals</span><span class="value">{{ summary.tracker_count }}</span></div>
       <div class="stat" title="Setups filtered out by quality / reward-risk gates"><span class="label">Skipped (low quality)</span><span class="value">{{ skipped_count }}</span></div>
@@ -1666,6 +1692,65 @@
           {% endif %}
         </div>
         {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {% if early_watchlist %}
+    <details class="leaderboard-panel early-watch-panel" open aria-label="High-quality early watchlist">
+      <summary>
+        <div class="leaderboard-title">
+          <h3>High-Quality Early Watchlist</h3>
+          <p class="subline">These setups have high raw conviction but have not crossed the trigger yet. They are early watch names, not enter-now recommendations.</p>
+        </div>
+        <div class="leaderboard-summary-chips">
+          <span class="lb-chip neutral">{{ summary.early_watch_count }} waiting</span>
+        </div>
+      </summary>
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table early-watch-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Symbol</th>
+              <th scope="col">Pattern</th>
+              <th scope="col">Score</th>
+              <th scope="col">Latest</th>
+              <th scope="col">Trigger</th>
+              <th scope="col">Gap</th>
+              <th scope="col">R:R</th>
+              <th scope="col">Target</th>
+              <th scope="col">Stop</th>
+              <th scope="col">Action</th>
+              <th scope="col">Sector</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in early_watchlist %}
+            <tr>
+              <td><span class="lb-rank">{{ loop.index }}</span></td>
+              <td><a class="symbol-link lb-sector-name" href="{{ item.screener_url }}" target="_blank" rel="noopener noreferrer" title="Open {{ item.symbol }} on Screener">{{ item.symbol }}</a></td>
+              <td>
+                <strong>{{ item.pattern }}</strong><br>
+                <span class="muted">{{ item.status }} | {{ item.timeframe }}</span>
+              </td>
+              <td><span class="radar-score {{ item.score_class }}">{{ item.score_display }}</span></td>
+              <td>{{ item.latest_text }}</td>
+              <td>{{ item.trigger_text }}</td>
+              <td>{{ item.distance_text }}</td>
+              <td><span class="rr-pill rr-{{ item.reward_risk_class }}">{{ item.reward_risk_display }}</span></td>
+              <td>{{ item.target_text }}</td>
+              <td>{{ item.stop_text }}</td>
+              <td>
+                <span class="early-watch-action">{{ item.action }}</span><br>
+                <strong>{{ item.decision }}</strong><br>
+                {{ item.trigger_note }}
+              </td>
+              <td><span class="sector-pill sector-tier-{{ item.sector_tier_class }}">{{ item.sector }} | {{ item.sector_tier }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </details>
     {% endif %}

@@ -132,6 +132,12 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         results.append(normalized)
     skip_breakdown = _build_skip_breakdown(skip_reasons, skipped_samples)
     results.sort(key=lambda item: (TIER_ORDER.index(item["tier"]) if item["tier"] in TIER_ORDER else 99, -item["score"]))
+    early_watchlist = [
+        _normalize_early_watch_item(item)
+        for item in results
+        if _is_early_watch_candidate(item)
+    ]
+    early_watchlist.sort(key=lambda item: (item["distance_sort"], -item["score"], item["symbol"]))
     radar = [
         _normalize_radar_item(item, sector_by_symbol, tier_by_sector)
         for item in _list(context, "momentum_radar", "radar_results")
@@ -186,6 +192,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "duration": duration,
         "results": results,
         "tier_groups": tier_groups,
+        "early_watchlist": early_watchlist,
         "momentum_radar": radar,
         "signal_tracker": signal_tracker,
         "skipped_count": skipped_count,
@@ -197,6 +204,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "pattern_guide": _supported_pattern_guide(),
         "summary": {
             "hit_count": len(results),
+            "early_watch_count": len(early_watchlist),
             "radar_count": len(radar),
             "tracker_count": len(signal_tracker),
             "tracker_prior_count": tracker_prior_count,
@@ -252,6 +260,59 @@ def _normalize_radar_item(item: dict[str, Any], sector_by_symbol: dict[str, str]
         "notes": notes[:3],
         "primary_note": notes[0] if notes else "Watch for a clean trigger.",
     }
+
+
+def _is_early_watch_candidate(item: dict[str, Any]) -> bool:
+    entry_state = str(item.get("entry_state") or "").upper()
+    if entry_state != "WAIT_FOR_TRIGGER":
+        return False
+    if bool(item.get("entry_triggered")):
+        return False
+    if str(item.get("tier") or "").upper() == "SKIP":
+        return False
+    return int(item.get("score") or 0) >= int(settings.CONVICTION_TIERS["HIGH"])
+
+
+def _normalize_early_watch_item(item: dict[str, Any]) -> dict[str, Any]:
+    trigger = _number(_coalesce(item.get("trigger_price"), item.get("entry_price"), item.get("technical_pivot"), item.get("pivot")))
+    latest = _number(_coalesce(item.get("scan_close"), item.get("entry_price")))
+    distance = _trigger_distance_pct(latest, trigger)
+    trigger_note = "Wait for close above trigger"
+    if distance is not None:
+        trigger_note = f"{_fmt_percent(distance, signed=False)} away from trigger"
+    return {
+        "symbol": item["symbol"],
+        "screener_url": item["screener_url"],
+        "pattern": item["pattern"],
+        "status": item["status"] or "Waiting for trigger",
+        "timeframe": str(item.get("timeframe") or "daily").title(),
+        "score": item["score"],
+        "score_display": _fmt_number(item["score"]),
+        "score_class": _radar_score_class(float(item["score"])),
+        "tier": item["tier"],
+        "pattern_grade_label": item["pattern_grade_label"],
+        "pattern_grade_class": item["pattern_grade_class"],
+        "reward_risk_display": item["reward_risk_display"],
+        "reward_risk_class": item["reward_risk_class"],
+        "latest_text": _fmt_money(latest),
+        "trigger_text": _fmt_money(trigger),
+        "distance_text": "N/A" if distance is None else _fmt_percent(distance, signed=False),
+        "distance_sort": 9999.0 if distance is None else max(0.0, distance),
+        "target_text": item["target_text"],
+        "stop_text": item["stop_text"],
+        "sector": item["sector"],
+        "sector_tier": item["sector_tier"],
+        "sector_tier_class": item["sector_tier_class"],
+        "action": "WAIT FOR TRIGGER",
+        "trigger_note": trigger_note,
+        "decision": "Do not enter yet",
+    }
+
+
+def _trigger_distance_pct(latest: float | None, trigger: float | None) -> float | None:
+    if latest is None or trigger is None or latest <= 0:
+        return None
+    return max(0.0, (trigger / latest - 1.0) * 100.0)
 
 
 def _normalize_signal_tracker_item(
@@ -423,12 +484,16 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "technical_pivot": _number(_coalesce(item.get("technical_pivot"), pivot)),
         "entry_price": entry,
         "entry_basis": str(item.get("entry_basis") or "pivot"),
+        "entry_triggered": bool(item.get("entry_triggered")) if "entry_triggered" in item else None,
+        "entry_state": str(item.get("entry_state") or ""),
+        "trigger_price": _number(_coalesce(item.get("trigger_price"), entry, pivot)),
         "scan_close": _number(item.get("scan_close")),
         "target": target,
         "stop_loss": stop_loss,
         "pivot_text": _fmt_money(pivot),
         "technical_pivot_text": _fmt_money(_coalesce(item.get("technical_pivot"), pivot)),
         "entry_text": _fmt_money(entry),
+        "trigger_text": _fmt_money(_coalesce(item.get("trigger_price"), entry, pivot)),
         "scan_close_text": _fmt_money(item.get("scan_close")),
         "target_text": _fmt_money(target),
         "stop_text": _fmt_money(stop_loss),

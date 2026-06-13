@@ -399,6 +399,41 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("Weekly invalidation is wide", html)
         self.assertIn('href="https://www.screener.in/company/HSCL/"', html)
 
+    def test_high_quality_untriggered_setup_renders_early_watchlist(self):
+        context = self._context(Path("missing.png"))
+        watch = dict(context["results"][0])
+        watch.update(
+            {
+                "symbol": "EARLY",
+                "status": "PIVOT READY",
+                "score": 92,
+                "tier": "MEDIUM",
+                "entry_price": 120.0,
+                "entry_state": "WAIT_FOR_TRIGGER",
+                "entry_triggered": False,
+                "trigger_price": 120.0,
+                "scan_close": 114.0,
+                "target": 168.0,
+                "stop_loss": 104.0,
+                "reward_risk": 3.0,
+                "pattern_grade": 8.6,
+            }
+        )
+        context["results"] = [watch]
+
+        normalized = build_dashboard_context(context)
+        html = render_dashboard(context)
+
+        self.assertEqual(normalized["summary"]["early_watch_count"], 1)
+        self.assertEqual(normalized["early_watchlist"][0]["symbol"], "EARLY")
+        self.assertEqual(normalized["early_watchlist"][0]["action"], "WAIT FOR TRIGGER")
+        self.assertIn("High-Quality Early Watchlist", html)
+        self.assertIn("not enter-now recommendations", html)
+        self.assertIn("EARLY", html)
+        self.assertIn("WAIT FOR TRIGGER", html)
+        self.assertIn("Do not enter yet", html)
+        self.assertIn('href="https://www.screener.in/company/EARLY/"', html)
+
     def test_signal_tracker_renders_lifecycle_table_separately(self):
         context = self._context(Path("missing.png"))
         context["signal_tracker"] = [
