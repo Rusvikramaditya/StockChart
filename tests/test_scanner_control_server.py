@@ -72,7 +72,7 @@ def test_fetch_no_telegram_mode_keeps_fetch_enabled():
     assert "--limit" not in command
 
 
-def test_full_all_nse_all_timeframes_forces_local_data():
+def test_full_all_nse_all_timeframes_skips_dhan_but_keeps_eod_catchup():
     command, _output_path = build_scan_command(
         {
             "universe": ["all_nse_equity"],
@@ -88,7 +88,7 @@ def test_full_all_nse_all_timeframes_forces_local_data():
     assert command[command.index("--scan-timeframe") + 1] == "all"
     assert "--limit" not in command
     assert "--skip-fetch" in command
-    assert "--no-fetch-missing" in command
+    assert "--no-fetch-missing" not in command
     assert "--dry-run" not in command
     assert "--no-telegram" in command
 
@@ -176,7 +176,7 @@ def test_control_page_explains_fields_and_chart_locations():
     assert "Past Suggestions" in html
     assert "Which stock list to scan" in html
     assert "Scan timeframe" in html
-    assert "Full All NSE + Daily + weekly uses local data only" in html
+    assert "Full All NSE + Daily + weekly skips Dhan live fetch" in html
     assert "Chart approval gallery" in html
 
 
