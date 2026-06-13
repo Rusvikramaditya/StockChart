@@ -135,6 +135,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         normalized["sector"] = sector
         normalized["sector_tier"] = sector_tier
         normalized["sector_tier_class"] = sector_tier.lower()
+        normalized["entry_card"] = _entry_decision_from_result(normalized)
         results.append(normalized)
     skip_breakdown = _build_skip_breakdown(skip_reasons, skipped_samples)
     results.sort(key=lambda item: (TIER_ORDER.index(item["tier"]) if item["tier"] in TIER_ORDER else 99, -item["score"]))

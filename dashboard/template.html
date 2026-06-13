@@ -1242,6 +1242,40 @@
       font-size: 12px;
     }
 
+    .card-entry-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--line-soft);
+      background: #0d0f0f;
+    }
+
+    .card-entry-primary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .card-entry-price {
+      color: var(--text);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 14px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .card-entry-reason {
+      min-width: 160px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: right;
+    }
+
     .metric-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1732,6 +1766,8 @@
       .result-count { min-width: 0; }
       .result-main { grid-template-columns: 1fr; }
       .score-block { text-align: left; }
+      .card-entry-action { align-items: flex-start; flex-direction: column; }
+      .card-entry-reason { text-align: left; }
       .metric-grid,
       .volume-panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .volume-note { flex-direction: column; gap: 4px; }
@@ -2404,6 +2440,16 @@
                   <div class="score-label">conviction</div>
                 </div>
               </div>
+
+              {% if result.entry_card %}
+              <div class="card-entry-action" aria-label="{{ result.symbol }} entry decision">
+                <div class="card-entry-primary">
+                  <span class="entry-decision {{ result.entry_card.decision_class }}">{{ result.entry_card.decision }}</span>
+                  <span class="card-entry-price">{{ result.entry_card.enter_at }}</span>
+                </div>
+                <div class="card-entry-reason">{{ result.entry_card.reason }}</div>
+              </div>
+              {% endif %}
 
               <div class="metric-grid" aria-label="{{ result.symbol }} levels">
                 <div class="metric"><span class="label">CMP</span><span class="value">{{ result.cmp }}</span></div>

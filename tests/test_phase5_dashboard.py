@@ -435,9 +435,32 @@ class DashboardPhase5BTest(unittest.TestCase):
         self.assertIn("ENTER ABOVE", html)
         self.assertIn("Trigger Pending Details", html)
         self.assertIn("EARLY", html)
+        self.assertIn('aria-label="EARLY entry decision"', html)
         self.assertIn("WAIT FOR TRIGGER", html)
         self.assertIn("Do not enter yet", html)
         self.assertIn('href="https://www.screener.in/company/EARLY/"', html)
+
+    def test_triggered_result_card_renders_enter_now_decision(self):
+        context = self._context(Path("missing.png"))
+        triggered = dict(context["results"][0])
+        triggered.update(
+            {
+                "entry_price": 181.0,
+                "entry_triggered": True,
+                "scan_close": 185.0,
+                "trigger_context": {"status": "CLEAN_TRIGGER", "label": "Clean trigger"},
+            }
+        )
+        context["results"] = [triggered]
+
+        normalized = build_dashboard_context(context)
+        html = render_dashboard(context)
+
+        self.assertEqual(normalized["results"][0]["entry_card"]["decision"], "ENTER NOW")
+        self.assertEqual(normalized["results"][0]["entry_card"]["enter_at"], "Rs.185")
+        self.assertIn('aria-label="TESTSTOCK entry decision"', html)
+        self.assertIn("ENTER NOW", html)
+        self.assertIn("Clean trigger with acceptable candle/volume context.", html)
 
     def test_skipped_daily_weekly_candidate_renders_setup_watchlist(self):
         context = self._context(Path("missing.png"))
