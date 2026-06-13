@@ -1814,8 +1814,8 @@
       <div class="stat"><span class="label">Stocks Scanned</span><span class="value">{{ stocks_scanned }}</span></div>
       <div class="stat"><span class="label">Duration</span><span class="value">{{ duration }}</span></div>
       <div class="stat"><span class="label">Pattern Hits</span><span class="value">{{ summary.hit_count }}</span></div>
-      <div class="stat"><span class="label">Entry Decisions</span><span class="value">{{ summary.entry_decision_count }}</span></div>
-      <div class="stat"><span class="label">Trigger Pending</span><span class="value">{{ summary.early_watch_count }}</span></div>
+      <div class="stat"><span class="label">Top Entry Actions</span><span class="value">{{ summary.entry_decision_count }}</span></div>
+      <div class="stat"><span class="label">Waiting Triggers</span><span class="value">{{ summary.early_watch_count }}</span></div>
       <div class="stat"><span class="label">No-Entry Setups</span><span class="value">{{ summary.setup_watch_count }}</span></div>
       <div class="stat"><span class="label">Research Only</span><span class="value">{{ summary.radar_count }}</span></div>
       <div class="stat"><span class="label">Tracked Signals</span><span class="value">{{ summary.tracker_count }}</span></div>
@@ -1862,14 +1862,14 @@
     {% endif %}
 
     {% if entry_decisions %}
-    <details class="leaderboard-panel entry-decision-panel" open aria-label="Entry decision table">
+    <details class="leaderboard-panel entry-decision-panel" open aria-label="Top entry actions">
       <summary>
         <div class="leaderboard-title">
-          <h3>Entry Decision Table</h3>
-          <p class="subline">Read this first: enter now, enter above a price, or do not enter.</p>
+          <h3>Top Entry Actions</h3>
+          <p class="subline">Read this first: top action rows from chart-pattern results. This table is capped at 60 rows.</p>
         </div>
         <div class="leaderboard-summary-chips">
-          <span class="lb-chip neutral">{{ summary.entry_decision_count }} decisions</span>
+          <span class="lb-chip neutral">{{ summary.entry_decision_count }} shown</span>
         </div>
       </summary>
       <div class="leaderboard-table-wrap">
@@ -1957,11 +1957,11 @@
     {% endif %}
 
     {% if early_watchlist %}
-    <details class="leaderboard-panel early-watch-panel" aria-label="Trigger pending details">
+    <details class="leaderboard-panel early-watch-panel" aria-label="Waiting for entry trigger">
       <summary>
         <div class="leaderboard-title">
-          <h3>Trigger Pending Details</h3>
-          <p class="subline">These setups are only entry candidates after price clears the trigger.</p>
+          <h3>Waiting For Entry Trigger</h3>
+          <p class="subline">Pattern found, but entry is not active until price crosses or closes above the trigger.</p>
         </div>
         <div class="leaderboard-summary-chips">
           <span class="lb-chip neutral">{{ summary.early_watch_count }} waiting</span>
@@ -1974,7 +1974,7 @@
               <th scope="col">#</th>
               <th scope="col">Symbol</th>
               <th scope="col">Pattern</th>
-              <th scope="col">Score</th>
+              <th scope="col">Conviction</th>
               <th scope="col">Latest</th>
               <th scope="col">Trigger</th>
               <th scope="col">Gap</th>
