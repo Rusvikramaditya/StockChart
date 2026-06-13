@@ -72,11 +72,12 @@ def test_fetch_no_telegram_mode_keeps_fetch_enabled():
     assert "--limit" not in command
 
 
-def test_allows_full_all_nse_live_fetch():
+def test_full_all_nse_all_timeframes_forces_local_data():
     command, _output_path = build_scan_command(
         {
             "universe": ["all_nse_equity"],
             "mode": ["fetch_no_telegram"],
+            "scan_timeframe": ["all"],
             "limit": [""],
             "workers": ["4"],
         },
@@ -84,8 +85,31 @@ def test_allows_full_all_nse_live_fetch():
     )
 
     assert command[command.index("--universe") + 1] == "all_nse_equity"
+    assert command[command.index("--scan-timeframe") + 1] == "all"
     assert "--limit" not in command
+    assert "--skip-fetch" in command
+    assert "--no-fetch-missing" in command
+    assert "--dry-run" not in command
+    assert "--no-telegram" in command
+
+
+def test_limited_all_nse_all_timeframes_keeps_requested_live_fetch():
+    command, _output_path = build_scan_command(
+        {
+            "universe": ["all_nse_equity"],
+            "mode": ["fetch_no_telegram"],
+            "scan_timeframe": ["all"],
+            "limit": ["25"],
+            "workers": ["4"],
+        },
+        now=NOW,
+    )
+
+    assert command[command.index("--universe") + 1] == "all_nse_equity"
+    assert command[command.index("--scan-timeframe") + 1] == "all"
+    assert command[command.index("--limit") + 1] == "25"
     assert "--skip-fetch" not in command
+    assert "--no-fetch-missing" not in command
     assert "--dry-run" not in command
     assert "--no-telegram" in command
 
@@ -152,7 +176,7 @@ def test_control_page_explains_fields_and_chart_locations():
     assert "Past Suggestions" in html
     assert "Which stock list to scan" in html
     assert "Scan timeframe" in html
-    assert "Weekly is for larger swing setups" in html
+    assert "Full All NSE + Daily + weekly uses local data only" in html
     assert "Chart approval gallery" in html
 
 

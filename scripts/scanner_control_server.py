@@ -83,6 +83,11 @@ def build_scan_command(form: dict[str, list[str]], *, now: datetime | None = Non
     elif mode == "fetch_no_telegram":
         command.append("--no-telegram")
 
+    if universe == "all_nse_equity" and scan_timeframe == "all" and limit_value is None:
+        for flag in ("--skip-fetch", "--no-fetch-missing", "--no-telegram"):
+            if flag not in command:
+                command.append(flag)
+
     return command, output_path
 
 
@@ -876,7 +881,7 @@ def _render_index() -> str:
                 <option value="weekly">Weekly</option>
                 <option value="all">Daily + weekly</option>
               </select>
-              <span class="field-note">Daily is unchanged. Weekly is for larger swing setups.</span>
+              <span class="field-note">Daily is unchanged. Full All NSE + Daily + weekly uses local data only unless you add a limit.</span>
             </label>
             <label>
               <span class="field-label">Limit <span class="help" tabindex="0" data-tip="Optional cap on selected symbols. Use 1-25 to test quickly. Leave blank to scan the full selected universe.">?</span></span>
