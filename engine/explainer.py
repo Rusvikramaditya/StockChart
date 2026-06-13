@@ -52,6 +52,11 @@ PATTERN_101 = {
         "A Weekly Breakout forms when the weekly chart clears a major resistance "
         "or descending trendline. It is a larger swing setup; daily action is used for timing."
     ),
+    "Rounded Reversal Base": (
+        "A Rounded Reversal Base forms after a meaningful decline when price stops making "
+        "new lows, rounds upward, and reclaims a descending supply line. It is an early "
+        "turnaround setup, so the trigger price matters."
+    ),
 }
 
 

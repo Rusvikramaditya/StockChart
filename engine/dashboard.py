@@ -64,6 +64,7 @@ PATTERN_CHART_GUIDE = {
     "Supertrend Bullish Flip": "The chart should show price reclaiming the supertrend support line. The support line is the invalidation reference if the flip fails.",
     "Multi-Year Breakout": "The chart should show a long resistance line or zone that has been tested before. A real breakout needs price and volume to clear that ceiling.",
     "Weekly Breakout": "The chart should show price clearing a weekly resistance line or descending trendline. Daily candles are confirmation, not the source of the setup.",
+    "Rounded Reversal Base": "The chart should show a rounded recovery after a decline, with price reclaiming or sitting just below a descending supply line. Entry is only valid at the trigger.",
 }
 
 
@@ -156,6 +157,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         for item in _list(context, "signal_tracker")
     ]
     signal_tracker.sort(key=lambda item: (item["signal_date"], item["symbol"], item["pattern"]), reverse=True)
+    pattern_feedback = _build_pattern_feedback(signal_tracker)
     tracker_today_count = len([item for item in signal_tracker if item["same_day"]])
     tracker_prior_count = len(signal_tracker) - tracker_today_count
     sectors = _normalize_sectors(context.get("sector_rs") or context.get("sector_cache") or context.get("sectors") or {})
@@ -205,6 +207,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
         "setup_watchlist": setup_watchlist,
         "momentum_radar": radar,
         "signal_tracker": signal_tracker,
+        "pattern_feedback": pattern_feedback,
         "skipped_count": skipped_count,
         "skip_breakdown": skip_breakdown,
         "sectors": sectors,
@@ -219,6 +222,7 @@ def build_dashboard_context(context: dict[str, Any]) -> dict[str, Any]:
             "setup_watch_count": len(setup_watchlist),
             "radar_count": len(radar),
             "tracker_count": len(signal_tracker),
+            "pattern_feedback_count": len(pattern_feedback),
             "tracker_prior_count": tracker_prior_count,
             "tracker_today_count": tracker_today_count,
             "alert_count": alerts_sent,
@@ -347,13 +351,13 @@ def _entry_decision_from_result(item: dict[str, Any]) -> dict[str, Any] | None:
         decision = "ENTER NOW"
         enter_at = _fmt_money(_coalesce(latest, item.get("entry_price")))
         rank = 0
-        reason = "Entry trigger is already cleared."
+        reason = _entry_reason_from_trigger(item)
         css = "enter-now"
     elif tradable:
         decision = "ENTER ABOVE"
         enter_at = _fmt_money(trigger)
         rank = 1
-        reason = "Do not enter before price clears this trigger."
+        reason = _entry_reason_from_trigger(item)
         css = "enter-above"
     else:
         decision = "DO NOT ENTER"
@@ -373,12 +377,43 @@ def _entry_decision_from_result(item: dict[str, Any]) -> dict[str, Any] | None:
         "reward_risk_display": item["reward_risk_display"],
         "reward_risk_class": item["reward_risk_class"],
         "pattern": item["pattern"],
-        "timeframe_tag": str(item.get("timeframe") or "daily").title(),
+        "timeframe_tag": _entry_timeframe_label(item),
         "conviction": _tracker_conviction_label(item.get("tier"), item.get("score")),
         "reason": reason,
         "rank": rank,
         "score_sort": int(item.get("score") or 0),
     }
+
+
+def _entry_reason_from_trigger(item: dict[str, Any]) -> str:
+    context = item.get("trigger_context") or {}
+    status = str(context.get("status") or "").upper()
+    label = str(context.get("label") or "").strip()
+    details = context.get("details") or {}
+    if status == "WAIT_FOR_TRIGGER":
+        return "Do not enter before price clears this trigger."
+    if status == "RETEST_HELD":
+        return "Trigger cleared and retest held."
+    if status == "CLEAN_TRIGGER":
+        return "Clean trigger with acceptable candle/volume context."
+    if status == "EXTENDED":
+        return f"{label}; use smaller size or wait for retest."
+    if status in {"GAP_UP_RISK", "WEAK_CLOSE"}:
+        return f"{label}; avoid chasing until price confirms again."
+    if status == "TARGET_AREA":
+        return "Already near target; fresh entry is late."
+    extension = details.get("extension_pct")
+    if extension is not None:
+        return f"Entry trigger is cleared by {_fmt_percent(extension, signed=False)}."
+    return "Entry trigger is already cleared."
+
+
+def _entry_timeframe_label(item: dict[str, Any]) -> str:
+    thesis = str(item.get("thesis_timeframe") or "").lower()
+    entry = str(item.get("entry_timeframe") or "").lower()
+    if thesis in {"daily+weekly", "weekly"} and entry == "daily":
+        return "Weekly thesis / Daily trigger" if thesis == "weekly" else "Daily + Weekly"
+    return str(item.get("timeframe") or "daily").title()
 
 
 def _entry_decision_from_setup_watch(item: dict[str, Any]) -> dict[str, Any] | None:
@@ -518,7 +553,7 @@ def _setup_watch_pattern_label(normalized: dict[str, Any]) -> str:
 
 def _setup_watch_action(reason_bucket: str, normalized: dict[str, Any]) -> tuple[str, str]:
     entry_state = str(normalized.get("entry_state") or "").upper()
-    if reason_bucket in {"MOVE_ALREADY_HAPPENED_TARGET_HIT", "TARGET_ALREADY_REACHED"}:
+    if reason_bucket in {"MOVE_ALREADY_HAPPENED_TARGET_HIT", "TARGET_ALREADY_REACHED", "OLD_TARGET_DONE_NEW_BASE_FORMING"}:
         return "DO NOT CHASE", "Watch for a fresh base"
     if reason_bucket == "STOP_ALREADY_BROKEN":
         return "AVOID", "Setup invalidated"
@@ -546,6 +581,7 @@ def _normalize_signal_tracker_item(
     current_conviction = str(item.get("current_conviction") or status)
     trigger_state = str(item.get("trigger_state") or "Waiting for trigger")
     entry_decision = str(item.get("entry_decision") or "Review manually")
+    change_pct_value = _number(item.get("change_pct"))
     return {
         "symbol": symbol,
         "company_name": str(item.get("company_name") or ""),
@@ -561,7 +597,8 @@ def _normalize_signal_tracker_item(
         "latest_date": str(item.get("latest_date") or ""),
         "signal_price": _fmt_money(_coalesce(item.get("cmp"), item.get("signal_price"))),
         "latest_close": _fmt_money(item.get("latest_close")),
-        "change_pct": _fmt_percent(item.get("change_pct")),
+        "change_pct": _fmt_percent(change_pct_value),
+        "change_pct_value": change_pct_value,
         "entry_text": _fmt_money(_coalesce(item.get("entry_price"), item.get("entry"))),
         "target_text": _fmt_money(item.get("target")),
         "stop_text": _fmt_money(_coalesce(item.get("stop_loss"), item.get("stop"))),
@@ -601,6 +638,98 @@ def _signal_status_class(status: str) -> str:
     if "missing" in text:
         return "missing"
     return "valid"
+
+
+def _build_pattern_feedback(signal_tracker: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    buckets: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in signal_tracker:
+        if bool(item.get("same_day")):
+            continue
+        key = (str(item.get("pattern") or "Pattern"), str(item.get("timeframe") or "Daily"))
+        row = buckets.setdefault(
+            key,
+            {
+                "pattern": key[0],
+                "timeframe": key[1],
+                "count": 0,
+                "positive": 0,
+                "target": 0,
+                "invalid": 0,
+                "changes": [],
+            },
+        )
+        row["count"] += 1
+        change = _number(_coalesce(item.get("change_pct_value"), item.get("change_pct")))
+        if change is not None:
+            row["changes"].append(change)
+            if change > 0:
+                row["positive"] += 1
+        status_class = str(item.get("status_class") or "").lower()
+        if status_class == "target":
+            row["target"] += 1
+        elif status_class == "invalid":
+            row["invalid"] += 1
+
+    rows = []
+    for row in buckets.values():
+        count = int(row["count"])
+        changes = row["changes"]
+        avg_change = sum(changes) / len(changes) if changes else None
+        positive_rate = row["positive"] / len(changes) * 100.0 if changes else None
+        status = _feedback_status(count, positive_rate, avg_change, int(row["target"]), int(row["invalid"]))
+        rows.append(
+            {
+                "pattern": row["pattern"],
+                "timeframe": row["timeframe"],
+                "count": count,
+                "avg_change": _fmt_percent(avg_change),
+                "positive_rate": "N/A" if positive_rate is None else f"{positive_rate:.0f}%",
+                "target_count": int(row["target"]),
+                "invalid_count": int(row["invalid"]),
+                "status": status["label"],
+                "status_class": status["class_name"],
+                "note": status["note"],
+                "sort_score": status["sort_score"],
+            }
+        )
+    rows.sort(key=lambda item: (item["sort_score"], -item["count"], item["pattern"]))
+    return rows[:12]
+
+
+def _feedback_status(
+    count: int,
+    positive_rate: float | None,
+    avg_change: float | None,
+    target_count: int,
+    invalid_count: int,
+) -> dict[str, Any]:
+    if count < 5:
+        return {
+            "label": "LOW SAMPLE",
+            "class_name": "watch",
+            "note": "Not enough past signals yet to trust this bucket.",
+            "sort_score": 2,
+        }
+    if target_count > invalid_count and (positive_rate or 0.0) >= 55.0 and (avg_change or 0.0) > 0.0:
+        return {
+            "label": "WORKING",
+            "class_name": "valid",
+            "note": "Recent signals are confirming this pattern bucket.",
+            "sort_score": 0,
+        }
+    if invalid_count > target_count and ((positive_rate is not None and positive_rate < 45.0) or (avg_change or 0.0) < 0.0):
+        return {
+            "label": "WEAK",
+            "class_name": "invalid",
+            "note": "Recent signals are not proving this bucket; treat conviction carefully.",
+            "sort_score": 1,
+        }
+    return {
+        "label": "MIXED",
+        "class_name": "review",
+        "note": "Recent signals are mixed; do not over-trust the score.",
+        "sort_score": 1,
+    }
 
 
 def _tracker_conviction_label(tier: Any, score: Any) -> str:
@@ -700,6 +829,9 @@ def _normalize_result(item: dict[str, Any]) -> dict[str, Any]:
         "entry_basis": str(item.get("entry_basis") or "pivot"),
         "entry_triggered": bool(item.get("entry_triggered")) if "entry_triggered" in item else None,
         "entry_state": str(item.get("entry_state") or ""),
+        "entry_timeframe": str(item.get("entry_timeframe") or "daily"),
+        "thesis_timeframe": str(item.get("thesis_timeframe") or _coalesce(item.get("timeframe"), _field(pattern_result, "timeframe"), "daily")),
+        "trigger_context": item.get("trigger_context") or {},
         "trigger_price": _number(_coalesce(item.get("trigger_price"), entry, pivot)),
         "scan_close": _number(item.get("scan_close")),
         "target": target,
@@ -1209,6 +1341,7 @@ _SKIP_REASON_LABELS = {
     "REWARD_RISK_BELOW_FLOOR": "Reward / risk below 1.0:1",
     "ACTIONABLE_REWARD_RISK_BELOW_FLOOR": "Future reward / risk below 1.5:1",
     "MOVE_ALREADY_HAPPENED_TARGET_HIT": "Target already hit after breakout",
+    "OLD_TARGET_DONE_NEW_BASE_FORMING": "Old target already hit; wait for a fresh base",
     "TARGET_ALREADY_REACHED": "Already at or above target",
     "STOP_ALREADY_BROKEN": "Already below stop",
     "STAGE2_FAIL": "Not in Stage 2 uptrend",
@@ -1217,6 +1350,7 @@ _SKIP_REASON_LABELS = {
     "REGIME_BEAR": "Market regime bear",
     "RSI_OVERBOUGHT": "RSI overbought",
     "MULTI_TF_DIVERGENT": "Daily / weekly divergent",
+    "LOW_CONVICTION_AFTER_DEDUP": "Detected, but conviction is still too low",
     "UNKNOWN": "Unspecified",
 }
 

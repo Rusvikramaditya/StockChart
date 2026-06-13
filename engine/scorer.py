@@ -120,6 +120,9 @@ def score_pattern(
         "entry_basis": trade_plan["entry_basis"],
         "entry_triggered": trade_plan["entry_triggered"],
         "entry_state": trade_plan["entry_state"],
+        "entry_timeframe": trade_plan["entry_timeframe"],
+        "thesis_timeframe": trade_plan["thesis_timeframe"],
+        "trigger_context": trade_plan["trigger_context"],
         "trigger_price": trade_plan["trigger_price"],
         "scan_close": trade_plan["scan_close"],
         "breakout_age_bars": trade_plan["breakout_age_bars"],
@@ -143,6 +146,9 @@ def score_pattern(
             "entry_basis": trade_plan["entry_basis"],
             "entry_triggered": trade_plan["entry_triggered"],
             "entry_state": trade_plan["entry_state"],
+            "entry_timeframe": trade_plan["entry_timeframe"],
+            "thesis_timeframe": trade_plan["thesis_timeframe"],
+            "trigger_context": trade_plan["trigger_context"],
             "trigger_price": trade_plan["trigger_price"],
             "technical_pivot": pattern.pivot,
             "scan_close": trade_plan["scan_close"],
@@ -225,6 +231,114 @@ def _reward_risk_ratio(pattern: PatternResult) -> float | None:
     return _reward_risk_from_levels(pattern.pivot, pattern.target, pattern.stop_loss)
 
 
+def _target_hit_skip_reason(pattern: PatternResult) -> str:
+    extra = pattern.extra if isinstance(pattern.extra, dict) else {}
+    if (
+        str(pattern.timeframe or "").lower() == "weekly"
+        or extra.get("reversal_model") == "rounded_base_trendline_reclaim"
+        or extra.get("weekly_thesis_aligned") is True
+    ):
+        return "OLD_TARGET_DONE_NEW_BASE_FORMING"
+    return "MOVE_ALREADY_HAPPENED_TARGET_HIT"
+
+
+def _thesis_timeframe(pattern: PatternResult) -> str:
+    extra = pattern.extra if isinstance(pattern.extra, dict) else {}
+    if str(pattern.timeframe or "").lower() == "weekly":
+        return "weekly"
+    if extra.get("weekly_thesis_aligned") is True:
+        return "daily+weekly"
+    return str(pattern.timeframe or "daily").lower()
+
+
+def _trigger_context(
+    *,
+    daily: dict,
+    trigger: float | None,
+    target: float | None,
+    stop: float | None,
+    entry_triggered: bool,
+) -> dict[str, Any]:
+    close = series(daily, "close")
+    open_ = series(daily, "open")
+    high = series(daily, "high")
+    low = series(daily, "low")
+    volume_values = series(daily, "volume")
+    latest_close = last_finite(close)
+    if latest_close is None or trigger is None or trigger <= 0:
+        return {"status": "NO_TRIGGER_DATA", "label": "No trigger data", "details": {}}
+
+    latest_open = last_finite(open_)
+    latest_high = last_finite(high)
+    latest_low = last_finite(low)
+    prev_close = float(close[-2]) if len(close) >= 2 and math.isfinite(float(close[-2])) else None
+    extension_pct = (latest_close - trigger) / trigger * 100.0
+    gap_pct = None
+    if latest_open is not None and prev_close and prev_close > 0:
+        gap_pct = (latest_open - prev_close) / prev_close * 100.0
+    close_position = None
+    if latest_high is not None and latest_low is not None and latest_high > latest_low:
+        close_position = (latest_close - latest_low) / (latest_high - latest_low)
+    volume_ratio = _latest_volume_ratio(volume_values)
+    retest_held = (
+        entry_triggered
+        and latest_low is not None
+        and latest_low <= trigger <= latest_close
+    )
+
+    if not entry_triggered:
+        status = "WAIT_FOR_TRIGGER"
+        label = "Enter only above trigger"
+    elif target is not None and latest_close >= target:
+        status = "TARGET_AREA"
+        label = "Already near target"
+    elif retest_held:
+        status = "RETEST_HELD"
+        label = "Retest held"
+    elif gap_pct is not None and gap_pct >= 4.0 and close_position is not None and close_position < 0.55:
+        status = "GAP_UP_RISK"
+        label = "Gap-up risk"
+    elif close_position is not None and close_position < 0.35:
+        status = "WEAK_CLOSE"
+        label = "Weak close after trigger"
+    elif extension_pct > 5.0:
+        status = "EXTENDED"
+        label = "Extended above trigger"
+    elif close_position is not None and close_position >= 0.60 and (volume_ratio is None or volume_ratio >= 1.0):
+        status = "CLEAN_TRIGGER"
+        label = "Clean trigger"
+    else:
+        status = "TRIGGERED"
+        label = "Trigger cleared"
+
+    stop_distance_pct = None
+    if stop is not None and latest_close > 0:
+        stop_distance_pct = (latest_close - stop) / latest_close * 100.0
+    return {
+        "status": status,
+        "label": label,
+        "details": {
+            "extension_pct": round(extension_pct, 2),
+            "gap_pct": None if gap_pct is None else round(gap_pct, 2),
+            "close_position": None if close_position is None else round(close_position, 2),
+            "volume_ratio": None if volume_ratio is None else round(volume_ratio, 2),
+            "retest_held": retest_held,
+            "stop_distance_pct": None if stop_distance_pct is None else round(stop_distance_pct, 2),
+        },
+    }
+
+
+def _latest_volume_ratio(volume_values: np.ndarray) -> float | None:
+    if len(volume_values) < 2:
+        return None
+    latest = float(volume_values[-1])
+    lookback = volume_values[-51:-1] if len(volume_values) >= 51 else volume_values[:-1]
+    avg = float(np.mean(lookback)) if len(lookback) else 0.0
+    if avg <= 0:
+        return None
+    return latest / avg
+
+
 def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = None) -> dict[str, Any]:
     """Return scan-date actionable levels for user-facing trade decisions.
 
@@ -269,7 +383,7 @@ def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = 
             stop_distance_pct = None
     skip_reason = None
     if target_hit:
-        skip_reason = "MOVE_ALREADY_HAPPENED_TARGET_HIT"
+        skip_reason = _target_hit_skip_reason(pattern)
     elif latest_close is not None and target is not None and latest_close >= target:
         skip_reason = "TARGET_ALREADY_REACHED"
     elif latest_close is not None and stop is not None and latest_close <= stop:
@@ -280,6 +394,15 @@ def _scan_trade_plan(pattern: PatternResult, daily: dict, weekly: dict | None = 
         "entry_basis": entry_basis,
         "entry_triggered": bool(entry_triggered),
         "entry_state": "TRIGGERED" if entry_triggered else "WAIT_FOR_TRIGGER",
+        "entry_timeframe": "daily",
+        "thesis_timeframe": _thesis_timeframe(pattern),
+        "trigger_context": _trigger_context(
+            daily=daily,
+            trigger=current_pivot,
+            target=target,
+            stop=stop,
+            entry_triggered=bool(entry_triggered),
+        ),
         "trigger_price": None if current_pivot is None else round(current_pivot, 2),
         "scan_close": None if latest_close is None else round(latest_close, 2),
         "reward_risk": None if reward_risk is None else round(reward_risk, 4),
@@ -430,6 +553,11 @@ def _apply_textbook_filter_caps(
     filters = filters or {}
     if trade_plan is not None and not bool(trade_plan.get("entry_triggered")):
         tier = _cap_tier(tier, "MEDIUM")
+    trigger_status = str(((trade_plan or {}).get("trigger_context") or {}).get("status") or "").upper()
+    if trigger_status in {"GAP_UP_RISK", "WEAK_CLOSE"}:
+        tier = _cap_tier(tier, "MEDIUM")
+    elif trigger_status == "EXTENDED":
+        tier = _cap_tier(tier, "HIGH")
 
     volume_result = filters.get("volume") or {}
     daily_volume_result = filters.get("daily_volume") or {}

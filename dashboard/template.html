@@ -517,6 +517,39 @@
       color: var(--muted);
       line-height: 1.4;
     }
+    .feedback-panel {
+      margin-bottom: 24px;
+    }
+    .feedback-table thead th:nth-child(2),
+    .feedback-table thead th:nth-child(8) {
+      text-align: left;
+    }
+    .feedback-table tbody td:nth-child(2),
+    .feedback-table tbody td:nth-child(8) {
+      text-align: left;
+      font-family: inherit;
+    }
+    .feedback-note {
+      min-width: 260px;
+      max-width: 420px;
+      white-space: normal;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .feedback-status {
+      display: inline-block;
+      min-width: 86px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+    .feedback-status.valid { color: var(--green); background: rgba(38, 166, 154, 0.16); }
+    .feedback-status.invalid { color: var(--red); background: rgba(239, 83, 80, 0.14); }
+    .feedback-status.review { color: var(--yellow); background: rgba(224, 180, 0, 0.16); }
+    .feedback-status.watch { color: var(--blue); background: rgba(56, 189, 248, 0.12); }
     .setup-watch-panel {
       margin-bottom: 24px;
     }
@@ -1750,6 +1783,7 @@
       <div class="stat"><span class="label">No-Entry Setups</span><span class="value">{{ summary.setup_watch_count }}</span></div>
       <div class="stat"><span class="label">Research Only</span><span class="value">{{ summary.radar_count }}</span></div>
       <div class="stat"><span class="label">Tracked Signals</span><span class="value">{{ summary.tracker_count }}</span></div>
+      <div class="stat"><span class="label">Feedback Buckets</span><span class="value">{{ summary.pattern_feedback_count }}</span></div>
       <div class="stat" title="Setups filtered out by quality / reward-risk gates"><span class="label">Skipped (low quality)</span><span class="value">{{ skipped_count }}</span></div>
       <div class="stat"><span class="label">Telegram Alerts</span><span class="value">{{ summary.alert_count }}</span></div>
       <div class="stat"><span class="label">Errors</span><span class="value">{{ summary.error_count }}</span></div>
@@ -1834,6 +1868,50 @@
                 <span class="muted">{{ item.timeframe_tag }} | {{ item.conviction }}</span>
               </td>
               <td class="entry-reason">{{ item.reason }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+
+    {% if pattern_feedback %}
+    <details class="leaderboard-panel feedback-panel" open aria-label="Pattern feedback">
+      <summary>
+        <div class="leaderboard-title">
+          <h3>Pattern Feedback</h3>
+          <p class="subline">Recent tracked signals grouped by pattern and timeframe. Low sample means conviction is still unproven.</p>
+        </div>
+        <div class="leaderboard-summary-chips">
+          <span class="lb-chip neutral">{{ summary.pattern_feedback_count }} buckets</span>
+        </div>
+      </summary>
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table feedback-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Pattern</th>
+              <th scope="col">Timeframe</th>
+              <th scope="col">Signals</th>
+              <th scope="col">Positive</th>
+              <th scope="col">Avg Move</th>
+              <th scope="col">Result</th>
+              <th scope="col">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in pattern_feedback %}
+            <tr>
+              <td><span class="lb-rank">{{ loop.index }}</span></td>
+              <td><strong>{{ item.pattern }}</strong></td>
+              <td>{{ item.timeframe }}</td>
+              <td>{{ item.count }}</td>
+              <td>{{ item.positive_rate }}</td>
+              <td>{{ item.avg_change }}</td>
+              <td><span class="feedback-status {{ item.status_class }}">{{ item.status }}</span></td>
+              <td class="feedback-note">{{ item.note }}</td>
             </tr>
             {% endfor %}
           </tbody>

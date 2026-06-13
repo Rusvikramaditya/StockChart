@@ -340,6 +340,29 @@ DOUBLE_BOTTOM = {
     "swing_order": 4,
 }
 
+ROUNDED_REVERSAL_BASE = {
+    # Human-chartist reversal setup: a rounded base forms after a real decline,
+    # price recovers on the right side, and the latest candle is near or above
+    # a descending supply line. This is intentionally separate from strict
+    # double-bottom/IHS geometry.
+    "lookback_bars": 150,
+    "min_bars": 110,
+    "swing_order": 4,
+    "min_prior_decline_pct": 18.0,
+    "min_right_side_recovery_pct": 10.0,
+    "max_base_depth_pct": 55.0,
+    "min_base_duration_bars": 45,
+    "min_trendline_touches": 2,
+    "min_trendline_separation_bars": 18,
+    "trendline_tolerance_pct": 3.5,
+    "trendline_anchor_exclusion_bars": 8,
+    "within_breakout_pct": 4.0,
+    "max_breakout_extension_pct": 7.0,
+    "right_low_lookback_bars": 28,
+    "stop_buffer_pct": 2.0,
+    "max_stop_distance_pct": 16.0,
+}
+
 SUPERTREND = {
     "atr_period": 10,
     "multiplier": 3.0,

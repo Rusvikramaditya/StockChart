@@ -208,12 +208,13 @@ class ScorePatternEndToEndTest(unittest.TestCase):
 
     def test_textbook_pattern_stays_highest(self):
         """Grade 8 + RR 2.0 + clean filters -> HIGHEST."""
-        p = _pattern(grade=8.5, pivot=100.0, target=150.0, stop_loss=100.0)
+        p = _pattern(grade=8.5, pivot=108.0, target=150.0, stop_loss=100.0)
         result = self._run(p)
         self.assertEqual(result["tier"], "HIGHEST")
         self.assertTrue(result["tradable"])
         self.assertTrue(result["entry_triggered"])
         self.assertEqual(result["entry_state"], "TRIGGERED")
+        self.assertIn(result["trigger_context"]["status"], {"CLEAN_TRIGGER", "TRIGGERED"})
 
     def test_untriggered_setup_caps_at_medium_until_entry_clears(self):
         """A clean setup near the pivot is watch-only until price triggers."""
@@ -253,6 +254,26 @@ class ScorePatternEndToEndTest(unittest.TestCase):
         self.assertEqual(result["tier"], "SKIP")
         self.assertEqual(result["skip_reason"], "MOVE_ALREADY_HAPPENED_TARGET_HIT")
         self.assertTrue(result["target_hit_since_breakout"])
+
+    def test_weekly_target_hit_is_classified_as_new_base_watch(self):
+        """Weekly/reversal thesis target hits stay non-actionable but get a better reason."""
+        p = _pattern(name="Weekly Breakout", grade=8.5, pivot=100.0, target=130.0, stop_loss=90.0, timeframe="weekly")
+        daily = _trending_daily(n=260, start=90.0, end=110.0)
+        weekly = _trending_daily(n=80, start=90.0, end=110.0)
+        weekly["close"][-5:] = np.array([98.0, 101.0, 118.0, 110.0, 109.0])
+        weekly["high"][-5:] = np.array([99.0, 102.0, 131.0, 112.0, 110.0])
+        weekly["open"] = weekly["close"].copy()
+        weekly["low"] = weekly["close"] - 1.0
+        with patch("engine.scorer.stage2.evaluate", return_value={"passed": True, "status": "PASS", "details": {"close": 110.0}}), \
+             patch("engine.scorer.volume.evaluate", return_value={"passed": True, "status": "PASS", "details": {}}), \
+             patch("engine.scorer.sector_rs.evaluate", return_value={"passed": True, "status": "LEADING", "details": {}}), \
+             patch("engine.scorer.rsi.evaluate", return_value={"name": "rsi", "value": 65.0, "penalty": 0, "status": "HEALTHY", "bearish_divergence": False, "details": {}}):
+            result = scorer.score_pattern("TEST", p, daily, weekly, {"score": 4}, {"sectors": {}})
+
+        self.assertEqual(result["tier"], "SKIP")
+        self.assertEqual(result["skip_reason"], "OLD_TARGET_DONE_NEW_BASE_FORMING")
+        self.assertEqual(result["thesis_timeframe"], "weekly")
+        self.assertEqual(result["entry_timeframe"], "daily")
 
     def test_rsi_overbought_penalty_active(self):
         """An RSI 87 reading with config penalty -15 must subtract from score."""

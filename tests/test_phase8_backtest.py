@@ -344,6 +344,7 @@ class BacktestAnalysisPhase8Test(unittest.TestCase):
             "patterns.high_tight_flag",
             "patterns.inv_head_shoulders",
             "patterns.multiyear_breakout",
+            "patterns.rounded_reversal_base",
             "patterns.ascending_triangle",
             "patterns.bull_flag",
             "patterns.supertrend",
