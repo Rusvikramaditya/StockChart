@@ -409,6 +409,33 @@
     }
     .leaderboard-table thead th:first-child,
     .leaderboard-table thead th:nth-child(2) { text-align: left; }
+    .leaderboard-table th.sortable {
+      cursor: pointer;
+    }
+    .table-sort-button {
+      width: 100%;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: inherit;
+      text-transform: inherit;
+      letter-spacing: inherit;
+      cursor: pointer;
+    }
+    .table-sort-button:hover,
+    .table-sort-button.active {
+      color: var(--text);
+    }
+    .table-sort-mark {
+      display: inline-block;
+      min-width: 34px;
+      margin-left: 6px;
+      color: var(--accent);
+      font-size: 9px;
+      text-align: left;
+    }
     .leaderboard-table tbody td {
       padding: 9px 12px;
       border-bottom: 1px solid var(--line-soft);
@@ -1866,7 +1893,7 @@
       <summary>
         <div class="leaderboard-title">
           <h3>Top Entry Actions</h3>
-          <p class="subline">Read this first: top action rows from chart-pattern results. This table is capped at 60 rows.</p>
+          <p class="subline">Read this first: top action rows from chart-pattern results. This table is capped at 60 rows. Click headers to sort.</p>
         </div>
         <div class="leaderboard-summary-chips">
           <span class="lb-chip neutral">{{ summary.entry_decision_count }} shown</span>
@@ -1961,7 +1988,7 @@
       <summary>
         <div class="leaderboard-title">
           <h3>Waiting For Entry Trigger</h3>
-          <p class="subline">Pattern found, but entry is not active until price crosses or closes above the trigger.</p>
+          <p class="subline">Pattern found, but entry is not active until price crosses or closes above the trigger. Click headers to sort.</p>
         </div>
         <div class="leaderboard-summary-chips">
           <span class="lb-chip neutral">{{ summary.early_watch_count }} waiting</span>
@@ -2799,6 +2826,169 @@
       }
     }
 
+    function initSortableTables() {
+      const decisionOrder = {
+        "ENTER NOW": 0,
+        "ENTER ABOVE": 1,
+        "WAIT FOR TRIGGER": 2,
+        "DO NOT ENTER": 3,
+        "DO NOT CHASE": 4,
+      };
+      const tables = Array.from(document.querySelectorAll(".leaderboard-table"));
+
+      function numberFrom(text) {
+        const match = String(text || "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+        return match ? Number(match[0]) : null;
+      }
+
+      function dateFrom(text) {
+        const value = String(text || "");
+        const iso = value.match(/\d{4}-\d{2}-\d{2}/);
+        const time = iso ? Date.parse(iso[0]) : Date.parse(value);
+        return Number.isFinite(time) ? time : null;
+      }
+
+      function sortType(label, index) {
+        const text = label.toLowerCase();
+        if (index === 0 || text === "#") return "rank";
+        if (text.includes("decision") || text.includes("action")) return "decision";
+        if (text.includes("date") || text === "signal") return "date";
+        if (text.includes("why") || text.includes("reason") || text.includes("note")) return "text";
+        if (
+          text.includes("score") ||
+          text.includes("conviction") ||
+          text.includes("latest") ||
+          text.includes("trigger") ||
+          text.includes("gap") ||
+          text.includes("r:r") ||
+          text.includes("target") ||
+          text.includes("stop") ||
+          text.includes("cmp") ||
+          text.includes("price") ||
+          text.includes("entry") ||
+          text.includes("enter") ||
+          text.includes("move") ||
+          text.includes("signals") ||
+          text.includes("positive") ||
+          text.includes("avg") ||
+          text.includes("1d") ||
+          text.includes("20d") ||
+          text.includes("vol") ||
+          text.includes("52w") ||
+          text.includes("1m") ||
+          text.includes("3m") ||
+          text.includes("6m") ||
+          text.includes("dma") ||
+          text.includes("stocks")
+        ) {
+          return "number";
+        }
+        return "text";
+      }
+
+      function defaultDirection(type, label) {
+        const text = label.toLowerCase();
+        if (type === "rank" || type === "text" || type === "decision") return "asc";
+        if (text.includes("gap")) return "asc";
+        return "desc";
+      }
+
+      function cellValue(row, index, type) {
+        if (type === "rank") return Number(row.dataset.originalIndex || "0");
+        const cell = row.cells[index];
+        const text = cell ? cell.textContent.trim() : "";
+        if (type === "decision") {
+          const upper = text.toUpperCase();
+          for (const [key, value] of Object.entries(decisionOrder)) {
+            if (upper.includes(key)) return value;
+          }
+          return 999;
+        }
+        if (type === "date") return dateFrom(text);
+        if (type === "number") return numberFrom(text);
+        return text.toLowerCase();
+      }
+
+      function compareValues(a, b, type) {
+        if (type === "text") return String(a).localeCompare(String(b));
+        const aMissing = a === null || a === undefined || Number.isNaN(a);
+        const bMissing = b === null || b === undefined || Number.isNaN(b);
+        if (aMissing && bMissing) return 0;
+        if (aMissing) return 1;
+        if (bMissing) return -1;
+        return Number(a) - Number(b);
+      }
+
+      tables.forEach((table) => {
+        const tbody = table.querySelector("tbody");
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const headers = Array.from(table.querySelectorAll("thead th"));
+        if (!rows.length || !headers.length) return;
+        rows.forEach((row, index) => { row.dataset.originalIndex = String(index); });
+
+        let activeIndex = null;
+        let activeDirection = "asc";
+
+        function refreshRanks() {
+          Array.from(tbody.querySelectorAll("tr")).forEach((row, index) => {
+            const rank = row.querySelector(".lb-rank");
+            if (rank) rank.textContent = String(index + 1);
+          });
+        }
+
+        function renderSortMarks() {
+          headers.forEach((th, index) => {
+            const button = th.querySelector(".table-sort-button");
+            const mark = th.querySelector(".table-sort-mark");
+            const isActive = index === activeIndex;
+            th.setAttribute("aria-sort", isActive ? (activeDirection === "asc" ? "ascending" : "descending") : "none");
+            if (button) button.classList.toggle("active", isActive);
+            if (mark) mark.textContent = isActive ? activeDirection.toUpperCase() : "";
+          });
+        }
+
+        function sortRows(index, direction, type) {
+          const sorted = Array.from(tbody.querySelectorAll("tr")).sort((left, right) => {
+            const primary = compareValues(cellValue(left, index, type), cellValue(right, index, type), type);
+            if (primary !== 0) return direction === "asc" ? primary : -primary;
+            return Number(left.dataset.originalIndex || "0") - Number(right.dataset.originalIndex || "0");
+          });
+          sorted.forEach((row) => tbody.appendChild(row));
+          refreshRanks();
+          renderSortMarks();
+        }
+
+        headers.forEach((th, index) => {
+          const label = th.textContent.trim() || "#";
+          const type = sortType(label, index);
+          const button = document.createElement("button");
+          const mark = document.createElement("span");
+          button.type = "button";
+          button.className = "table-sort-button";
+          button.title = `Sort by ${label}`;
+          button.textContent = label;
+          mark.className = "table-sort-mark";
+          mark.setAttribute("aria-hidden", "true");
+          button.appendChild(mark);
+          th.textContent = "";
+          th.classList.add("sortable");
+          th.setAttribute("aria-sort", "none");
+          th.appendChild(button);
+          button.addEventListener("click", () => {
+            if (activeIndex === index) {
+              activeDirection = activeDirection === "asc" ? "desc" : "asc";
+            } else {
+              activeIndex = index;
+              activeDirection = defaultDirection(type, label);
+            }
+            sortRows(index, activeDirection, type);
+          });
+        });
+        renderSortMarks();
+      });
+    }
+
     buttons.forEach((button) => {
       button.addEventListener("click", () => {
         activeTier = button.dataset.tierFilter;
@@ -2832,6 +3022,7 @@
     });
 
     updateResultFilters();
+    initSortableTables();
 
     // Analysis-chart toggle button
     document.querySelectorAll("[data-toggle-analysis]").forEach((btn) => {
