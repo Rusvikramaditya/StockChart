@@ -164,6 +164,51 @@ def test_fresh_watch_signal_explains_trigger_before_entry(tmp_path: Path):
     assert "has not crossed the entry trigger" in row["decision_reason"]
 
 
+def test_tracker_includes_full_lookback_beyond_200_rows(tmp_path: Path):
+    conn = storage.connect(tmp_path / "tracker.db")
+    try:
+        storage.ensure_schema(conn)
+        rows = [
+            {
+                "symbol": f"SYM{index:03d}",
+                "pattern": "Flat Base",
+                "signal_date": "2026-06-10",
+                "timeframe": "daily",
+                "tier": "MEDIUM",
+                "score": 70,
+                "cmp": 100,
+                "entry_price": 100,
+                "target": 120,
+                "stop_loss": 94,
+                "seen_at": "2026-06-10T18:45:00",
+            }
+            for index in range(205)
+        ]
+        rows.append(
+            {
+                "symbol": "PRIVISCL",
+                "pattern": "Double Bottom",
+                "signal_date": "2026-06-09",
+                "timeframe": "daily",
+                "tier": "HIGH",
+                "score": 100,
+                "cmp": 3444.3,
+                "entry_price": 3444.3,
+                "target": 4343.29,
+                "stop_loss": 2989.11,
+                "seen_at": "2026-06-09T18:45:00",
+            }
+        )
+        storage.record_signal_history(conn, rows)
+
+        tracked = signal_tracker.build_tracker(conn, [], generated_at=NOW, data_as_of="2026-06-10")
+    finally:
+        conn.close()
+
+    assert len(tracked) == 206
+    assert "PRIVISCL" in {row["symbol"] for row in tracked}
+
+
 def test_record_current_signals_skips_non_visible_tiers(tmp_path: Path):
     conn = storage.connect(tmp_path / "tracker.db")
     try:

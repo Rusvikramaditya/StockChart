@@ -59,7 +59,7 @@ def build_tracker(
     generated_at: datetime,
     data_as_of: str | None = None,
     lookback_days: int = LOOKBACK_DAYS,
-    limit: int = 200,
+    limit: int | None = None,
 ) -> list[dict[str, Any]]:
     """Return recent signal rows with validity status from post-signal candles."""
     as_of = _date_value(data_as_of) or generated_at.date()

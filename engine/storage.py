@@ -294,20 +294,24 @@ def fetch_recent_signal_history(
     conn: sqlite3.Connection,
     *,
     since_date: str,
-    limit: int = 200,
+    limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    frame = query_frame(
-        conn,
-        """
+    sql = """
         SELECT symbol, pattern, signal_date, timeframe, tier, score, status,
                company_name, sector, cmp, entry_price, target, stop_loss,
                first_seen_at, last_seen_at
         FROM signal_history
         WHERE signal_date >= ?
         ORDER BY signal_date DESC, symbol ASC, pattern ASC
-        LIMIT ?
-        """,
-        (str(since_date), int(limit)),
+        """
+    params: list[Any] = [str(since_date)]
+    if limit is not None:
+        sql += "\n        LIMIT ?"
+        params.append(int(limit))
+    frame = query_frame(
+        conn,
+        sql,
+        params,
     )
     return frame.to_dict("records")
 
