@@ -388,6 +388,35 @@
     .lb-chip.neutral { background: rgba(224, 180, 0, 0.18); color: var(--yellow); }
     .lb-chip.lagging { background: rgba(239, 83, 80, 0.18); color: var(--red); }
 
+    .panel-global-search {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      gap: 12px;
+      margin: 0 0 18px;
+      padding: 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 18px 44px var(--shadow);
+    }
+    .panel-search-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 420px);
+      gap: 10px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #0d0d0d;
+    }
+    .panel-search-row .search-box input {
+      min-height: 36px;
+    }
+    .panel-search-empty {
+      padding: 14px 18px;
+      border-top: 1px solid var(--line-soft);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     .leaderboard-table-wrap { overflow-x: auto; }
     .leaderboard-table {
       width: 100%;
@@ -1866,12 +1895,26 @@
     </section>
     {% endif %}
 
+    <section class="panel-global-search" aria-label="Search report panels">
+      <label class="search-box" for="panelGlobalSearch">
+        <span>Global panel search</span>
+        <input id="panelGlobalSearch" type="search" placeholder="Search all top panels: symbol, pattern, sector, reason">
+      </label>
+      <button type="button" class="compact-button" id="clearPanelSearch">Clear panel search</button>
+    </section>
+
     {% if skip_breakdown %}
-    <details class="skip-breakdown" aria-label="Skipped setups breakdown">
+    <details class="skip-breakdown" aria-label="Skipped setups breakdown" data-panel-search-scope>
       <summary>
         <span class="skip-summary-title">Why {{ skipped_count }} setups were skipped</span>
         <span class="skip-summary-hint">Click to inspect by reason</span>
       </summary>
+      <div class="panel-search-row">
+        <label class="search-box" for="skipBreakdownSearch">
+          <span>Search this panel</span>
+          <input id="skipBreakdownSearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Reason or sample symbol">
+        </label>
+      </div>
       <div class="skip-breakdown-grid">
         {% for row in skip_breakdown %}
         <div class="skip-row">
@@ -1885,11 +1928,12 @@
         </div>
         {% endfor %}
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching skipped reason rows.</div>
     </details>
     {% endif %}
 
     {% if entry_decisions %}
-    <details class="leaderboard-panel entry-decision-panel" open aria-label="Top entry actions">
+    <details class="leaderboard-panel entry-decision-panel" open aria-label="Top entry actions" data-panel-search-scope>
       <summary>
         <div class="leaderboard-title">
           <h3>Top Entry Actions</h3>
@@ -1899,6 +1943,12 @@
           <span class="lb-chip neutral">{{ summary.entry_decision_count }} shown</span>
         </div>
       </summary>
+      <div class="panel-search-row">
+        <label class="search-box" for="entryDecisionSearch">
+          <span>Search this panel</span>
+          <input id="entryDecisionSearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Stock, decision, setup, reason">
+        </label>
+      </div>
       <div class="leaderboard-table-wrap">
         <table class="leaderboard-table entry-decision-table">
           <thead>
@@ -1936,11 +1986,12 @@
           </tbody>
         </table>
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching entry action rows.</div>
     </details>
     {% endif %}
 
     {% if pattern_feedback %}
-    <details class="leaderboard-panel feedback-panel" open aria-label="Pattern feedback">
+    <details class="leaderboard-panel feedback-panel" open aria-label="Pattern feedback" data-panel-search-scope>
       <summary>
         <div class="leaderboard-title">
           <h3>Pattern Feedback</h3>
@@ -1950,6 +2001,12 @@
           <span class="lb-chip neutral">{{ summary.pattern_feedback_count }} buckets</span>
         </div>
       </summary>
+      <div class="panel-search-row">
+        <label class="search-box" for="patternFeedbackSearch">
+          <span>Search this panel</span>
+          <input id="patternFeedbackSearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Pattern, timeframe, result, note">
+        </label>
+      </div>
       <div class="leaderboard-table-wrap">
         <table class="leaderboard-table feedback-table">
           <thead>
@@ -1980,11 +2037,12 @@
           </tbody>
         </table>
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching pattern feedback rows.</div>
     </details>
     {% endif %}
 
     {% if early_watchlist %}
-    <details class="leaderboard-panel early-watch-panel" aria-label="Waiting for entry trigger">
+    <details class="leaderboard-panel early-watch-panel" aria-label="Waiting for entry trigger" data-panel-search-scope>
       <summary>
         <div class="leaderboard-title">
           <h3>Waiting For Entry Trigger</h3>
@@ -1994,6 +2052,12 @@
           <span class="lb-chip neutral">{{ summary.early_watch_count }} waiting</span>
         </div>
       </summary>
+      <div class="panel-search-row">
+        <label class="search-box" for="earlyWatchSearch">
+          <span>Search this panel</span>
+          <input id="earlyWatchSearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Symbol, pattern, trigger, sector">
+        </label>
+      </div>
       <div class="leaderboard-table-wrap">
         <table class="leaderboard-table early-watch-table">
           <thead>
@@ -2039,11 +2103,12 @@
           </tbody>
         </table>
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching waiting-trigger rows.</div>
     </details>
     {% endif %}
 
     {% if setup_watchlist %}
-    <details class="leaderboard-panel setup-watch-panel" aria-label="No-entry setup details">
+    <details class="leaderboard-panel setup-watch-panel" aria-label="No-entry setup details" data-panel-search-scope>
       <summary>
         <div class="leaderboard-title">
           <h3>No-Entry Setup Details</h3>
@@ -2053,6 +2118,12 @@
           <span class="lb-chip neutral">{{ summary.setup_watch_count }} no-entry</span>
         </div>
       </summary>
+      <div class="panel-search-row">
+        <label class="search-box" for="setupWatchSearch">
+          <span>Search this panel</span>
+          <input id="setupWatchSearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Symbol, timeframe, pattern, reason">
+        </label>
+      </div>
       <div class="leaderboard-table-wrap">
         <table class="leaderboard-table setup-watch-table">
           <thead>
@@ -2103,11 +2174,12 @@
           </tbody>
         </table>
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching no-entry rows.</div>
     </details>
     {% endif %}
 
     {% if momentum_radar %}
-    <details class="leaderboard-panel radar-panel" aria-label="Research only">
+    <details class="leaderboard-panel radar-panel" aria-label="Research only" data-panel-search-scope>
       <summary>
         <div class="leaderboard-title">
           <h3>Research Only</h3>
@@ -2117,6 +2189,12 @@
           <span class="lb-chip neutral">{{ summary.radar_count }} names</span>
         </div>
       </summary>
+      <div class="panel-search-row">
+        <label class="search-box" for="researchOnlySearch">
+          <span>Search this panel</span>
+          <input id="researchOnlySearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Symbol, status, sector, note">
+        </label>
+      </div>
       <div class="leaderboard-table-wrap">
         <table class="leaderboard-table radar-table">
           <thead>
@@ -2167,11 +2245,12 @@
           </tbody>
         </table>
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching research-only rows.</div>
     </details>
     {% endif %}
 
     {% if signal_tracker %}
-    <details class="leaderboard-panel signal-tracker-panel" open aria-label="30-day signal tracker">
+    <details class="leaderboard-panel signal-tracker-panel" open aria-label="30-day signal tracker" data-panel-search-scope>
       <summary>
         <div class="leaderboard-title">
           <h3>30-Day Trade Decision Tracker</h3>
@@ -2189,6 +2268,12 @@
       {% if summary.tracker_today_count %}
       <div class="tracker-hidden-note">Same-day fresh cards are hidden here by default so this table stays focused on follow-up decisions. Use Include today to compare today's signals too.</div>
       {% endif %}
+      <div class="panel-search-row">
+        <label class="search-box" for="signalTrackerSearch">
+          <span>Search this panel</span>
+          <input id="signalTrackerSearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Symbol, pattern, decision, reason">
+        </label>
+      </div>
       <div class="leaderboard-table-wrap">
         <table class="leaderboard-table signal-tracker-table">
           <thead>
@@ -2238,10 +2323,11 @@
           </tbody>
         </table>
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching tracker rows.</div>
     </details>
     {% endif %}
 
-    <details class="leaderboard-panel" open aria-label="Sector momentum leaderboard">
+    <details class="leaderboard-panel" open aria-label="Sector momentum leaderboard" data-panel-search-scope>
       <summary>
         <div class="leaderboard-title">
           <h3>Sector Leaderboard</h3>
@@ -2254,6 +2340,12 @@
         </div>
       </summary>
       {% if sector_leaderboard.rows %}
+      <div class="panel-search-row">
+        <label class="search-box" for="sectorLeaderboardSearch">
+          <span>Search this panel</span>
+          <input id="sectorLeaderboardSearch" class="panel-search-input" data-panel-search-input type="search" placeholder="Sector, tier, breadth, constituents">
+        </label>
+      </div>
       <div class="leaderboard-table-wrap">
         <table class="leaderboard-table">
           <thead>
@@ -2294,6 +2386,7 @@
           </tbody>
         </table>
       </div>
+      <div class="panel-search-empty hidden" data-panel-search-empty>No matching sector rows.</div>
       {% else %}
       <div class="leaderboard-empty">Sector leaderboard data is not available for this run.</div>
       {% endif %}
@@ -2698,6 +2791,9 @@
     const tierCountSpans = Array.from(document.querySelectorAll("[data-tier-count]"));
     const trackerPanel = document.querySelector(".signal-tracker-panel");
     const trackerIncludeToday = document.getElementById("trackerIncludeToday");
+    const panelGlobalSearch = document.getElementById("panelGlobalSearch");
+    const clearPanelSearch = document.getElementById("clearPanelSearch");
+    const panelSearchInputs = Array.from(document.querySelectorAll("[data-panel-search-input]"));
     let activeTier = "ALL";
     let activePattern = "";
     let activeSector = "";
@@ -2706,6 +2802,63 @@
       trackerIncludeToday.addEventListener("change", () => {
         trackerPanel.classList.toggle("show-today", trackerIncludeToday.checked);
       });
+    }
+
+    function normalizePanelSearch(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function initPanelSearch() {
+      const panelScopes = Array.from(document.querySelectorAll("[data-panel-search-scope]"));
+
+      function rowText(row) {
+        return normalizePanelSearch(row.textContent || "");
+      }
+
+      function updatePanelSearch() {
+        const globalQuery = normalizePanelSearch(panelGlobalSearch ? panelGlobalSearch.value : "");
+        panelScopes.forEach((panel) => {
+          const localInput = panel.querySelector("[data-panel-search-input]");
+          const localQuery = normalizePanelSearch(localInput ? localInput.value : "");
+          const hasQuery = Boolean(globalQuery || localQuery);
+          const rows = Array.from(panel.querySelectorAll("tbody tr, .skip-row"));
+          let visibleRows = 0;
+
+          rows.forEach((row) => {
+            const text = rowText(row);
+            const matchesGlobal = !globalQuery || text.includes(globalQuery);
+            const matchesLocal = !localQuery || text.includes(localQuery);
+            const showRow = matchesGlobal && matchesLocal;
+            row.classList.toggle("hidden", !showRow);
+            if (showRow) visibleRows += 1;
+          });
+
+          const empty = panel.querySelector("[data-panel-search-empty]");
+          if (empty) {
+            empty.classList.toggle("hidden", !hasQuery || visibleRows > 0 || rows.length === 0);
+          }
+          panel.classList.toggle("hidden", Boolean(globalQuery && rows.length > 0 && visibleRows === 0));
+          if (hasQuery && visibleRows > 0 && panel.tagName.toLowerCase() === "details") {
+            panel.open = true;
+          }
+        });
+      }
+
+      panelSearchInputs.forEach((input) => {
+        input.addEventListener("input", updatePanelSearch);
+      });
+      if (panelGlobalSearch) {
+        panelGlobalSearch.addEventListener("input", updatePanelSearch);
+      }
+      if (clearPanelSearch) {
+        clearPanelSearch.addEventListener("click", () => {
+          if (panelGlobalSearch) panelGlobalSearch.value = "";
+          panelSearchInputs.forEach((input) => { input.value = ""; });
+          updatePanelSearch();
+        });
+      }
+
+      updatePanelSearch();
     }
 
     // Leading-sector set: derived from the leaderboard table at the top.
@@ -3023,6 +3176,7 @@
 
     updateResultFilters();
     initSortableTables();
+    initPanelSearch();
 
     // Analysis-chart toggle button
     document.querySelectorAll("[data-toggle-analysis]").forEach((btn) => {
