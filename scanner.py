@@ -34,6 +34,7 @@ from patterns.base import PatternResult
 
 
 STAGE_ORDER = ("verify", "fetch_missing", "fetch", "pre_compute", "detect", "filter_and_score", "output")
+STALE_CONFIRM_THRESHOLD_PERCENT = 5.0
 
 # Cross-process lock file. Held during the fetch_missing + fetch stages so
 # two scanners cannot write to the SQLite DB concurrently. Stale locks are
@@ -106,6 +107,7 @@ class PipelineContext:
     dry_run: bool = False
     skip_fetch: bool = False
     fetch_missing: bool = True
+    allow_partial_scan: bool = False
     stage: str | None = None
     workers: int = settings.PROCESS_WORKERS
     stock_timeout_seconds: int = settings.STOCK_TIMEOUT_SECONDS
@@ -204,7 +206,7 @@ class Pipeline:
             raise PipelineError(f"Verification failed with {new_verify_errors} non-critical data issue(s)")
         self.ctx.stats["symbols_selected"] = len(self.ctx.symbols)
 
-    @stage("fetch_missing", critical=False)
+    @stage("fetch_missing")
     def fetch_missing(self) -> None:
         """Catch up completed EOD candles before live/today fetch."""
         if self.ctx.dry_run or not self.ctx.fetch_missing:
@@ -301,7 +303,7 @@ class Pipeline:
         if not self.ctx.symbols:
             raise PipelineError("verify must run before pre_compute")
         assert self.ctx.loader is not None
-        self._exclude_stale_symbols_from_scan()
+        self._prepare_current_data()
         sector_map = _load_sector_map()
         sector_symbols = {str(s).upper() for s in sector_map.keys()}
         breadth_universe = sorted(set(self.ctx.symbols) | sector_symbols)
@@ -339,13 +341,25 @@ class Pipeline:
             self.ctx.stats["detect"] = "no_symbols_with_daily_data"
             return
 
-        if int(self.ctx.workers) <= 1:
+        if int(self.ctx.workers) <= 1 or self._should_use_single_process_detection(prepared):
             results = [
                 _detect_symbol(symbol, daily, weekly, self.ctx.universe_name, self.ctx.scan_timeframe)
                 for symbol, daily, weekly in prepared
             ]
         else:
-            results = self._detect_parallel(prepared)
+            try:
+                results = self._detect_parallel(prepared)
+            except Exception as exc:
+                self._record_error(
+                    "detect",
+                    "-",
+                    f"parallel detector workers failed ({type(exc).__name__}: {exc}); retrying in single-process mode",
+                    critical=False,
+                )
+                results = [
+                    _detect_symbol(symbol, daily, weekly, self.ctx.universe_name, self.ctx.scan_timeframe)
+                    for symbol, daily, weekly in prepared
+                ]
 
         self.ctx.raw_hits = []
         for item in results:
@@ -355,6 +369,22 @@ class Pipeline:
             for hit in item.get("hits", []):
                 self.ctx.raw_hits.append({"symbol": symbol, "pattern_result": hit})
         self.ctx.stats["raw_hits"] = len(self.ctx.raw_hits)
+
+    def _should_use_single_process_detection(self, prepared: list[tuple[str, dict, dict]]) -> bool:
+        if int(self.ctx.workers) <= 1:
+            return False
+        if os.name != "nt":
+            return False
+        if self.ctx.universe_name != "all_nse_equity" or self.ctx.limit is not None:
+            return False
+        if len(prepared) < 1000:
+            return False
+        self._log_data(
+            "Parallel detector workers skipped for full All NSE on Windows; "
+            "using single-process detection to avoid SciPy worker memory/page-file failures."
+        )
+        self.ctx.stats["detect_parallel_skipped"] = "windows_full_all_nse_memory_guard"
+        return True
 
     @stage("filter_and_score")
     def filter_and_score(self) -> None:
@@ -545,6 +575,8 @@ class Pipeline:
                     try:
                         results.append(future.result())
                     except Exception as exc:
+                        if _is_parallel_pool_failure(exc):
+                            raise
                         results.append({"symbol": symbol, "hits": [], "errors": [str(exc)]})
             except concurrent.futures.TimeoutError:
                 done = {future for future in future_to_symbol if future.done() and future not in processed}
@@ -553,6 +585,8 @@ class Pipeline:
                     try:
                         results.append(future.result())
                     except Exception as exc:
+                        if _is_parallel_pool_failure(exc):
+                            raise
                         results.append({"symbol": symbol, "hits": [], "errors": [str(exc)]})
                 for future, symbol in future_to_symbol.items():
                     if future not in done and future not in processed:
@@ -693,38 +727,69 @@ class Pipeline:
             updated["missing_days_count"] = int(current.get("missing_days_count") or 0)
             updated["caught_up_days"] = current.get("caught_up_days", [])
             updated["caught_up_days_count"] = int(current.get("caught_up_days_count") or 0)
+            updated["yfinance_failed"] = bool(
+                current.get("yfinance_failed") or updated.get("yfinance_failed")
+            )
         self.ctx.stats["data_status"] = updated
 
-    def _exclude_stale_symbols_from_scan(self) -> None:
+    def _prepare_current_data(self) -> None:
         data_status = self.ctx.stats.get("data_status") or {}
-        stale_symbols = {
+        stale_symbols = sorted({
             str(symbol).strip().upper()
             for symbol in data_status.get("stale_symbols", [])
             if str(symbol).strip()
-        }
+        })
         if not stale_symbols:
             return
-        before = len(self.ctx.symbols)
-        self.ctx.symbols = [symbol for symbol in self.ctx.symbols if symbol not in stale_symbols]
-        skipped = before - len(self.ctx.symbols)
-        if skipped <= 0:
+        selected_symbols = {str(symbol).strip().upper() for symbol in self.ctx.symbols}
+        stale_symbols = [symbol for symbol in stale_symbols if symbol in selected_symbols]
+        if not stale_symbols:
             return
-        self.ctx.stats["symbols_skipped_stale"] = skipped
-        self.ctx.stats["stale_symbols_skipped"] = sorted(stale_symbols)[:20]
+        target = str(data_status.get("target_date") or "latest completed EOD")
+        preview = ", ".join(stale_symbols[:20])
+        suffix = ", ..." if len(stale_symbols) > 20 else ""
+        warnings = [str(item).strip() for item in data_status.get("warnings", []) if str(item).strip()]
+        warning_text = f" Upstream details: {' | '.join(warnings[:3])}" if warnings else ""
+        yfinance_failed = bool(data_status.get("yfinance_failed"))
+        selected_count = len(self.ctx.symbols)
+        stale_percent = (len(stale_symbols) / selected_count * 100.0) if selected_count else 100.0
+        if len(stale_symbols) >= selected_count:
+            raise PipelineError(
+                f"Scan aborted: no current symbols remain for {target}. "
+                f"All {selected_count} selected symbol(s) are stale.{warning_text}"
+            )
+        if (
+            stale_percent > STALE_CONFIRM_THRESHOLD_PERCENT
+            and not self.ctx.allow_partial_scan
+            and not yfinance_failed
+        ):
+            raise PipelineError(
+                f"Partial scan confirmation required: {len(stale_symbols)} of {selected_count} symbol(s) "
+                f"({stale_percent:.1f}%) have no EOD row for {target} and would be excluded: "
+                f"{preview}{suffix}.{warning_text}"
+            )
+
+        stale_set = set(stale_symbols)
+        self.ctx.symbols = [symbol for symbol in self.ctx.symbols if symbol not in stale_set]
         if self.ctx.selected_profile is not None and "symbol" in self.ctx.selected_profile.columns:
             profile = self.ctx.selected_profile.copy()
-            symbols = profile["symbol"].astype(str).str.strip().str.upper()
-            self.ctx.selected_profile = profile.loc[~symbols.isin(stale_symbols)].reset_index(drop=True)
-        target = str(data_status.get("target_date") or "latest completed EOD")
-        self._log_data(f"Skipping {skipped} stale symbol(s) before detection; no official EOD row for {target}.")
-        self._record_error(
-            "data_status",
-            "-",
-            f"Skipped {skipped} stale symbol(s) before detection; no official EOD row for {target}.",
-            critical=False,
+            profile_symbols = profile["symbol"].astype(str).str.strip().str.upper()
+            self.ctx.selected_profile = profile.loc[~profile_symbols.isin(stale_set)].reset_index(drop=True)
+        message = (
+            f"Continuing with {len(self.ctx.symbols)} current symbol(s); excluded {len(stale_symbols)} stale "
+            f"symbol(s) ({stale_percent:.1f}%) with no EOD row for {target}: {preview}{suffix}."
         )
-        if not self.ctx.symbols:
-            raise PipelineError(f"No current symbols left to scan after stale-data filter for {target}.")
+        if yfinance_failed:
+            message += " Yahoo fallback failed or returned no data; the scan was not blocked."
+        data_status["warnings"] = list(dict.fromkeys([*warnings, message]))
+        data_status["partial_scan_authorized"] = bool(
+            stale_percent > STALE_CONFIRM_THRESHOLD_PERCENT and self.ctx.allow_partial_scan
+        )
+        self.ctx.stats["data_status"] = data_status
+        self.ctx.stats["symbols_skipped_stale"] = len(stale_symbols)
+        self.ctx.stats["stale_symbols_skipped"] = stale_symbols
+        self._log_data(message)
+        self._record_error("data_status", "-", message, critical=False)
 
     def _alert_already_sent(self, scored: dict, signal_date: str) -> bool:
         conn = getattr(self.ctx.loader, "conn", None) if self.ctx.loader is not None else None
@@ -790,6 +855,12 @@ class Pipeline:
                 "critical": critical,
             }
         )
+
+
+def _is_parallel_pool_failure(exc: Exception) -> bool:
+    name = type(exc).__name__.lower()
+    message = str(exc).lower()
+    return "brokenprocesspool" in name or "process pool" in message
 
 
 def _detect_symbol(
@@ -998,6 +1069,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Skip the pre-scan EOD catch-up stage. By default the scanner fills "
         "missing completed daily candles from bhavcopy/yfinance before scanning.",
     )
+    parser.add_argument(
+        "--allow-partial-scan",
+        action="store_true",
+        help="Proceed with current symbols after excluding stale symbols. Use only after explicit approval.",
+    )
     parser.add_argument("--stage", choices=STAGE_ORDER, default=None, help="Run through this stage and stop.")
     parser.add_argument("--dry-run", action="store_true", help="No Dhan fetch and no Telegram sends.")
     parser.add_argument("--workers", type=int, default=settings.PROCESS_WORKERS)
@@ -1038,6 +1114,7 @@ def main(argv: list[str] | None = None) -> int:
         dry_run=dry_run,
         skip_fetch=skip_fetch,
         fetch_missing=not bool(args.no_fetch_missing),
+        allow_partial_scan=bool(args.allow_partial_scan),
         stage=args.stage,
         workers=args.workers,
         stock_timeout_seconds=args.timeout,
@@ -1052,6 +1129,9 @@ def main(argv: list[str] | None = None) -> int:
     pipeline = Pipeline(ctx)
     try:
         pipeline.run()
+    except PipelineError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
     finally:
         pipeline.close()
 

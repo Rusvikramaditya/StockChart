@@ -5,6 +5,8 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -13,6 +15,7 @@ from engine.eod_catchup import (
     BhavcopyResult,
     CatchupSummary,
     catch_up_daily_eod,
+    fetch_yfinance_daily,
     missing_trading_days,
     normalise_nse_bhavcopy,
 )
@@ -85,7 +88,106 @@ class EodCatchupTest(unittest.TestCase):
         self.assertEqual(row, (120.0, 1000))
         self.assertTrue(any("EOD target date: 2026-05-28" in event for event in events))
         self.assertTrue(any("bhavcopy status=unavailable" in event for event in events))
-        self.assertTrue(any("yfinance rows_written=1" in event for event in events))
+        self.assertTrue(any("Yahoo batch fallback rows_written=1" in event for event in events))
+
+    def test_successful_bhavcopy_uses_one_yahoo_batch_for_unmatched_symbols(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = storage.connect(Path(tmp) / "test.db")
+            storage.ensure_schema(conn)
+            storage.upsert_daily_rows(conn, "AAA", "1", _daily_frame("2026-05-26", 100.0))
+            events: list[str] = []
+            yahoo_calls: list[tuple[list[str], str, str]] = []
+
+            def yahoo_fetcher(symbols, from_date, to_date):
+                yahoo_calls.append((symbols, from_date, to_date))
+                return {
+                    "AAA": pd.concat(
+                        [
+                            _daily_frame("2026-05-27", 110.0),
+                            _daily_frame("2026-05-28", 120.0),
+                        ],
+                        ignore_index=True,
+                    )
+                }
+
+            try:
+                summary = catch_up_daily_eod(
+                    conn,
+                    _profile("AAA"),
+                    to_date="2026-05-28",
+                    bhavcopy_fetcher=lambda day: BhavcopyResult(day, "bhavcopy", _empty_bhavcopy()),
+                    yfinance_fetcher=yahoo_fetcher,
+                    logger=events.append,
+                )
+            finally:
+                conn.close()
+
+        self.assertEqual(yahoo_calls, [(["AAA"], "2026-05-27", "2026-05-28")])
+        self.assertFalse(summary.stale)
+        self.assertEqual(summary.source_counts["yfinance"], 2)
+        self.assertTrue(any("one Yahoo batch fallback" in event for event in events))
+
+    def test_yfinance_download_is_batched_timeout_bounded_and_closes_session(self):
+        calls: list[tuple[list[str], dict]] = []
+        session = SimpleNamespace(close_calls=0)
+        session.close = lambda: setattr(session, "close_calls", session.close_calls + 1)
+
+        def fake_download(tickers: list[str], **kwargs):
+            calls.append((tickers, kwargs))
+            columns = pd.MultiIndex.from_product(
+                [["AAA.NS", "BBB.NS"], ["Open", "High", "Low", "Close", "Volume"]]
+            )
+            return pd.DataFrame(
+                [[100.0, 102.0, 99.0, 101.0, 1000, 200.0, 203.0, 198.0, 202.0, 2000]],
+                index=pd.DatetimeIndex(["2026-05-28"], name="Date"),
+                columns=columns,
+            )
+
+        fake_yf = SimpleNamespace(download=fake_download, shared=SimpleNamespace(_ERRORS={}))
+        fake_curl = SimpleNamespace(requests=SimpleNamespace(Session=lambda **_kwargs: session))
+        with patch.dict("sys.modules", {"yfinance": fake_yf, "curl_cffi": fake_curl}):
+            frames = fetch_yfinance_daily(["AAA", "BBB"], "2026-05-28", "2026-05-28")
+
+        self.assertEqual(calls[0][0], ["AAA.NS", "BBB.NS"])
+        self.assertTrue(calls[0][1]["threads"])
+        self.assertEqual(calls[0][1]["timeout"], 10)
+        self.assertIs(calls[0][1]["session"], session)
+        self.assertEqual(session.close_calls, 1)
+        self.assertEqual(frames["AAA"]["date"].tolist(), ["2026-05-28"])
+        self.assertEqual(float(frames["BBB"].iloc[0]["close"]), 202.0)
+
+    def test_yfinance_failure_reason_is_reported(self):
+        events: list[str] = []
+
+        def failing_fetcher(*_args):
+            raise TimeoutError("Yahoo request timed out")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            conn = storage.connect(Path(tmp) / "test.db")
+            storage.ensure_schema(conn)
+            storage.upsert_daily_rows(conn, "AAA", "1", _daily_frame("2026-05-27", 100.0))
+            try:
+                summary = catch_up_daily_eod(
+                    conn,
+                    _profile("AAA"),
+                    to_date="2026-05-28",
+                    bhavcopy_fetcher=lambda day: BhavcopyResult(
+                        day,
+                        "bhavcopy",
+                        pd.DataFrame(),
+                        status="unavailable",
+                    ),
+                    yfinance_fetcher=failing_fetcher,
+                    logger=events.append,
+                )
+            finally:
+                conn.close()
+
+        self.assertTrue(
+            any("Yahoo Finance batch fallback failed: TimeoutError" in warning for warning in summary.warnings)
+        )
+        self.assertTrue(summary.yfinance_failed)
+        self.assertTrue(any("Yahoo Finance batch fallback failed: TimeoutError" in event for event in events))
 
     def test_empty_external_sources_keep_local_stale_and_record_warning(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -105,6 +207,7 @@ class EodCatchupTest(unittest.TestCase):
 
         self.assertEqual(summary.rows_written, 0)
         self.assertTrue(summary.stale)
+        self.assertTrue(summary.yfinance_failed)
         self.assertEqual(summary.data_as_of, "2026-05-27")
         self.assertEqual(summary.source_counts["local_stale"], 1)
         self.assertTrue(any("Current-month data is incomplete" in warning for warning in summary.warnings))

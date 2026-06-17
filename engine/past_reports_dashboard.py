@@ -56,6 +56,7 @@ class PastPick:
             "reportName": self.report_name,
             "reportHref": self.report_href,
             "screenerUrl": _screener_url(self.symbol),
+            "symbolSearchKey": _symbol_search_key(self.symbol),
             "priceThen": self.price_then,
             "priceThenText": _money(self.price_then),
             "cmpToday": self.cmp_today,
@@ -379,7 +380,7 @@ def render_dashboard(
     </header>
 
     <section class="controls" aria-label="Dashboard controls">
-      <label>Search <input id="search" type="search" placeholder="Symbol, company, pattern"></label>
+      <label>Find stock <input id="search" type="search" placeholder="Type symbol or company; PRIVSCL finds PRIVISCL"></label>
       <label>Days
         <select id="days">
           <option value="30">30 days</option>
@@ -616,6 +617,7 @@ def render_dashboard(
 
     function groupedRows() {{
       const query = controls.search.value.trim().toLowerCase();
+      const querySymbolKey = symbolSearchKey(query);
       const dayLimit = controls.days.value;
       const sector = controls.sector.value;
       const tier = controls.tier.value;
@@ -626,7 +628,8 @@ def render_dashboard(
           if (row.tier !== "HIGH" && row.tier !== "HIGHEST") return false;
         }} else if (tier !== "all" && row.tier !== tier) return false;
         if (!query) return true;
-        return [row.symbol, row.companyName, row.sector, row.pattern, row.timeframe].join(" ").toLowerCase().includes(query);
+        const searchText = [row.symbol, row.companyName, row.sector, row.pattern, row.timeframe].join(" ").toLowerCase();
+        return searchText.includes(query) || (querySymbolKey && row.symbolSearchKey === querySymbolKey);
       }}).sort((a, b) => new Date(a.recommendedAt) - new Date(b.recommendedAt));
 
       const groups = new Map();
@@ -642,6 +645,13 @@ def render_dashboard(
         }}
       }}
       return sortRows(Array.from(groups.values()));
+    }}
+
+    function symbolSearchKey(value) {{
+      return String(value || "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .replace(/[AEIOU]/g, "");
     }}
 
     function successStats(rows, tier) {{
@@ -888,6 +898,11 @@ class _ReportParser(HTMLParser):
 
 def _screener_url(symbol: str) -> str:
     return f"https://www.screener.in/company/{quote(str(symbol).upper(), safe='')}/"
+
+
+def _symbol_search_key(symbol: str) -> str:
+    cleaned = re.sub(r"[^A-Z0-9]", "", str(symbol).upper())
+    return re.sub(r"[AEIOU]", "", cleaned)
 
 
 def _quote_href_path(path: str) -> str:

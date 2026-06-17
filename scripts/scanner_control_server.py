@@ -8,6 +8,7 @@ import mimetypes
 import subprocess
 import sys
 import threading
+import uuid
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -34,6 +35,9 @@ DHAN_ENV_KEYS = ("DHAN_CLIENT_ID", "DHAN_ACCESS_TOKEN", "DHAN_PIN", "DHAN_TOTP_S
 MAX_LIMIT = 5000
 MAX_WORKERS = 16
 RUN_LOCK = threading.Lock()
+RUN_JOBS_LOCK = threading.Lock()
+RUN_JOBS: dict[str, dict] = {}
+MAX_JOB_LOG_CHARS = 2_000_000
 
 
 def build_scan_command(form: dict[str, list[str]], *, now: datetime | None = None) -> tuple[list[str], Path]:
@@ -77,13 +81,15 @@ def build_scan_command(form: dict[str, list[str]], *, now: datetime | None = Non
     # already current (e.g., right after a manual setup/10 run).
     if _truthy(form, "skip_backfill"):
         command.append("--no-fetch-missing")
+    if _truthy(form, "allow_partial_scan"):
+        command.append("--allow-partial-scan")
 
     if mode == "safe":
         command.extend(["--skip-fetch", "--dry-run", "--no-telegram"])
     elif mode == "fetch_no_telegram":
         command.append("--no-telegram")
 
-    if universe == "all_nse_equity" and scan_timeframe == "all" and limit_value is None:
+    if universe == "all_nse_equity" and scan_timeframe in {"daily", "all"} and limit_value is None:
         for flag in ("--skip-fetch", "--no-telegram"):
             if flag not in command:
                 command.append(flag)
@@ -132,6 +138,10 @@ def build_past_recommendations_dashboard(*, days: int = 60) -> Path:
 def summarize_run_failure(returncode: int, stdout: str, stderr: str) -> str:
     """Return a concise operator-facing failure message."""
     combined = f"{stdout}\n{stderr}".lower()
+    error_lines = [line.removeprefix("ERROR: ").strip() for line in stderr.splitlines() if line.startswith("ERROR: ")]
+    for line in reversed(error_lines):
+        if line.startswith(("Partial scan confirmation required:", "Scan aborted:")):
+            return line
     if "dhan" in combined and ("429" in combined or "too many requests" in combined):
         return (
             "Dhan rate-limited the live fetch. Wait before starting another live run, or use Safe dry run / skip live "
@@ -149,9 +159,80 @@ def summarize_run_failure(returncode: int, stdout: str, stderr: str) -> str:
         )
     if "universe profile" in combined and "missing" in combined:
         return "The selected universe profile is missing. Pick another universe or rebuild the profile before scanning."
+    if error_lines:
+        return error_lines[-1]
     if returncode != 0:
         return "Scanner failed. Check the technical log below for the exact traceback."
     return ""
+
+
+def requires_partial_scan_confirmation(returncode: int, stdout: str, stderr: str) -> bool:
+    combined = f"{stdout}\n{stderr}".lower()
+    return returncode != 0 and "partial scan confirmation required:" in combined
+
+
+def _append_job_log(job_id: str, text: str) -> None:
+    with RUN_JOBS_LOCK:
+        job = RUN_JOBS.get(job_id)
+        if job is None:
+            return
+        job["log"] += text
+        if len(job["log"]) > MAX_JOB_LOG_CHARS:
+            job["log"] = "[Earlier output trimmed]\n" + job["log"][-MAX_JOB_LOG_CHARS:]
+
+
+def _finish_scan_job(job_id: str, returncode: int) -> None:
+    with RUN_JOBS_LOCK:
+        job = RUN_JOBS[job_id]
+        job["status"] = "completed"
+        job["returncode"] = returncode
+        job["elapsed"] = round((datetime.now() - job["started"]).total_seconds(), 1)
+        log = job["log"]
+        job["error"] = summarize_run_failure(returncode, log, "")
+        job["requires_partial_confirmation"] = requires_partial_scan_confirmation(returncode, log, "")
+        output_path = job["output_path"]
+        job["dashboard"] = f"/output/{output_path.name}" if output_path.exists() else ""
+
+
+def _run_scan_process(job_id: str, process: subprocess.Popen) -> None:
+    try:
+        assert process.stdout is not None
+        for line in process.stdout:
+            _append_job_log(job_id, line)
+        _finish_scan_job(job_id, process.wait())
+    except Exception as exc:
+        _append_job_log(job_id, f"\nERROR: Control server could not read scanner output: {exc}\n")
+        _finish_scan_job(job_id, process.poll() if process.poll() is not None else -1)
+    finally:
+        RUN_LOCK.release()
+
+
+def scan_job_payload(job_id: str) -> dict | None:
+    with RUN_JOBS_LOCK:
+        job = RUN_JOBS.get(job_id)
+        if job is None:
+            return None
+        elapsed = (
+            job["elapsed"]
+            if job["status"] == "completed"
+            else round((datetime.now() - job["started"]).total_seconds(), 1)
+        )
+        payload = {
+            "job_id": job_id,
+            "status": job["status"],
+            "ok": job["status"] == "completed" and job["returncode"] == 0,
+            "returncode": job["returncode"],
+            "elapsed": elapsed,
+            "error": job["error"],
+            "command": job["command_text"],
+            "log": job["log"],
+            "requires_partial_confirmation": job["requires_partial_confirmation"],
+            "dashboard": job["dashboard"],
+        }
+    if payload["status"] == "completed":
+        payload["reports"] = recent_reports()
+        payload["charts"] = recent_charts()
+    return payload
 
 
 def read_env_map(path: Path) -> dict[str, str]:
@@ -389,6 +470,14 @@ class ControlHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/charts":
             self._send_json({"charts": recent_charts()})
             return
+        if parsed.path == "/api/run-status":
+            job_id = parse_qs(parsed.query).get("job_id", [""])[0]
+            payload = scan_job_payload(job_id)
+            if payload is None:
+                self._send_json({"ok": False, "error": "Unknown scanner job."}, status=HTTPStatus.NOT_FOUND)
+                return
+            self._send_json(payload)
+            return
         if parsed.path.startswith("/output/"):
             self._serve_output(parsed.path)
             return
@@ -442,34 +531,52 @@ class ControlHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            started = datetime.now()
-            result = subprocess.run(
+            process = subprocess.Popen(
                 command,
                 cwd=BASE_DIR,
                 text=True,
-                capture_output=True,
-                timeout=3600,
-                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                encoding="utf-8",
+                errors="replace",
             )
-            elapsed = round((datetime.now() - started).total_seconds(), 1)
-        finally:
+        except Exception as exc:
             RUN_LOCK.release()
+            self._send_json(
+                {"ok": False, "error": f"Could not start scanner: {exc}"},
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
 
-        failure_summary = summarize_run_failure(result.returncode, result.stdout, result.stderr)
+        job_id = uuid.uuid4().hex
+        with RUN_JOBS_LOCK:
+            RUN_JOBS[job_id] = {
+                "status": "running",
+                "returncode": None,
+                "started": datetime.now(),
+                "elapsed": 0.0,
+                "error": "",
+                "command_text": " ".join(str(item) for item in command),
+                "log": "",
+                "requires_partial_confirmation": False,
+                "dashboard": "",
+                "output_path": output_path,
+            }
+        threading.Thread(
+            target=_run_scan_process,
+            args=(job_id, process),
+            daemon=True,
+            name=f"scanner-job-{job_id[:8]}",
+        ).start()
         self._send_json(
             {
-                "ok": result.returncode == 0,
-                "returncode": result.returncode,
-                "elapsed": elapsed,
-                "error": failure_summary,
+                "ok": True,
+                "started": True,
+                "job_id": job_id,
                 "command": " ".join(str(item) for item in command),
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "dashboard": f"/output/{output_path.name}" if output_path.exists() else "",
-                "reports": recent_reports(),
-                "charts": recent_charts(),
             },
-            status=HTTPStatus.OK if result.returncode == 0 else HTTPStatus.INTERNAL_SERVER_ERROR,
+            status=HTTPStatus.ACCEPTED,
         )
 
     def _run_verify(self) -> None:
@@ -773,7 +880,9 @@ def _render_index() -> str:
     button:hover {{ border-color: var(--accent); }}
     button:disabled {{ color: #6f6f6f; cursor: wait; }}
     .status {{ padding: 16px; display: grid; gap: 10px; }}
+    .status-head {{ display: flex; gap: 10px; align-items: stretch; }}
     .status-line {{
+      flex: 1 1 auto;
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 12px;
@@ -782,6 +891,7 @@ def _render_index() -> str:
     }}
     .status-line.ok {{ color: var(--green); }}
     .status-line.fail {{ color: var(--red); }}
+    .copy-log-button {{ flex: 0 0 auto; padding: 12px 14px; }}
     pre {{
       min-height: 260px;
       max-height: 520px;
@@ -830,6 +940,7 @@ def _render_index() -> str:
       h1 {{ font-size: 26px; }}
       .badge {{ width: 100%; }}
       .report {{ flex-direction: column; }}
+      .status-head {{ flex-direction: column; }}
     }}
   </style>
 </head>
@@ -909,7 +1020,10 @@ def _render_index() -> str:
           </div>
         </form>
         <div class="status">
-          <div class="status-line" id="statusLine">Ready.</div>
+          <div class="status-head">
+            <div class="status-line" id="statusLine">Ready.</div>
+            <button type="button" class="copy-log-button" id="copyLogButton" title="Copy the scanner output textbox content.">Copy text</button>
+          </div>
           <pre id="logBox">Scanner output will appear here.</pre>
         </div>
       </div>
@@ -952,6 +1066,7 @@ def _render_index() -> str:
     const verifyDhanButton = document.getElementById("verifyDhanButton");
     const verifyTelegramButton = document.getElementById("verifyTelegramButton");
     const resolveTelegramButton = document.getElementById("resolveTelegramButton");
+    const copyLogButton = document.getElementById("copyLogButton");
     const runMode = document.getElementById("runMode");
     const modeWarning = document.getElementById("modeWarning");
     const statusLine = document.getElementById("statusLine");
@@ -972,6 +1087,52 @@ def _render_index() -> str:
     function setStatus(text, cls = "") {{
       statusLine.className = "status-line " + cls;
       statusLine.innerHTML = text;
+    }}
+
+    function fallbackCopyText(text) {{
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand("copy");
+      textarea.remove();
+      if (!ok) throw new Error("Copy command failed");
+    }}
+
+    function flashCopyButton(label) {{
+      const original = copyLogButton.textContent;
+      copyLogButton.textContent = label;
+      copyLogButton.disabled = true;
+      setTimeout(() => {{
+        copyLogButton.textContent = original;
+        copyLogButton.disabled = false;
+      }}, 1200);
+    }}
+
+    async function copyLogText() {{
+      const text = logBox.textContent || "";
+      if (!text.trim()) {{
+        flashCopyButton("Nothing to copy");
+        return;
+      }}
+      try {{
+        if (navigator.clipboard && window.isSecureContext) {{
+          await navigator.clipboard.writeText(text);
+        }} else {{
+          fallbackCopyText(text);
+        }}
+        flashCopyButton("Copied");
+      }} catch (error) {{
+        try {{
+          fallbackCopyText(text);
+          flashCopyButton("Copied");
+        }} catch (fallbackError) {{
+          flashCopyButton("Copy failed");
+        }}
+      }}
     }}
 
     function updateModeWarning() {{
@@ -1011,21 +1172,62 @@ def _render_index() -> str:
       renderCharts(payload.charts);
     }}
 
+    async function submitScan(params) {{
+      const response = await fetch("/api/run", {{ method: "POST", body: params }});
+      const started = await response.json();
+      if (!started.started || !started.job_id) return started;
+      logBox.textContent = started.command + "\\n\\nScanner process started. Waiting for first progress line...";
+      while (true) {{
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const statusResponse = await fetch(`/api/run-status?job_id=${{encodeURIComponent(started.job_id)}}`);
+        const payload = await statusResponse.json();
+        renderScanLog(payload);
+        if (payload.status === "running") {{
+          setStatus(`Running scanner... ${{payload.elapsed}}s`);
+          continue;
+        }}
+        return payload;
+      }}
+    }}
+
+    function renderScanLog(payload) {{
+      logBox.textContent = [
+        payload.error ? "Summary:\\n" + payload.error + "\\n" : "",
+        payload.command || "",
+        "",
+        payload.log || payload.stdout || "",
+        payload.stderr ? "\\nTechnical stderr:\\n" + payload.stderr : ""
+      ].join("\\n");
+      logBox.scrollTop = logBox.scrollHeight;
+    }}
+
     form.addEventListener("submit", async (event) => {{
       event.preventDefault();
       setBusy(true);
       setStatus("Running scanner...");
       logBox.textContent = "Waiting for scanner output...";
       try {{
-        const response = await fetch("/api/run", {{ method: "POST", body: new URLSearchParams(new FormData(form)) }});
-        const payload = await response.json();
-        logBox.textContent = [
-          payload.error ? "Summary:\\n" + payload.error + "\\n" : "",
-          payload.command || "",
-          "",
-          payload.stdout || "",
-          payload.stderr ? "\\nTechnical stderr:\\n" + payload.stderr : ""
-        ].join("\\n");
+        const params = new URLSearchParams(new FormData(form));
+        let payload = await submitScan(params);
+        renderScanLog(payload);
+        if (payload.requires_partial_confirmation) {{
+          setStatus(payload.error || "Some symbols do not have fresh EOD data.", "fail");
+          const proceed = window.confirm(
+            (payload.error || "Some symbols do not have fresh EOD data.") +
+            "\\n\\nProceed with a partial scan that excludes all stale symbols?"
+          );
+          if (!proceed) {{
+            setStatus("Scan cancelled. Partial-universe scan was not authorized.", "fail");
+            renderReports(payload.reports);
+            renderCharts(payload.charts);
+            return;
+          }}
+          params.set("allow_partial_scan", "1");
+          setStatus("Permission received. Running with fresh symbols only...");
+          logBox.textContent += "\\n\\nUser approved a partial scan. Restarting with stale symbols excluded...";
+          payload = await submitScan(params);
+          renderScanLog(payload);
+        }}
         if (payload.ok && payload.dashboard) {{
           setStatus(`Done in ${{payload.elapsed}}s. <a class="dashboard-link" href="${{payload.dashboard}}" target="_blank">Open generated dashboard</a>`, "ok");
         }} else {{
@@ -1155,6 +1357,7 @@ def _render_index() -> str:
     }});
 
     if (runMode) runMode.addEventListener("change", updateModeWarning);
+    if (copyLogButton) copyLogButton.addEventListener("click", copyLogText);
     updateModeWarning();
     refreshReports();
     refreshCharts();

@@ -93,6 +93,70 @@ def test_full_all_nse_all_timeframes_skips_dhan_but_keeps_eod_catchup():
     assert "--no-telegram" in command
 
 
+def test_full_all_nse_daily_skips_dhan_but_keeps_eod_catchup():
+    command, _output_path = build_scan_command(
+        {
+            "universe": ["all_nse_equity"],
+            "mode": ["fetch_no_telegram"],
+            "scan_timeframe": ["daily"],
+            "limit": [""],
+            "workers": ["8"],
+        },
+        now=NOW,
+    )
+
+    assert command[command.index("--universe") + 1] == "all_nse_equity"
+    assert command[command.index("--scan-timeframe") + 1] == "daily"
+    assert "--limit" not in command
+    assert "--skip-fetch" in command
+    assert "--no-fetch-missing" not in command
+    assert "--dry-run" not in command
+    assert "--no-telegram" in command
+
+
+def test_scanner_failure_surfaces_exact_stale_data_error():
+    message = control.summarize_run_failure(
+        2,
+        "",
+        "ERROR: Scan aborted: 2 symbol(s) have no EOD row for 2026-06-15: AAA, BBB.",
+    )
+
+    assert message == "Scan aborted: 2 symbol(s) have no EOD row for 2026-06-15: AAA, BBB."
+
+
+def test_partial_scan_prompt_takes_priority_over_dhan_warning():
+    message = control.summarize_run_failure(
+        2,
+        "[data] Dhan live fetch unavailable: Data APIs not subscribed.",
+        "ERROR: Partial scan confirmation required: 20 of 100 symbol(s) are stale.",
+    )
+
+    assert message == "Partial scan confirmation required: 20 of 100 symbol(s) are stale."
+
+
+def test_partial_scan_confirmation_adds_explicit_scanner_flag():
+    command, _output_path = build_scan_command(
+        {
+            "universe": ["watchlist"],
+            "mode": ["fetch_no_telegram"],
+            "workers": ["2"],
+            "allow_partial_scan": ["1"],
+        },
+        now=NOW,
+    )
+
+    assert "--allow-partial-scan" in command
+
+
+def test_broad_stale_data_failure_requests_partial_scan_confirmation():
+    assert control.requires_partial_scan_confirmation(
+        2,
+        "",
+        "ERROR: Partial scan confirmation required: 2 of 10 symbol(s) are stale.",
+    )
+    assert not control.requires_partial_scan_confirmation(1, "", "ERROR: Dhan authentication failed")
+
+
 def test_limited_all_nse_all_timeframes_keeps_requested_live_fetch():
     command, _output_path = build_scan_command(
         {
@@ -170,6 +234,13 @@ def test_control_page_explains_fields_and_chart_locations():
     assert "Live fetch may call Dhan" in html
     assert "Skip EOD catch-up" in html
     assert "Import StockScanner Dhan" in html
+    assert 'id="copyLogButton"' in html
+    assert "Copy text" in html
+    assert "copyLogText" in html
+    assert "Proceed with a partial scan that excludes all stale symbols?" in html
+    assert 'params.set("allow_partial_scan", "1")' in html
+    assert "/api/run-status?job_id=" in html
+    assert "Scanner process started. Waiting for first progress line..." in html
     assert "Verify Dhan auth" in html
     assert "Verify Telegram" in html
     assert "Resolve Telegram Chat ID" in html

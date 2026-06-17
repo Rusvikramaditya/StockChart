@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
@@ -28,6 +29,7 @@ BSE_BHAVCOPY_URLS = (
     "https://www.bseindia.com/download/BhavCopy/Equity/EQ{ddmmyy}_CSV.ZIP",
     "https://www.bseindia.com/download/BhavCopy/Equity/EQ{ddmmyy}_csv.zip",
 )
+YFINANCE_TIMEOUT_SECONDS = 10
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,7 @@ class CatchupSummary:
     stale_symbols: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     stale: bool = False
+    yfinance_failed: bool = False
     current_month_incomplete: bool = False
 
     def to_dict(self) -> dict:
@@ -72,12 +75,19 @@ class CatchupSummary:
             "stale_symbols_preview": list(self.stale_symbols[:20]),
             "warnings": list(self.warnings),
             "stale": self.stale,
+            "yfinance_failed": self.yfinance_failed,
             "current_month_incomplete": self.current_month_incomplete,
         }
 
 
 BhavcopyFetcher = Callable[[str], BhavcopyResult]
 YfinanceFetcher = Callable[[list[str], str, str], dict[str, pd.DataFrame]]
+
+
+class YfinanceFetchResult(dict[str, pd.DataFrame]):
+    def __init__(self) -> None:
+        super().__init__()
+        self.failures: dict[str, str] = {}
 
 
 def latest_completed_eod_date(now: datetime | None = None) -> str:
@@ -165,35 +175,69 @@ def catch_up_daily_eod(
             summary.warnings.append(f"Bhavcopy fetch failed for {day}: {result.message}")
             _log(logger, f"{day}: bhavcopy status=error: {result.message or 'no detail'}")
         else:
-            _log(logger, f"{day}: bhavcopy status={result.status}; using yfinance fallback if needed.")
+            _log(logger, f"{day}: bhavcopy status={result.status}; queued for Yahoo fallback if needed.")
 
         if needed:
-            _log(logger, f"{day}: trying yfinance fallback for {len(needed)} symbol(s).")
-            yframes = yfinance_fetcher(needed, day, day)
-            yfinance_written = 0
-            for symbol in needed:
-                frame = _frame_for_day(yframes.get(symbol), day)
-                if frame.empty:
-                    continue
-                written = storage.upsert_daily_rows(conn, symbol, security_ids.get(symbol, ""), frame)
-                if written:
-                    latest_by_symbol[symbol] = day
-                    day_wrote += written
-                    yfinance_written += written
-                    summary.rows_written += written
-                    _add_source_count(summary.source_counts, "yfinance", written)
-            _log(logger, f"{day}: yfinance rows_written={yfinance_written}.")
-
-        unresolved = [symbol for symbol in needed if _is_before(latest_by_symbol.get(symbol), day)]
-        if unresolved:
-            preview = ", ".join(unresolved[:8])
-            suffix = "..." if len(unresolved) > 8 else ""
-            summary.warnings.append(
-                f"No EOD rows recovered for {day}: {len(unresolved)} symbol(s) still stale ({preview}{suffix})."
+            _log(
+                logger,
+                f"{day}: {len(needed)} symbol(s) still missing after bhavcopy; queued for Yahoo batch fallback.",
             )
-            _log(logger, f"{day}: still stale after fallbacks: {len(unresolved)} symbol(s) ({preview}{suffix}).")
         if day_wrote:
             summary.caught_up_days.append(day)
+
+    yahoo_needed = [symbol for symbol in symbols if _is_before(latest_by_symbol.get(symbol), target_date)]
+    if yahoo_needed:
+        from_date = summary.missing_days[0]
+        _log(
+            logger,
+            f"Trying one Yahoo batch fallback for {len(yahoo_needed)} symbol(s), {from_date} through {target_date}.",
+        )
+        try:
+            yframes = yfinance_fetcher(yahoo_needed, from_date, target_date)
+        except Exception as exc:
+            message = f"{type(exc).__name__}: {exc}"
+            yframes = {}
+            summary.yfinance_failed = True
+            summary.warnings.append(f"Yahoo Finance batch fallback failed: {message}")
+            _log(logger, f"Yahoo Finance batch fallback failed: {message}")
+
+        failures = getattr(yframes, "failures", {})
+        if failures:
+            summary.yfinance_failed = True
+            details = _preview_failures(failures)
+            summary.warnings.append(
+                f"Yahoo Finance fallback failed for {len(failures)} symbol(s): {details}"
+            )
+            _log(logger, f"Yahoo Finance failures={len(failures)}: {details}")
+
+        yfinance_written = 0
+        yahoo_dates: set[str] = set()
+        for symbol in yahoo_needed:
+            frame = _frame_for_range(yframes.get(symbol), from_date, target_date)
+            if frame.empty:
+                continue
+            written = storage.upsert_daily_rows(conn, symbol, security_ids.get(symbol, ""), frame)
+            if not written:
+                continue
+            frame_dates = frame["date"].astype(str)
+            latest_by_symbol[symbol] = frame_dates.max()
+            yahoo_dates.update(frame_dates.tolist())
+            yfinance_written += written
+            summary.rows_written += written
+            _add_source_count(summary.source_counts, "yfinance", written)
+        summary.caught_up_days = sorted(set(summary.caught_up_days) | yahoo_dates)
+        _log(logger, f"Yahoo batch fallback rows_written={yfinance_written}.")
+
+    unresolved = [symbol for symbol in symbols if _is_before(latest_by_symbol.get(symbol), target_date)]
+    if unresolved:
+        summary.yfinance_failed = True
+        preview = ", ".join(unresolved[:8])
+        suffix = "..." if len(unresolved) > 8 else ""
+        summary.warnings.append(
+            f"No current EOD row recovered through {target_date}: "
+            f"{len(unresolved)} symbol(s) still stale ({preview}{suffix})."
+        )
+        _log(logger, f"Still stale after fallbacks: {len(unresolved)} symbol(s) ({preview}{suffix}).")
 
     _finish_summary(conn, symbols, summary)
     _log(
@@ -353,19 +397,61 @@ def normalise_bse_bhavcopy(raw: pd.DataFrame, day: str) -> pd.DataFrame:
 
 
 def fetch_yfinance_daily(symbols: list[str], from_date: str, to_date: str) -> dict[str, pd.DataFrame]:
+    from curl_cffi import requests as curl_requests
     import yfinance as yf
 
-    output: dict[str, pd.DataFrame] = {}
+    output = YfinanceFetchResult()
+    if not symbols:
+        return output
+
+    tickers = [f"{symbol}.NS" for symbol in symbols]
     end = (_parse_date(to_date) + timedelta(days=1)).isoformat()
-    for symbol in symbols:
-        ticker = f"{symbol}.NS"
+    yf_logger = logging.getLogger("yfinance")
+    logger_disabled = yf_logger.disabled
+    yf_logger.disabled = True
+    session = curl_requests.Session(impersonate="chrome")
+    try:
         try:
-            data = yf.download(ticker, start=from_date, end=end, progress=False, auto_adjust=False)
-        except Exception:
-            output[symbol] = pd.DataFrame()
-            continue
-        output[symbol] = _normalise_yfinance_frame(data)
+            data = yf.download(
+                tickers,
+                start=from_date,
+                end=end,
+                progress=False,
+                auto_adjust=False,
+                group_by="ticker",
+                threads=True,
+                timeout=YFINANCE_TIMEOUT_SECONDS,
+                session=session,
+            )
+        except Exception as exc:
+            message = f"{type(exc).__name__}: {exc}"
+            for symbol in symbols:
+                output[symbol] = pd.DataFrame()
+                output.failures[symbol] = message
+            return output
+
+        yahoo_errors = getattr(getattr(yf, "shared", None), "_ERRORS", {})
+        for symbol, ticker in zip(symbols, tickers):
+            ticker_data = _extract_yfinance_ticker_frame(data, ticker, single=len(symbols) == 1)
+            output[symbol] = _normalise_yfinance_frame(ticker_data)
+            if output[symbol].empty:
+                yahoo_error = yahoo_errors.get(ticker)
+                output.failures[symbol] = str(yahoo_error or "Yahoo returned no data.")
+    finally:
+        session.close()
+        yf_logger.disabled = logger_disabled
     return output
+
+
+def _extract_yfinance_ticker_frame(data: pd.DataFrame, ticker: str, *, single: bool) -> pd.DataFrame:
+    if data is None or data.empty:
+        return pd.DataFrame()
+    if not isinstance(data.columns, pd.MultiIndex):
+        return data if single else pd.DataFrame()
+    for level in range(data.columns.nlevels):
+        if ticker in data.columns.get_level_values(level):
+            return data.xs(ticker, axis=1, level=level, drop_level=True)
+    return data if single else pd.DataFrame()
 
 
 def _normalise_yfinance_frame(data: pd.DataFrame) -> pd.DataFrame:
@@ -388,6 +474,19 @@ def _normalise_yfinance_frame(data: pd.DataFrame) -> pd.DataFrame:
             }
         )
     )
+
+
+def _frame_for_range(frame: pd.DataFrame | None, from_date: str, to_date: str) -> pd.DataFrame:
+    if frame is None or frame.empty or "date" not in frame.columns:
+        return pd.DataFrame()
+    dates = frame["date"].astype(str)
+    return frame.loc[(dates >= from_date) & (dates <= to_date)].copy()
+
+
+def _preview_failures(failures: dict[str, str], limit: int = 3) -> str:
+    items = list(failures.items())
+    preview = "; ".join(f"{symbol}: {message}" for symbol, message in items[:limit])
+    return f"{preview}; ..." if len(items) > limit else preview
 
 
 def _finish_summary(conn, symbols: list[str], summary: CatchupSummary) -> None:

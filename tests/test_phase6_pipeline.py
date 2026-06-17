@@ -122,6 +122,56 @@ class StageDecoratorPhase6Test(unittest.TestCase):
         self.assertTrue(ctx.errors[0]["critical"])
 
 
+class PipelineDetectPhase6Test(unittest.TestCase):
+    def test_full_all_nse_on_windows_uses_single_process_detection_guard(self):
+        ctx = PipelineContext(
+            loader=_FakeLoader(None, symbols=["AAA"]),
+            universe_name="all_nse_equity",
+            workers=8,
+            limit=None,
+        )
+        ctx.symbols = ["AAA"]
+        pipeline = Pipeline(ctx)
+        daily = {"close": [100.0], "open": [99.0], "high": [101.0], "low": [98.0], "volume": [1000]}
+        prepared = [(f"SYM{idx:04d}", daily, daily) for idx in range(1000)]
+
+        with (
+            patch("scanner.os.name", "nt"),
+            patch.object(pipeline, "_load_detector_inputs", return_value=prepared),
+            patch.object(pipeline, "_detect_parallel") as parallel_mock,
+            patch("scanner._detect_symbol", return_value={"symbol": "AAA", "hits": [], "errors": []}) as detect_mock,
+        ):
+            pipeline.detect()
+
+        parallel_mock.assert_not_called()
+        self.assertEqual(detect_mock.call_count, 1000)
+        self.assertEqual(ctx.stats["detect_parallel_skipped"], "windows_full_all_nse_memory_guard")
+
+    def test_parallel_worker_failure_falls_back_to_single_process_detection(self):
+        ctx = PipelineContext(
+            loader=_FakeLoader(None, symbols=["AAA"]),
+            universe_name="watchlist",
+            workers=4,
+        )
+        ctx.symbols = ["AAA"]
+        pipeline = Pipeline(ctx)
+        daily = {"close": [100.0], "open": [99.0], "high": [101.0], "low": [98.0], "volume": [1000]}
+
+        with (
+            patch.object(pipeline, "_load_detector_inputs", return_value=[("AAA", daily, daily)]),
+            patch.object(pipeline, "_detect_parallel", side_effect=ImportError("DLL load failed")),
+            patch("scanner._detect_symbol", return_value={"symbol": "AAA", "hits": [], "errors": []}) as detect_mock,
+        ):
+            pipeline.detect()
+
+        self.assertEqual(ctx.raw_hits, [])
+        self.assertEqual(ctx.stats["raw_hits"], 0)
+        self.assertEqual(ctx.errors[0]["stage"], "detect")
+        self.assertFalse(ctx.errors[0]["critical"])
+        self.assertIn("retrying in single-process mode", ctx.errors[0]["message"])
+        detect_mock.assert_called_once()
+
+
 class PipelineVerifyPhase6Test(unittest.TestCase):
     def test_verify_loads_profile_and_reports_coverage(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -284,21 +334,95 @@ class PipelineVerifyPhase6Test(unittest.TestCase):
         self.assertTrue(any(error["stage"] == "fetch" and "not subscribed" in error["message"] for error in ctx.errors))
         self.assertIn("data_as_of", ctx.stats["data_status"])
 
-    def test_stale_symbols_are_removed_before_detection(self):
+    def test_small_stale_share_is_excluded_without_aborting(self):
         ctx = PipelineContext(loader=_FakeLoader(None, symbols=["AAA", "BBB", "CCC"]), universe_name="watchlist")
-        ctx.symbols = ["AAA", "BBB", "CCC"]
+        ctx.symbols = [f"SYM{index:02d}" for index in range(20)]
+        ctx.selected_profile = ctx.loader.get_universe_profile("watchlist")
+        ctx.selected_profile = pd.DataFrame({"symbol": ctx.symbols})
+        ctx.stats["data_status"] = {
+            "target_date": "2026-06-01",
+            "stale_symbols": ["SYM19"],
+            "warnings": ["Yahoo Finance fallback failed for SYM19"],
+        }
+
+        Pipeline(ctx)._prepare_current_data()
+
+        self.assertEqual(ctx.symbols, [f"SYM{index:02d}" for index in range(19)])
+        self.assertEqual(ctx.stats["symbols_skipped_stale"], 1)
+
+    def test_all_nse_run_continues_with_96_of_2945_symbols_stale(self):
+        symbols = [f"SYM{index:04d}" for index in range(2945)]
+        stale = symbols[:96]
+        ctx = PipelineContext(universe_name="all_nse_equity")
+        ctx.symbols = symbols
+        ctx.selected_profile = pd.DataFrame({"symbol": symbols})
+        ctx.stats["data_status"] = {
+            "target_date": "2026-06-15",
+            "stale_symbols": stale,
+        }
+
+        Pipeline(ctx)._prepare_current_data()
+
+        self.assertEqual(len(ctx.symbols), 2849)
+        self.assertEqual(ctx.stats["symbols_skipped_stale"], 96)
+        self.assertFalse(ctx.stats["data_status"]["partial_scan_authorized"])
+
+    def test_broad_stale_share_requires_partial_scan_permission(self):
+        ctx = PipelineContext(
+            loader=_FakeLoader(None, symbols=["AAA", "BBB"]),
+            universe_name="watchlist",
+        )
+        ctx.symbols = ["AAA", "BBB"]
         ctx.selected_profile = ctx.loader.get_universe_profile("watchlist")
         ctx.stats["data_status"] = {
             "target_date": "2026-06-01",
             "stale_symbols": ["BBB"],
+            "warnings": ["Yahoo returned no data."],
         }
 
-        Pipeline(ctx)._exclude_stale_symbols_from_scan()
+        with self.assertRaisesRegex(PipelineError, "Partial scan confirmation required"):
+            Pipeline(ctx)._prepare_current_data()
 
-        self.assertEqual(ctx.symbols, ["AAA", "CCC"])
-        self.assertEqual(ctx.selected_profile["symbol"].tolist(), ["AAA", "CCC"])
-        self.assertEqual(ctx.stats["symbols_skipped_stale"], 1)
-        self.assertTrue(any(error["stage"] == "data_status" for error in ctx.errors))
+        self.assertEqual(ctx.symbols, ["AAA", "BBB"])
+
+    def test_yfinance_failure_excludes_stale_symbols_without_blocking(self):
+        ctx = PipelineContext(
+            loader=_FakeLoader(None, symbols=["AAA", "BBB"]),
+            universe_name="watchlist",
+        )
+        ctx.symbols = ["AAA", "BBB"]
+        ctx.selected_profile = ctx.loader.get_universe_profile("watchlist")
+        ctx.stats["data_status"] = {
+            "target_date": "2026-06-01",
+            "stale_symbols": ["BBB"],
+            "warnings": ["Yahoo request timed out."],
+            "yfinance_failed": True,
+        }
+
+        Pipeline(ctx)._prepare_current_data()
+
+        self.assertEqual(ctx.symbols, ["AAA"])
+        self.assertFalse(ctx.stats["data_status"]["partial_scan_authorized"])
+        self.assertIn("scan was not blocked", ctx.stats["data_status"]["warnings"][-1])
+
+    def test_explicit_permission_excludes_stale_symbols_and_continues(self):
+        ctx = PipelineContext(
+            loader=_FakeLoader(None, symbols=["AAA", "BBB"]),
+            universe_name="watchlist",
+            allow_partial_scan=True,
+        )
+        ctx.symbols = ["AAA", "BBB"]
+        ctx.selected_profile = ctx.loader.get_universe_profile("watchlist")
+        ctx.stats["data_status"] = {
+            "target_date": "2026-06-01",
+            "stale_symbols": ["BBB"],
+            "warnings": ["Yahoo returned no data."],
+        }
+
+        Pipeline(ctx)._prepare_current_data()
+
+        self.assertEqual(ctx.symbols, ["AAA"])
+        self.assertTrue(ctx.stats["data_status"]["partial_scan_authorized"])
 
     def test_eod_catchup_rebuilds_weekly_after_rows_written(self):
         with tempfile.TemporaryDirectory() as tmp:

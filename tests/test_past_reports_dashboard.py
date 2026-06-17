@@ -220,6 +220,8 @@ def test_render_dashboard_has_day_tier_search_controls():
     assert '<select id="tier">' in html
     assert '<select id="sector">' in html
     assert '<input id="search"' in html
+    assert "Find stock" in html
+    assert "PRIVSCL finds PRIVISCL" in html
     assert '"symbol": "ABC"' in html
     assert '"sector": "NIFTY IT"' in html
     assert '"priceThenText": "Rs.100"' in html
@@ -246,6 +248,35 @@ def test_render_dashboard_has_day_tier_search_controls():
     assert "let sortStack = [];" in html
     assert "sortStack.push(primarySort);" in html
     assert 'controls.clearSort.addEventListener("click"' in html
+
+
+def test_render_dashboard_symbol_search_tolerates_missing_vowels():
+    pick = past_reports_dashboard.PastPick(
+        symbol="PRIVISCL",
+        company_name="Privi Speciality Chemicals",
+        sector="NIFTY 50",
+        tier="HIGH",
+        pattern="Double Bottom",
+        timeframe="daily",
+        recommended_at=datetime(2026, 6, 13, 10, 0),
+        report_name="control_20260613_100048_all_nse_equity.html",
+        report_href="control_20260613_100048_all_nse_equity.html",
+        price_then=3444.3,
+        cmp_today=3469.1,
+        cmp_date="2026-06-15",
+        entry=3444.3,
+        target=4343.29,
+        stop_loss=2989.11,
+    )
+
+    html = past_reports_dashboard.render_dashboard([pick], default_days=60, now=NOW)
+    payload = json.loads(
+        html.split('<script id="pickData" type="application/json">', 1)[1].split("</script>", 1)[0]
+    )
+
+    assert payload[0]["symbol"] == "PRIVISCL"
+    assert payload[0]["symbolSearchKey"] == past_reports_dashboard._symbol_search_key("PRIVSCL")
+    assert "symbolSearchKey(query)" in html
 
 
 def _report_html(
